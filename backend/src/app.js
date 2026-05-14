@@ -1,0 +1,61 @@
+const authRoutes = require("./modules/auth/auth.routes");
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
+const morgan = require("morgan");
+
+const env = require("./config/env");
+const apiLogger = require("./middleware/logger.middleware");
+const errorMiddleware = require("./middleware/error.middleware");
+
+const app = express();
+
+app.use(
+  cors({
+    origin: env.clientUrl,
+    credentials: true,
+  })
+);
+
+app.use(helmet());
+app.use(cookieParser());
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true }));
+
+app.use(morgan("dev"));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: {
+    success: false,
+    message: "Too many requests. Please try again later.",
+  },
+});
+
+app.use(limiter);
+
+// Custom API logger for every API hit
+app.use(apiLogger);
+app.use("/api/auth", authRoutes);
+
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "KK Vocational Backend API is running",
+  });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server health is good",
+    timestamp: new Date(),
+  });
+});
+
+app.use(errorMiddleware);
+
+module.exports = app;
