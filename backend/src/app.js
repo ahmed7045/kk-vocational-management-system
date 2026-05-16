@@ -1,3 +1,8 @@
+const shiftRoutes = require("./modules/shifts/shift.routes");
+const courseRoutes = require("./modules/courses/course.routes");
+const branchRoutes = require("./modules/branches/branch.routes");
+const employeeRoutes = require("./modules/employees/employee.routes");
+const portalRoutes = require("./modules/portal/portal.routes");
 const authRoutes = require("./modules/auth/auth.routes");
 const express = require("express");
 const cors = require("cors");
@@ -40,6 +45,11 @@ app.use(limiter);
 // Custom API logger for every API hit
 app.use(apiLogger);
 app.use("/api/auth", authRoutes);
+app.use("/api/portal", portalRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/branches", branchRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/shifts", shiftRoutes);
 
 app.get("/", (req, res) => {
   res.json({
