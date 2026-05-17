@@ -87,3 +87,47 @@ VALUES (
     TRUE
 )
 ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('courses.view', 'Can view courses'),
+('courses.create', 'Can create courses'),
+('courses.update', 'Can update courses'),
+('courses.delete', 'Can delete courses'),
+
+('shifts.view', 'Can view shift timings'),
+('shifts.create', 'Can create shift timings'),
+('shifts.update', 'Can update shift timings'),
+('shifts.delete', 'Can delete shift timings')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('students.view', 'Can view students'),
+('students.create', 'Can create students'),
+('students.update', 'Can update students'),
+('students.delete', 'Can delete students'),
+('students.export', 'Can export students'),
+('students.view_paid', 'Can view paid students'),
+('students.view_pending', 'Can view pending students'),
+('students.view_non_active', 'Can view non-active students')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('payments.view', 'Can view payments'),
+('payments.create', 'Can create payments'),
+('payments.update', 'Can update payments'),
+('payment_methods.view', 'Can view payment methods'),
+('payment_methods.create', 'Can create payment methods')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('expenses.view', 'Can view expenses'),
+('expenses.create', 'Can create expenses'),
+('expenses.update', 'Can update expenses'),
+('expenses.delete', 'Can delete expenses'),
+('expense_categories.view', 'Can view expense categories'),
+('expense_categories.create', 'Can create expense categories')
+ON CONFLICT (name) DO NOTHING;

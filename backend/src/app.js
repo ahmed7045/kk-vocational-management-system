@@ -1,3 +1,6 @@
+const expenseRoutes = require("./modules/expenses/expense.routes");
+const paymentRoutes = require("./modules/payments/payment.routes");
+const studentRoutes = require("./modules/students/student.routes");
 const shiftRoutes = require("./modules/shifts/shift.routes");
 const courseRoutes = require("./modules/courses/course.routes");
 const branchRoutes = require("./modules/branches/branch.routes");
@@ -50,6 +53,9 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/shifts", shiftRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/expenses", expenseRoutes);
 
 app.get("/", (req, res) => {
   res.json({

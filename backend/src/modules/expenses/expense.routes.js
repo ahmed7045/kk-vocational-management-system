@@ -9,42 +9,50 @@ const {
   list,
   details,
   update,
-  updateStatus,
-} = require("./student.controller");
+  categories,
+  createCategory,
+} = require("./expense.controller");
+
+router.get(
+  "/categories",
+  authMiddleware,
+  requirePermission("expense_categories.view"),
+  categories
+);
+
+router.post(
+  "/categories",
+  authMiddleware,
+  requirePermission("expense_categories.create"),
+  createCategory
+);
 
 router.get(
   "/",
   authMiddleware,
-  requirePermission("students.view"),
+  requirePermission("expenses.view"),
   list
 );
 
 router.get(
   "/:id",
   authMiddleware,
-  requirePermission("students.view"),
+  requirePermission("expenses.view"),
   details
 );
 
 router.post(
   "/",
   authMiddleware,
-  requirePermission("students.create"),
+  requirePermission("expenses.create"),
   create
 );
 
 router.put(
   "/:id",
   authMiddleware,
-  requirePermission("students.update"),
+  requirePermission("expenses.update"),
   update
-);
-
-router.patch(
-  "/:id/status",
-  authMiddleware,
-  requirePermission("students.update"),
-  updateStatus
 );
 
 module.exports = router;
