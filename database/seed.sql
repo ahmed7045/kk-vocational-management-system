@@ -131,3 +131,48 @@ VALUES
 ('expense_categories.view', 'Can view expense categories'),
 ('expense_categories.create', 'Can create expense categories')
 ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('dashboard.view', 'Can view dashboard'),
+('dashboard.analytics.view', 'Can view dashboard analytics')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('welfare.view', 'Can view welfare module'),
+
+('welfare.donor.view', 'Can view donors'),
+('welfare.donor.create', 'Can create donors'),
+('welfare.donor.update', 'Can update donors'),
+
+('welfare.charity.view', 'Can view charities'),
+('welfare.charity.create', 'Can create charities'),
+('welfare.charity.update', 'Can update charities'),
+
+('welfare.donation.view', 'Can view donations'),
+('welfare.donation.create', 'Can create donations'),
+
+('welfare.application.view', 'Can view welfare applications'),
+('welfare.application.create', 'Can create welfare applications'),
+('welfare.application.update', 'Can update welfare applications'),
+('welfare.application.approve', 'Can approve welfare applications'),
+
+('welfare.expense.view', 'Can view welfare expenses'),
+('welfare.expense.create', 'Can create welfare expenses'),
+
+('welfare.report.view', 'Can view welfare reports'),
+('welfare.dashboard.view', 'Can view welfare dashboard'),
+
+('donation_methods.view', 'Can view donation methods'),
+('donation_methods.create', 'Can create donation methods')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO donation_methods (method_name)
+VALUES
+('Cash'),
+('Bank Transfer'),
+('EasyPaisa'),
+('JazzCash'),
+('Cheque')
+ON CONFLICT (method_name) DO NOTHING;

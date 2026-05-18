@@ -1,3 +1,5 @@
+const welfareRoutes = require("./modules/welfare/welfare.routes");
+const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const expenseRoutes = require("./modules/expenses/expense.routes");
 const paymentRoutes = require("./modules/payments/payment.routes");
 const studentRoutes = require("./modules/students/student.routes");
@@ -56,6 +58,8 @@ app.use("/api/shifts", shiftRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/welfare", welfareRoutes);
 
 app.get("/", (req, res) => {
   res.json({
