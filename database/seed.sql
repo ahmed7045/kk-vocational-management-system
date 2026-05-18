@@ -176,3 +176,17 @@ VALUES
 ('JazzCash'),
 ('Cheque')
 ON CONFLICT (method_name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+VALUES
+('certificates.view', 'Can view certificates'),
+('certificates.generate', 'Can generate certificates'),
+('certificates.download', 'Can download certificates'),
+
+('reports.view', 'Can view reports'),
+('reports.students.view', 'Can view student reports'),
+('reports.financial.view', 'Can view financial reports'),
+('reports.welfare.view', 'Can view welfare reports'),
+('reports.export_pdf', 'Can export PDF reports'),
+('reports.export_excel', 'Can export Excel reports')
+ON CONFLICT (name) DO NOTHING;

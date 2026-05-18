@@ -1,3 +1,5 @@
+const reportRoutes = require("./modules/reports/report.routes");
+const certificateRoutes = require("./modules/certificates/certificate.routes");
 const welfareRoutes = require("./modules/welfare/welfare.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const expenseRoutes = require("./modules/expenses/expense.routes");
@@ -60,6 +62,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/welfare", welfareRoutes);
+app.use("/api/certificates", certificateRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.get("/", (req, res) => {
   res.json({

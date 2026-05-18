@@ -301,3 +301,38 @@ CREATE TABLE IF NOT EXISTS welfare_impact_records (
     created_by INT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS certificates (
+    id SERIAL PRIMARY KEY,
+    student_id INT REFERENCES students(id) ON DELETE CASCADE,
+    course_id INT REFERENCES courses(id) ON DELETE SET NULL,
+
+    certificate_no VARCHAR(100) UNIQUE NOT NULL,
+    certificate_title VARCHAR(150) DEFAULT 'Certificate of Achievement',
+
+    association_name VARCHAR(250) DEFAULT 'KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION',
+    registration_text VARCHAR(50) DEFAULT '(Regd)',
+    institute_name VARCHAR(200) DEFAULT 'Khidmat-e-Khalq Vocational IT Center',
+
+    student_name VARCHAR(150) NOT NULL,
+    course_name VARCHAR(150) NOT NULL,
+    course_duration VARCHAR(100),
+
+    achievement_text TEXT,
+    issue_date DATE DEFAULT CURRENT_DATE,
+
+    secretary_name VARCHAR(150) DEFAULT 'Aftab Ahmed',
+    president_name VARCHAR(150) DEFAULT 'Muhammad Rafiq Mara',
+
+    generated_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS report_exports (
+    id SERIAL PRIMARY KEY,
+    report_type VARCHAR(100) NOT NULL,
+    export_type VARCHAR(50) NOT NULL,
+    filters JSONB,
+    generated_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
