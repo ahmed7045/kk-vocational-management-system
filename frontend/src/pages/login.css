@@ -1,0 +1,112 @@
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+}
+
+.login-left {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: white;
+}
+
+.brand-box {
+  max-width: 520px;
+}
+
+.brand-logo {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  background: white;
+  color: var(--primary);
+  font-size: 28px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+}
+
+.brand-box h1 {
+  font-size: 42px;
+  margin: 0 0 14px;
+}
+
+.brand-box p {
+  font-size: 17px;
+  opacity: 0.9;
+  line-height: 1.7;
+}
+
+.login-right {
+  display: grid;
+  place-items: center;
+  padding: 30px;
+}
+
+.login-right .card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.login-card-header {
+  margin-bottom: 24px;
+}
+
+.login-card-header h2 {
+  font-size: 26px;
+  margin: 0 0 8px;
+}
+
+.login-card-header p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.login-options label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.login-options span {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.login-right .btn {
+  width: 100%;
+}
+
+@media (max-width: 850px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-left {
+    display: none;
+  }
+}
