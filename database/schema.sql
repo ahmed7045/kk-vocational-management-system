@@ -1,12 +1,3 @@
--- // INDEXING BLOCK
-CREATE INDEX IF NOT EXISTS idx_students_branch_id ON students(branch_id);
-CREATE INDEX IF NOT EXISTS idx_students_fee_status ON students(fee_status);
-CREATE INDEX IF NOT EXISTS idx_payments_branch_id ON payments(branch_id);
-CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);
-CREATE INDEX IF NOT EXISTS idx_expenses_branch_id ON expenses(branch_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date);
-
--- //
 
 CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
@@ -336,3 +327,13 @@ CREATE TABLE IF NOT EXISTS report_exports (
     generated_by INT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- // INDEXING BLOCK
+CREATE INDEX IF NOT EXISTS idx_students_branch_id ON students(branch_id);
+CREATE INDEX IF NOT EXISTS idx_students_fee_status ON students(fee_status);
+CREATE INDEX IF NOT EXISTS idx_payments_branch_id ON payments(branch_id);
+CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);
+CREATE INDEX IF NOT EXISTS idx_expenses_branch_id ON expenses(branch_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date);
+
+-- //
