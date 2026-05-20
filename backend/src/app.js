@@ -23,10 +23,29 @@ const apiLogger = require("./middleware/logger.middleware");
 const errorMiddleware = require("./middleware/error.middleware");
 
 const app = express();
+//LOCAL SETINGS
+// app.use(
+//   cors({
+//     origin: env.clientUrl,
+//     credentials: true,
+//   })
+// );
+
+//PROD SETTINGS
+const allowedOrigins = [
+  env.clientUrl,
+  "http://localhost:5173",
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
