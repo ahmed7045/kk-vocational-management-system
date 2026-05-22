@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
 import Login from "../pages/Login";
 import PortalSelection from "../pages/PortalSelection";
 import BranchSelection from "../pages/BranchSelection";
@@ -11,8 +12,19 @@ import Expenses from "../pages/Expenses";
 import WelfareDashboard from "../pages/WelfareDashboard";
 import Reports from "../pages/Reports";
 import Certificates from "../pages/Certificates";
+
 import ProtectedRoute from "../auth/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
+
+const PortalGuard = ({ portal, children }) => {
+  const selectedPortal = localStorage.getItem("selectedPortal");
+
+  if (portal && selectedPortal !== portal) {
+    return <Navigate to="/portal-selection" replace />;
+  }
+
+  return children;
+};
 
 const AppRoutes = () => {
   return (
@@ -35,7 +47,9 @@ const AppRoutes = () => {
           path="/branch-selection"
           element={
             <ProtectedRoute>
-              <BranchSelection />
+              <PortalGuard portal="vocational">
+                <BranchSelection />
+              </PortalGuard>
             </ProtectedRoute>
           }
         />
@@ -48,16 +62,125 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="students" element={<Students />} />
-          <Route path="employees" element={<Employees />} />
-          <Route path="courses" element={<Courses />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="expenses" element={<Expenses />} />
-          <Route path="welfare" element={<WelfareDashboard />} />
+          <Route
+            index
+            element={
+              <PortalGuard portal="vocational">
+                <Dashboard />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="dashboard"
+            element={
+              <PortalGuard portal="vocational">
+                <Dashboard />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="students"
+            element={
+              <PortalGuard portal="vocational">
+                <Students />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="students/non-active"
+            element={
+              <PortalGuard portal="vocational">
+                <Students defaultStudentStatus="non_active" pageTitle="Non-Active Students" />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="employees"
+            element={
+              <PortalGuard portal="vocational">
+                <Employees />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="courses"
+            element={
+              <PortalGuard portal="vocational">
+                <Courses />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="payments"
+            element={
+              <PortalGuard portal="vocational">
+                <Payments />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="certificates"
+            element={
+              <PortalGuard portal="vocational">
+                <Certificates />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="welfare"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="dashboard" />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="welfare/donors"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="donors" />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="welfare/charities"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="charities" />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="welfare/donations"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="donations" />
+              </PortalGuard>
+            }
+          />
+
+          <Route
+            path="welfare/applications"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="applications" />
+              </PortalGuard>
+            }
+          />
+
           <Route path="reports" element={<Reports />} />
-          <Route path="certificates" element={<Certificates />} />
+          <Route path="expenses" element={<Expenses />} />
         </Route>
       </Routes>
     </BrowserRouter>

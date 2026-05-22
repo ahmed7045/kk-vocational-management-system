@@ -1,0 +1,136 @@
+.expenses-page .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expenses-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.expense-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.expense-summary-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  display: grid;
+  place-items: center;
+}
+
+.expense-summary-icon.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.expense-summary-card p,
+.expense-mini-stat p {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.expense-summary-card h2,
+.expense-mini-stat h3 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.expense-mini-stat {
+  padding: 4px 0;
+}
+
+.expenses-toolbar {
+  display: grid;
+  grid-template-columns: 1.4fr 220px 180px 160px 160px auto;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.expenses-search {
+  height: 42px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+}
+
+.expenses-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+}
+
+.expenses-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.table-subtext {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.expense-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.form-group textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  outline: none;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+@media (max-width: 1200px) {
+  .expenses-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .expenses-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .expenses-summary-grid,
+  .expenses-toolbar,
+  .expense-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

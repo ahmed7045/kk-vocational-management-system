@@ -1,9 +1,10 @@
 const {
   createStudent,
   getStudents,
-  getStudentById,
+  getStudentDetails,
   updateStudent,
   updateStudentStatus,
+  deleteStudent,
 } = require("./student.service");
 
 const create = async (req, res, next) => {
@@ -22,12 +23,19 @@ const create = async (req, res, next) => {
 
 const list = async (req, res, next) => {
   try {
-    const students = await getStudents(req.query, req.user);
+    const data = await getStudents({
+      branchId: req.query.branchId,
+      search: req.query.search,
+      feeStatus: req.query.feeStatus,
+      studentStatus: req.query.studentStatus,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
 
     res.status(200).json({
       success: true,
       message: "Students fetched successfully",
-      data: students,
+      data,
     });
   } catch (error) {
     next(error);
@@ -76,10 +84,24 @@ const updateStatus = async (req, res, next) => {
   }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    await deleteStudent(req.params.id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Student deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   create,
   list,
   details,
   update,
   updateStatus,
+  remove,
 };

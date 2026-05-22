@@ -1,0 +1,303 @@
+.welfare-page .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welfare-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+.welfare-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.welfare-tabs button {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text-muted);
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.welfare-tabs button:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.welfare-tabs button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Summary cards */
+.welfare-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+
+.welfare-summary-grid.small {
+  margin-bottom: 22px;
+}
+
+.welfare-summary-card {
+  min-height: 95px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.welfare-mini-stat {
+  min-height: 95px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.welfare-summary-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  display: grid;
+  place-items: center;
+}
+
+.welfare-summary-icon.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.welfare-summary-icon.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.welfare-summary-card p,
+.welfare-mini-stat p {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.welfare-summary-card h2,
+.welfare-mini-stat h3 {
+  margin: 0;
+  font-size: 24px;
+}
+
+/* Graphs */
+.welfare-graphs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 4px;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+
+.welfare-graphs-grid .card {
+  height: 100%;
+}
+
+.welfare-chart-box {
+  width: 100%;
+  height: 300px;
+}
+
+.welfare-chart-box .recharts-wrapper {
+  font-size: 12px;
+}
+
+/* Forms and tables */
+.welfare-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.table-subtext {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.welfare-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.form-group textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  outline: none;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .welfare-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .welfare-graphs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+
+  .welfare-summary-grid,
+  .welfare-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welfare-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+  }
+
+  .quick-add-wrapper {
+    position: relative;
+  }
+
+  .quick-add-menu {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    width: 190px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 8px;
+    z-index: 50;
+  }
+
+  .quick-add-menu button {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 11px 12px;
+    text-align: left;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .quick-add-menu button:hover {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+  }
+
+  @media (max-width: 700px) {
+    .welfare-header-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .quick-add-menu {
+      left: 0;
+      right: auto;
+    }
+  }
+
+}
+
+.welfare-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  position: relative;
+}
+
+.quick-add-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.quick-add-main-btn {
+  height: 42px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+}
+
+.quick-add-main-btn:hover {
+  background: var(--primary-dark);
+}
+
+.quick-add-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 190px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.15);
+  padding: 8px;
+  z-index: 999;
+}
+
+.quick-add-menu button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 11px 12px;
+  text-align: left;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-main);
+  display: block;
+}
+
+.quick-add-menu button:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}

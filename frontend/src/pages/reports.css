@@ -1,0 +1,144 @@
+.reports-page .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.reports-tabs button {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text-muted);
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-tabs button:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.reports-tabs button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.reports-filter-bar {
+  display: flex;
+  gap: 14px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.reports-filter-bar .form-group {
+  min-width: 190px;
+  margin-bottom: 0;
+}
+
+.reports-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 18px 0;
+}
+
+.reports-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  margin: 22px 0;
+}
+
+.report-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.report-summary-card > svg {
+  width: 58px;
+  height: 58px;
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.report-summary-card.danger > svg {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.report-summary-card.success > svg {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.report-summary-card p {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-summary-card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.reports-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.table-subtext {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1150px) {
+  .reports-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .reports-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .reports-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-header-actions {
+    width: 100%;
+  }
+
+  .reports-header-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

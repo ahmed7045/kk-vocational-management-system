@@ -218,3 +218,93 @@ tr:hover td {
     transform: rotate(360deg);
   }
 }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-md {
+  max-width: 720px;
+}
+
+.modal-lg {
+  max-width: 980px;
+}
+
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-header button {
+  border: none;
+  background: var(--bg-main);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.modal-body {
+  padding: 22px;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.action-view {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.action-edit {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}

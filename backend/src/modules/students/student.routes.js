@@ -10,6 +10,7 @@ const {
   details,
   update,
   updateStatus,
+  remove,
 } = require("./student.controller");
 
 router.get(
@@ -19,18 +20,18 @@ router.get(
   list
 );
 
-router.get(
-  "/:id",
-  authMiddleware,
-  requirePermission("students.view"),
-  details
-);
-
 router.post(
   "/",
   authMiddleware,
   requirePermission("students.create"),
   create
+);
+
+router.get(
+  "/:id",
+  authMiddleware,
+  requirePermission("students.view"),
+  details
 );
 
 router.put(
@@ -45,6 +46,13 @@ router.patch(
   authMiddleware,
   requirePermission("students.update"),
   updateStatus
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("students.delete"),
+  remove
 );
 
 module.exports = router;

@@ -223,7 +223,24 @@ const getEmployees = async (query, currentUser) => {
   return result.rows;
 };
 
+const getEmployeePermissions = async () => {
+  const result = await pool.query(
+    `
+    SELECT id, name, description
+    FROM permissions
+    WHERE name NOT IN (
+      'branches.delete',
+      'branches.create'
+    )
+    ORDER BY name ASC
+    `
+  );
+
+  return result.rows;
+};
+
 module.exports = {
   createEmployee,
   getEmployees,
+  getEmployeePermissions,
 };

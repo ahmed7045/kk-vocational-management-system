@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, ArrowRight, LogOut, Users, Wallet } from "lucide-react";
+import {
+  Building2,
+  ArrowRight,
+  LogOut,
+  Users,
+  Wallet,
+  ArrowLeft,
+} from "lucide-react";
+
 import axiosInstance from "../api/axiosInstance";
 import { useAuth } from "../auth/AuthContext";
 import Loader from "../components/common/Loader";
@@ -34,6 +42,7 @@ const BranchSelection = () => {
   }, []);
 
   const handleSelectBranch = (branch) => {
+    localStorage.setItem("selectedPortal", "vocational");
     localStorage.setItem("selectedBranchId", branch.id);
     localStorage.setItem("selectedBranchName", branch.name);
     localStorage.setItem("selectedBranchStatus", branch.status || "active");
@@ -55,6 +64,14 @@ const BranchSelection = () => {
         </div>
 
         <div className="branch-user-box">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/portal-selection")}
+          >
+            <ArrowLeft size={16} /> Back
+          </Button>
+
           <div>
             <strong>{user?.fullName || "Admin User"}</strong>
             <span>{user?.role || "User"}</span>
@@ -70,7 +87,9 @@ const BranchSelection = () => {
 
       <section className="branch-grid">
         {branches.length === 0 ? (
-          <div className="branch-empty">No branch access found for your account.</div>
+          <div className="branch-empty">
+            No branch access found for your account.
+          </div>
         ) : (
           branches.map((branch) => (
             <article
@@ -105,7 +124,9 @@ const BranchSelection = () => {
 
                 <div>
                   <Wallet size={17} />
-                  <span>Rs {Number(branch.monthly_revenue || 0).toLocaleString()}</span>
+                  <span>
+                    Rs {Number(branch.monthly_revenue || 0).toLocaleString()}
+                  </span>
                 </div>
               </div>
 

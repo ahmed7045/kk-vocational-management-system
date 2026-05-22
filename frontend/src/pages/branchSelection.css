@@ -73,11 +73,11 @@
 }
 
 .branch-grid {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(240px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 20px;
 }
 
 .branch-card {
@@ -213,7 +213,13 @@
   box-shadow: var(--shadow);
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
+  .branch-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 950px) {
   .branch-grid {
     grid-template-columns: repeat(2, 1fr);
   }

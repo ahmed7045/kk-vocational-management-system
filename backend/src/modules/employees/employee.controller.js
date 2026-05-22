@@ -1,6 +1,7 @@
 const {
   createEmployee,
   getEmployees,
+  getEmployeePermissions,
 } = require("./employee.service");
 
 const create = async (req, res, next) => {
@@ -31,7 +32,22 @@ const list = async (req, res, next) => {
   }
 };
 
+const permissions = async (req, res, next) => {
+  try {
+    const data = await getEmployeePermissions();
+
+    res.status(200).json({
+      success: true,
+      message: "Employee permissions fetched successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   create,
   list,
+  permissions,
 };

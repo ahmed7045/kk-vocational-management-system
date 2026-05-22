@@ -1,0 +1,135 @@
+.employees-page .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employees-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.employees-search {
+  height: 42px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+}
+
+.employees-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+}
+
+.employees-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.table-subtext {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.employee-account-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.employee-account-toggle button {
+  border: none;
+  padding: 13px;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.employee-account-toggle button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.employee-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.permissions-box {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 8px;
+  background: #f8fafc;
+}
+
+.permissions-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.permission-item {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.permission-item input {
+  width: 16px;
+  height: 16px;
+}
+
+.permissions-empty {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+@media (max-width: 750px) {
+  .employees-toolbar,
+  .employee-form-grid,
+  .permissions-grid {
+    grid-template-columns: 1fr;
+  }
+}

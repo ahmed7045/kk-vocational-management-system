@@ -15,21 +15,66 @@ const calculateFeeStatus = (totalFee, paidFee) => {
   return "partial";
 };
 
+// const recalculateStudentFee = async (client, studentId) => {
+//   const paymentResult = await client.query(
+//     `
+//     SELECT COALESCE(SUM(amount), 0) AS total_paid
+//     FROM payments
+//     WHERE student_id = $1
+//     `,
+//     [studentId]
+//   );
+
+//   const paidFee = Number(paymentResult.rows[0].total_paid) || 0;
+
+//   const studentResult = await client.query(
+//     `
+//     SELECT total_fee
+//     FROM students
+//     WHERE id = $1
+//     `,
+//     [studentId]
+//   );
+
+//   if (studentResult.rows.length === 0) {
+//     throw new ApiError(404, "Student not found");
+//   }
+
+//   const totalFee = Number(studentResult.rows[0].total_fee) || 0;
+//   const remainingFee = totalFee - paidFee;
+//   const feeStatus = calculateFeeStatus(totalFee, paidFee);
+
+//   const updatedStudent = await client.query(
+//     `
+//     UPDATE students
+//     SET 
+//       paid_fee = $1,
+//       remaining_fee = $2,
+//       fee_status = $3,
+//       updated_at = CURRENT_TIMESTAMP
+//     WHERE id = $4
+//     RETURNING *
+//     `,
+//     [paidFee, remainingFee, feeStatus, studentId]
+//   );
+
+//   return updatedStudent.rows[0];
+// };
+
+
+// const calculateFeeStatus = (totalFee, paidFee) => {
+//   const total = Number(totalFee) || 0;
+//   const paid = Number(paidFee) || 0;
+
+//   if (paid <= 0) return "pending";
+//   if (paid >= total) return "paid";
+//   return "partial";
+// };
+
 const recalculateStudentFee = async (client, studentId) => {
-  const paymentResult = await client.query(
-    `
-    SELECT COALESCE(SUM(amount), 0) AS total_paid
-    FROM payments
-    WHERE student_id = $1
-    `,
-    [studentId]
-  );
-
-  const paidFee = Number(paymentResult.rows[0].total_paid) || 0;
-
   const studentResult = await client.query(
     `
-    SELECT total_fee
+    SELECT id, total_fee
     FROM students
     WHERE id = $1
     `,
@@ -41,13 +86,24 @@ const recalculateStudentFee = async (client, studentId) => {
   }
 
   const totalFee = Number(studentResult.rows[0].total_fee) || 0;
-  const remainingFee = totalFee - paidFee;
+
+  const paymentResult = await client.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total_paid
+    FROM payments
+    WHERE student_id = $1
+    `,
+    [studentId]
+  );
+
+  const paidFee = Number(paymentResult.rows[0].total_paid) || 0;
+  const remainingFee = Math.max(totalFee - paidFee, 0);
   const feeStatus = calculateFeeStatus(totalFee, paidFee);
 
   const updatedStudent = await client.query(
     `
     UPDATE students
-    SET 
+    SET
       paid_fee = $1,
       remaining_fee = $2,
       fee_status = $3,
@@ -149,14 +205,14 @@ const createPayment = async (data, currentUser) => {
     await client.query("COMMIT");
 
     return {
-      payment: paymentResult.rows[0],
-      studentFee: {
-        totalFee: updatedStudent.total_fee,
-        paidFee: updatedStudent.paid_fee,
-        remainingFee: updatedStudent.remaining_fee,
-        feeStatus: updatedStudent.fee_status,
-      },
-    };
+    payment: paymentResult.rows[0],
+    studentFee: {
+    totalFee: updatedStudent.total_fee,
+    paidFee: updatedStudent.paid_fee,
+    remainingFee: updatedStudent.remaining_fee,
+    feeStatus: updatedStudent.fee_status,
+  },
+};
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

@@ -1,3 +1,25 @@
+
+.sidebar-switch-btn {
+  margin-top: 18px;
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-switch-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
 .dashboard-layout {
   min-height: 100vh;
   display: flex;
@@ -143,4 +165,29 @@
   .topbar-search {
     display: none;
   }
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-back-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar-back-btn:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateX(-2px);
 }

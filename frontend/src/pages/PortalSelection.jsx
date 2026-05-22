@@ -34,19 +34,23 @@ const PortalSelection = () => {
     fetchPortals();
   }, []);
 
-  const handleOpenPortal = (portalKey) => {
-    localStorage.setItem("selectedPortal", portalKey);
+const handleOpenPortal = (portalKey) => {
+  localStorage.setItem("selectedPortal", portalKey);
 
-    if (portalKey === "vocational") {
-      navigate("/branch-selection");
-      return;
-    }
+  if (portalKey === "vocational") {
+    navigate("/branch-selection");
+    return;
+  }
 
-    if (portalKey === "welfare") {
-      navigate("/app/welfare");
-      return;
-    }
-  };
+  if (portalKey === "welfare") {
+    localStorage.removeItem("selectedBranchId");
+    localStorage.removeItem("selectedBranchName");
+    localStorage.removeItem("selectedBranchStatus");
+
+    navigate("/app/welfare");
+    return;
+  }
+};
 
   const getPortalIcon = (key) => {
     if (key === "welfare") return <HeartHandshake size={32} />;

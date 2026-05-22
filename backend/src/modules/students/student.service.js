@@ -136,83 +136,83 @@ const createStudent = async (data, currentUser) => {
   }
 };
 
-const getStudents = async (query, currentUser) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 20;
-  const offset = (page - 1) * limit;
+const getStudents = async (filters = {}) => {
+  const {
+    branchId,
+    search,
+    feeStatus,
+    studentStatus,
+    page = 1,
+    limit = 50,
+  } = filters;
 
-  const search = query.search || "";
-  const feeStatus = query.feeStatus || null;
-  const studentStatus = query.studentStatus || null;
-  const courseId = query.courseId || null;
+  const values = [];
+  const conditions = [];
 
-  let branchId = query.branchId;
-
-  if (currentUser.role !== "super_admin") {
-    branchId = currentUser.branchId;
+  if (branchId) {
+    values.push(branchId);
+    conditions.push(`s.branch_id = $${values.length}`);
   }
+
+  if (search) {
+    values.push(`%${search}%`);
+    conditions.push(`
+      (
+        s.full_name ILIKE $${values.length}
+        OR s.father_name ILIKE $${values.length}
+        OR s.phone ILIKE $${values.length}
+      )
+    `);
+  }
+
+  if (feeStatus) {
+    values.push(feeStatus);
+    conditions.push(`s.fee_status = $${values.length}`);
+  }
+
+  if (studentStatus) {
+    values.push(studentStatus);
+    conditions.push(`s.student_status = $${values.length}`);
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
+
+  const offset = (Number(page) - 1) * Number(limit);
+
+  values.push(Number(limit));
+  const limitIndex = values.length;
+
+  values.push(offset);
+  const offsetIndex = values.length;
 
   const result = await pool.query(
     `
-    SELECT
-      s.id,
-      s.full_name,
-      s.father_name,
-      s.phone,
-      s.city,
-      s.address,
-      s.photo_url,
-      s.admission_date,
-      s.admission_status,
-      s.student_status,
-      s.fee_status,
-      s.total_fee,
-      s.paid_fee,
-      s.remaining_fee,
-      s.created_at,
+    SELECT 
+      s.*,
       b.name AS branch_name,
-      st.shift_name,
-      e.full_name AS teacher_name,
       COALESCE(
-        JSON_AGG(
-          DISTINCT JSONB_BUILD_OBJECT(
+        json_agg(
+          DISTINCT jsonb_build_object(
             'id', c.id,
             'courseName', c.course_name,
-            'courseCode', c.course_code
+            'duration', c.duration
           )
         ) FILTER (WHERE c.id IS NOT NULL),
         '[]'
       ) AS courses
     FROM students s
     LEFT JOIN branches b ON b.id = s.branch_id
-    LEFT JOIN shift_timings st ON st.id = s.shift_id
-    LEFT JOIN employees e ON e.id = s.assigned_teacher_id
     LEFT JOIN student_courses sc ON sc.student_id = s.id
     LEFT JOIN courses c ON c.id = sc.course_id
-    WHERE
-      ($1::INT IS NULL OR s.branch_id = $1)
-      AND
-      (
-        s.full_name ILIKE $2
-        OR s.father_name ILIKE $2
-        OR s.phone ILIKE $2
-      )
-      AND ($3::VARCHAR IS NULL OR s.fee_status = $3)
-      AND ($4::VARCHAR IS NULL OR s.student_status = $4)
-      AND ($5::INT IS NULL OR sc.course_id = $5)
-    GROUP BY s.id, b.name, st.shift_name, e.full_name
-    ORDER BY s.id DESC
-    LIMIT $6 OFFSET $7
+    ${whereClause}
+    GROUP BY s.id, b.name
+    ORDER BY s.created_at DESC
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
     `,
-    [
-      branchId || null,
-      `%${search}%`,
-      feeStatus,
-      studentStatus,
-      courseId,
-      limit,
-      offset,
-    ]
+    values
   );
 
   return result.rows;
@@ -424,10 +424,28 @@ const updateStudentStatus = async (id, data, currentUser) => {
   return result.rows[0];
 };
 
+const deleteStudent = async (studentId, user) => {
+  const result = await pool.query(
+    `
+    DELETE FROM students
+    WHERE id = $1
+    RETURNING id
+    `,
+    [studentId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Student not found");
+  }
+
+  return result.rows[0];
+};
+
 module.exports = {
   createStudent,
   getStudents,
   getStudentById,
   updateStudent,
   updateStudentStatus,
+  deleteStudent,
 };
