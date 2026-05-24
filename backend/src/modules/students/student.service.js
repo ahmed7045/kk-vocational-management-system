@@ -6,15 +6,67 @@ const canAccessBranch = (user, branchId) => {
   return Number(user.branchId) === Number(branchId);
 };
 
-const calculateFeeStatus = (totalFee, paidFee) => {
-  const total = Number(totalFee) || 0;
-  const paid = Number(paidFee) || 0;
+// const calculateFeeStatus = (totalFee, paidFee) => {
+//   const total = Number(totalFee) || 0;
+//   const paid = Number(paidFee) || 0;
 
-  if (paid <= 0) return "pending";
-  if (paid >= total) return "paid";
-  return "partial";
+//   if (paid <= 0) return "pending";
+//   if (paid >= total) return "paid";
+//   return "partial";
+// };
+
+const calculateFeeStatus = () => {
+  return "paid";
 };
 
+const updateCompletedStudentsStatus = async (branchId = null) => {
+  const values = [];
+  let branchCondition = "";
+
+  if (branchId) {
+    values.push(branchId);
+    branchCondition = `AND s.branch_id = $${values.length}`;
+  }
+
+  await pool.query(
+    `
+    UPDATE students s
+    SET student_status = 'non_active',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE s.student_status = 'active'
+      AND s.admission_date IS NOT NULL
+      ${branchCondition}
+      AND EXISTS (
+        SELECT 1
+        FROM student_courses sc
+        JOIN courses c ON c.id = sc.course_id
+        WHERE sc.student_id = s.id
+          AND c.duration IS NOT NULL
+          AND c.duration <> ''
+          AND CURRENT_DATE >= (
+            s.admission_date::DATE +
+            CASE
+              WHEN LOWER(c.duration) LIKE '%year%' THEN
+                (COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT || ' years')::INTERVAL
+
+              WHEN LOWER(c.duration) LIKE '%month%' THEN
+                (COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT || ' months')::INTERVAL
+
+              WHEN LOWER(c.duration) LIKE '%week%' THEN
+                (COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT || ' weeks')::INTERVAL
+
+              WHEN LOWER(c.duration) LIKE '%day%' THEN
+                (COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT || ' days')::INTERVAL
+
+              ELSE
+                INTERVAL '0 days'
+            END
+          )::DATE
+      )
+    `,
+    values
+  );
+};
 const createStudent = async (data, currentUser) => {
   const {
     branchId,
@@ -41,10 +93,10 @@ const createStudent = async (data, currentUser) => {
     throw new ApiError(403, "You cannot create student for this branch");
   }
 
-  const total = Number(totalFee) || 0;
   const paid = Number(paidFee) || 0;
-  const remaining = total - paid;
-  const feeStatus = calculateFeeStatus(total, paid);
+  const total = paid;
+  const remaining = 0;
+  const feeStatus = "paid";
 
   const client = await pool.connect();
 
@@ -146,6 +198,8 @@ const getStudents = async (filters = {}) => {
     limit = 50,
   } = filters;
 
+  await updateCompletedStudentsStatus(branchId);
+
   const values = [];
   const conditions = [];
 
@@ -218,9 +272,9 @@ const getStudents = async (filters = {}) => {
   return result.rows;
 };
 
-  const getStudentById = async (id, currentUser) => {
-    const result = await pool.query(
-      `
+const getStudentById = async (id, currentUser) => {
+  const result = await pool.query(
+    `
       SELECT
         s.*,
         b.name AS branch_name,
@@ -245,21 +299,21 @@ const getStudents = async (filters = {}) => {
       WHERE s.id = $1
       GROUP BY s.id, b.name, st.shift_name, e.full_name
       `,
-      [id]
-    );
+    [id]
+  );
 
-    if (result.rows.length === 0) {
-      throw new ApiError(404, "Student not found");
-    }
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Student not found");
+  }
 
-    const student = result.rows[0];
+  const student = result.rows[0];
 
-    if (!canAccessBranch(currentUser, student.branch_id)) {
-      throw new ApiError(403, "You cannot view this student");
-    }
+  if (!canAccessBranch(currentUser, student.branch_id)) {
+    throw new ApiError(403, "You cannot view this student");
+  }
 
-    return student;
-  };
+  return student;
+};
 
 const updateStudent = async (id, data, currentUser) => {
   const existing = await pool.query(
@@ -294,10 +348,12 @@ const updateStudent = async (id, data, currentUser) => {
     courseIds,
   } = data;
 
-  const finalTotalFee = totalFee !== undefined ? Number(totalFee) : Number(oldStudent.total_fee);
-  const finalPaidFee = paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
-  const finalRemainingFee = finalTotalFee - finalPaidFee;
-  const finalFeeStatus = calculateFeeStatus(finalTotalFee, finalPaidFee);
+  const finalPaidFee =
+    paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
+
+  const finalTotalFee = finalPaidFee;
+  const finalRemainingFee = 0;
+  const finalFeeStatus = "paid";
 
   const client = await pool.connect();
 
@@ -338,7 +394,7 @@ const updateStudent = async (id, data, currentUser) => {
         shiftId || null,
         admissionDate || null,
         admissionStatus || null,
-        studentStatus || null,
+        studentStatus || oldStudent.student_status || "active",
         finalTotalFee,
         finalPaidFee,
         finalRemainingFee,

@@ -160,3 +160,7 @@
 .expenses-toolbar.simple {
   grid-template-columns: 1.4fr 180px 180px auto;
 }
+
+.expenses-summary-grid.single {
+  grid-template-columns: minmax(280px, 420px);
+}

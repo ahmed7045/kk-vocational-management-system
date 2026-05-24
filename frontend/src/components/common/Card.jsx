@@ -1,20 +1,57 @@
-import "./common.css";
+// const Card = ({
+//   children,
+//   className = "",
+//   title,
+//   subtitle,
+//   onClick,
+// }) => {
+//   return (
+//     <div className={`card ${className}`} onClick={onClick}>
+//       {(title || subtitle) && (
+//         <div className="card-header">
+//           <div>
+//             {title && <h3>{title}</h3>}
+//             {subtitle && <p>{subtitle}</p>}
+//           </div>
+//         </div>
+//       )}
 
-const Card = ({ children, title, subtitle, action }) => {
+//       {children}
+//     </div>
+//   );
+// };
+
+// export default Card;
+
+const Card = ({
+  children,
+  className = "",
+  title,
+  subtitle,
+  action,
+  onClick,
+}) => {
   return (
-    <div className="card">
-      {(title || action) && (
+    <div className={`card ${className}`} onClick={onClick}>
+      {(title || subtitle || action) && (
         <div className="card-header">
           <div>
             {title && <h3>{title}</h3>}
             {subtitle && <p>{subtitle}</p>}
           </div>
 
-          {action && <div>{action}</div>}
+          {action && (
+            <div
+              className="card-action"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {action}
+            </div>
+          )}
         </div>
       )}
 
-      <div className="card-body">{children}</div>
+      {children}
     </div>
   );
 };

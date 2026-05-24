@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, RefreshCcw, Search } from "lucide-react";
 
 import { useAuth } from "../auth/AuthContext";
@@ -24,7 +25,12 @@ import "./students.css";
 
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) => {
+const Students = ({
+  defaultStudentStatus = "active",
+  pageTitle = "Students",
+}) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const { hasPermission } = useAuth();
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -47,7 +53,7 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
 
   const [filters, setFilters] = useState({
     search: "",
-    feeStatus: "",
+    feeStatus: searchParams.get("feeStatus") || "",
   });
 
   const [form, setForm] = useState({
@@ -61,10 +67,21 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
     shiftId: "",
     admissionDate: "",
     admissionStatus: "confirmed",
-    studentStatus: "active",
-    totalFee: "",
     paidFee: "",
   });
+
+  useEffect(() => {
+    const urlFeeStatus = searchParams.get("feeStatus") || "";
+
+    setFilters((prev) => {
+      if (prev.feeStatus === urlFeeStatus) return prev;
+
+      return {
+        ...prev,
+        feeStatus: urlFeeStatus,
+      };
+    });
+  }, [searchParams]);
 
   const fetchStudents = async () => {
     try {
@@ -121,6 +138,18 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       ...prev,
       [name]: value,
     }));
+
+    if (name === "feeStatus") {
+      const params = new URLSearchParams(searchParams);
+
+      if (value) {
+        params.set("feeStatus", value);
+      } else {
+        params.delete("feeStatus");
+      }
+
+      setSearchParams(params);
+    }
   };
 
   const clearFilters = () => {
@@ -128,6 +157,8 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       search: "",
       feeStatus: "",
     });
+
+    setSearchParams({});
   };
 
   const handleFormChange = (event) => {
@@ -151,8 +182,6 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       shiftId: "",
       admissionDate: "",
       admissionStatus: "confirmed",
-      studentStatus: defaultStudentStatus === "non_active" ? "non_active" : "active",
-      totalFee: "",
       paidFee: "",
     });
   };
@@ -171,6 +200,8 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       return;
     }
 
+    const paidFee = Number(form.paidFee || 0);
+
     const payload = {
       branchId: Number(branchId),
       fullName: form.fullName,
@@ -185,9 +216,11 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       shiftId: form.shiftId ? Number(form.shiftId) : null,
       admissionDate: form.admissionDate || null,
       admissionStatus: form.admissionStatus,
-      studentStatus: form.studentStatus,
-      totalFee: Number(form.totalFee || 0),
-      paidFee: Number(form.paidFee || 0),
+      studentStatus: "active",
+      totalFee: paidFee,
+      paidFee,
+      remainingFee: 0,
+      feeStatus: "paid",
     };
 
     try {
@@ -209,21 +242,17 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
                       phone: payload.phone,
                       city: payload.city,
                       address: payload.address,
-                      total_fee: payload.totalFee,
+                      total_fee: payload.paidFee,
                       paid_fee: payload.paidFee,
-                      remaining_fee: Math.max(
-                        payload.totalFee - payload.paidFee,
-                        0
-                      ),
-                      student_status: payload.studentStatus,
+                      remaining_fee: 0,
+                      fee_status: "paid",
+                      student_status: "active",
                       admission_status: payload.admissionStatus,
                       admission_date: payload.admissionDate,
                     }
                   : student
               )
-              .filter(
-                (student) => student.student_status === defaultStudentStatus
-              )
+              .filter((student) => student.student_status === defaultStudentStatus)
           );
         }
       } else {
@@ -239,16 +268,11 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
             city: payload.city,
             address: payload.address,
             courses: [],
-            total_fee: payload.totalFee,
+            total_fee: payload.paidFee,
             paid_fee: payload.paidFee,
-            remaining_fee: Math.max(payload.totalFee - payload.paidFee, 0),
-            fee_status:
-              payload.paidFee <= 0
-                ? "pending"
-                : payload.paidFee >= payload.totalFee
-                  ? "paid"
-                  : "partial",
-            student_status: payload.studentStatus || "active",
+            remaining_fee: 0,
+            fee_status: "paid",
+            student_status: "active",
             admission_status: payload.admissionStatus,
             admission_date: payload.admissionDate,
           };
@@ -315,8 +339,6 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
         shiftId: student.shift_id || "",
         admissionDate: student.admission_date?.split("T")[0] || "",
         admissionStatus: student.admission_status || "confirmed",
-        studentStatus: student.student_status || "active",
-        totalFee: student.total_fee || "",
         paidFee: student.paid_fee || "",
       });
 
@@ -367,6 +389,22 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
     return "warning";
   };
 
+  const displayTitle =
+    filters.feeStatus === "paid"
+      ? "Paid List"
+      : filters.feeStatus === "pending"
+        ? "Pending List"
+        : pageTitle;
+
+  const displaySubtitle =
+    filters.feeStatus === "paid"
+      ? `${students.length} records`
+      : filters.feeStatus === "pending"
+        ? `${students.length} records`
+        : defaultStudentStatus === "non_active"
+          ? `View non-active students for ${branchName || "selected branch"}.`
+          : `Manage student admissions for ${branchName || "selected branch"}.`;
+
   const columns = [
     {
       key: "full_name",
@@ -410,19 +448,9 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
       ),
     },
     {
-      key: "total_fee",
-      title: "Total Fee",
-      render: (row) => formatCurrency(row.total_fee),
-    },
-    {
       key: "paid_fee",
-      title: "Paid",
+      title: "Paid Fee",
       render: (row) => formatCurrency(row.paid_fee),
-    },
-    {
-      key: "remaining_fee",
-      title: "Remaining",
-      render: (row) => formatCurrency(row.remaining_fee),
     },
     {
       key: "admission_date",
@@ -457,12 +485,8 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
     <div className="page students-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{pageTitle}</h1>
-          <p className="page-subtitle">
-            {defaultStudentStatus === "non_active"
-              ? `View non-active students for ${branchName || "selected branch"}.`
-              : `Manage student admissions for ${branchName || "selected branch"}.`}
-          </p>
+          <h1 className="page-title">{displayTitle}</h1>
+          <p className="page-subtitle">{displaySubtitle}</p>
         </div>
 
         {defaultStudentStatus !== "non_active" &&
@@ -595,32 +619,12 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
             />
 
             <Input
-              label="Total Fee"
-              name="totalFee"
-              type="number"
-              value={form.totalFee}
-              onChange={handleFormChange}
-            />
-
-            <Input
               label="Paid Fee"
               name="paidFee"
               type="number"
               value={form.paidFee}
               onChange={handleFormChange}
-            />
-
-            <Select
-              label="Student Status"
-              name="studentStatus"
-              value={form.studentStatus}
-              onChange={handleFormChange}
-              options={[
-                { label: "Active", value: "active" },
-                { label: "Non Active", value: "non_active" },
-                { label: "Completed", value: "completed" },
-                { label: "Left", value: "left" },
-              ]}
+              required
             />
           </div>
 
@@ -700,18 +704,8 @@ const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) =
             </div>
 
             <div>
-              <strong>Total Fee:</strong>
-              <p>{formatCurrency(selectedRecord.total_fee || 0)}</p>
-            </div>
-
-            <div>
               <strong>Paid Fee:</strong>
               <p>{formatCurrency(selectedRecord.paid_fee || 0)}</p>
-            </div>
-
-            <div>
-              <strong>Remaining Fee:</strong>
-              <p>{formatCurrency(selectedRecord.remaining_fee || 0)}</p>
             </div>
 
             <div>

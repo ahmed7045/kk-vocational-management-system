@@ -54,15 +54,28 @@
   margin-bottom: 22px;
 }
 
+.welfare-summary-grid > .card {
+  min-height: 98px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+}
+
+.welfare-summary-grid > .card > * {
+  width: 100%;
+}
+
 .welfare-summary-card {
-  min-height: 95px;
+  width: 100%;
+  min-height: 62px;
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
 .welfare-mini-stat {
-  min-height: 95px;
+  width: 100%;
+  min-height: 62px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -70,6 +83,7 @@
 }
 
 .welfare-summary-icon {
+  flex: 0 0 58px;
   width: 58px;
   height: 58px;
   border-radius: 18px;
@@ -101,8 +115,18 @@
 .welfare-mini-stat h3 {
   margin: 0;
   font-size: 24px;
+  letter-spacing: -0.03em;
 }
 
+.welfare-click-card {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.welfare-click-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.12);
+}
 /* Graphs */
 .welfare-graphs-grid {
   display: grid;
@@ -387,4 +411,52 @@
   background: #f8fafc;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.card-header p {
+  margin: 4px 0 0;
+}
+
+.card-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.education-help-box {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.education-help-box label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.education-help-box input {
+  width: 16px;
+  height: 16px;
 }

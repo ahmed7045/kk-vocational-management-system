@@ -4,7 +4,7 @@ import {
   Users,
   UserCheck,
   Clock,
-  Wallet,
+  // Wallet,
   Receipt,
   TrendingUp,
   RefreshCcw,
@@ -81,7 +81,7 @@ const Dashboard = () => {
   }
 
   const summary = dashboardData?.summary || {};
-  const recentPayments = dashboardData?.recentPayments || [];
+  // const recentPayments = dashboardData?.recentPayments || [];
   const revenueAnalytics = dashboardData?.revenueAnalytics || [];
   const expenseAnalytics = dashboardData?.expenseAnalytics || [];
   const coursePopularity = dashboardData?.coursePopularity || [];
@@ -92,69 +92,69 @@ const Dashboard = () => {
       value: summary.totalStudents || 0,
       icon: Users,
       type: "info",
-      route: "/vocational/students",
+      route: "/app/students",
     },
     {
       title: "Paid Students",
       value: summary.paidStudents || 0,
       icon: UserCheck,
       type: "success",
-      route: "/vocational/students?feeStatus=paid",
+      route: "/app/students?feeStatus=paid",
     },
     {
       title: "Pending Students",
       value: summary.pendingStudents || 0,
       icon: Clock,
       type: "warning",
-      route: "/vocational/students?feeStatus=pending",
+      route: "/app/students?feeStatus=pending",
     },
-    {
-      title: "Monthly Revenue",
-      value: formatCurrency(summary.monthlyRevenue),
-      icon: Wallet,
-      type: "success",
-      route: "/vocational/payments",
-    },
+    // {
+    //   title: "Monthly Revenue",
+    //   value: formatCurrency(summary.monthlyRevenue),
+    //   icon: Wallet,
+    //   type: "success",
+    //   route: "/app/payments",
+    // },
     {
       title: "Monthly Expenses",
       value: formatCurrency(summary.monthlyExpenses),
       icon: Receipt,
       type: "danger",
-      route: "/vocational/expenses",
+      route: "/app/expenses",
     },
     {
       title: "Monthly Balance",
       value: formatCurrency(summary.monthlyBalance),
       icon: TrendingUp,
       type: summary.monthlyBalance >= 0 ? "success" : "danger",
-      route: "/vocational/reports",
+      route: "/app/reports",
     },
   ];
 
-  const paymentColumns = [
-    {
-      key: "student_name",
-      title: "Student",
-    },
-    {
-      key: "amount",
-      title: "Amount",
-      render: (row) => formatCurrency(row.amount),
-    },
-    {
-      key: "payment_method",
-      title: "Method",
-      render: (row) => row.payment_method || "-",
-    },
-    {
-      key: "payment_date",
-      title: "Date",
-      render: (row) =>
-        row.payment_date
-          ? new Date(row.payment_date).toLocaleDateString("en-GB")
-          : "-",
-    },
-  ];
+  // const paymentColumns = [
+  //   {
+  //     key: "student_name",
+  //     title: "Student",
+  //   },
+  //   {
+  //     key: "amount",
+  //     title: "Amount",
+  //     render: (row) => formatCurrency(row.amount),
+  //   },
+  //   {
+  //     key: "payment_method",
+  //     title: "Method",
+  //     render: (row) => row.payment_method || "-",
+  //   },
+  //   {
+  //     key: "payment_date",
+  //     title: "Date",
+  //     render: (row) =>
+  //       row.payment_date
+  //         ? new Date(row.payment_date).toLocaleDateString("en-GB")
+  //         : "-",
+  //   },
+  // ];
 
   return (
     <div className="page dashboard-page">
@@ -230,15 +230,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="dashboard-grid-2">
-        <Card title="Recent Payments" subtitle="Latest fee transactions">
-          <Table
-            columns={paymentColumns}
-            data={recentPayments}
-            emptyText="No recent payments found"
-          />
-        </Card>
-
+      <div className="dashboard-grid-2 single">
         <Card title="Course Popularity" subtitle="Top enrolled courses">
           <div className="course-list">
             {coursePopularity.length === 0 ? (
@@ -248,7 +240,7 @@ const Dashboard = () => {
                 <div
                   className="course-row dashboard-click-row"
                   key={course.id}
-                  onClick={() => navigate("/vocational/courses")}
+                  onClick={() => navigate("/app/courses")}
                 >
                   <div>
                     <strong>{course.courseName}</strong>

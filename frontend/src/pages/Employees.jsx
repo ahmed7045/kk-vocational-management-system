@@ -53,10 +53,8 @@ const Employees = () => {
     designation: "",
     phone: "",
     salary: "",
-    gender: "",
     email: "",
     password: "",
-    genderVisibility: "both",
     permissions: [],
   });
 
@@ -72,8 +70,6 @@ const Employees = () => {
           employee.designation,
           employee.phone,
           employee.email,
-          employee.gender,
-          employee.gender_visibility,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(searchText))
@@ -179,10 +175,8 @@ const Employees = () => {
       designation: "",
       phone: "",
       salary: "",
-      gender: "",
       email: "",
       password: "",
-      genderVisibility: "both",
       permissions: [],
     });
   };
@@ -210,8 +204,6 @@ const Employees = () => {
         designation: form.designation,
         phone: form.phone,
         salary: Number(form.salary || 0),
-        gender: form.gender || null,
-        genderVisibility: form.genderVisibility,
         hasLoginAccount: accountMode === "with_account",
       };
 
@@ -234,8 +226,6 @@ const Employees = () => {
                   designation: payload.designation,
                   phone: payload.phone,
                   salary: payload.salary,
-                  gender: payload.gender,
-                  gender_visibility: payload.genderVisibility,
                   has_login_account: payload.hasLoginAccount,
                   email: payload.email || employee.email,
                   permissions: payload.permissions || employee.permissions || [],
@@ -257,8 +247,6 @@ const Employees = () => {
             designation: payload.designation,
             phone: payload.phone,
             salary: payload.salary,
-            gender: payload.gender,
-            gender_visibility: payload.genderVisibility,
             has_login_account: payload.hasLoginAccount,
             email: payload.email || "",
             permissions: payload.permissions || [],
@@ -296,10 +284,8 @@ const Employees = () => {
       designation: row.designation || "",
       phone: row.phone || "",
       salary: row.salary || "",
-      gender: row.gender || "",
       email: row.email || "",
       password: "",
-      genderVisibility: row.gender_visibility || "both",
       permissions: row.permissions || [],
     });
 
@@ -366,11 +352,6 @@ const Employees = () => {
           {row.has_login_account ? "With Account" : "Info Only"}
         </Badge>
       ),
-    },
-    {
-      key: "gender_visibility",
-      title: "Visibility",
-      render: (row) => row.gender_visibility || "both",
     },
     {
       key: "is_active",
@@ -523,31 +504,6 @@ const Employees = () => {
               onChange={handleChange}
               placeholder="e.g. 30000"
             />
-
-            <Select
-              label="Gender"
-              name="gender"
-              value={form.gender}
-              onChange={handleChange}
-              placeholder="Select gender"
-              options={[
-                { label: "Male", value: "male" },
-                { label: "Female", value: "female" },
-                { label: "Other", value: "other" },
-              ]}
-            />
-
-            <Select
-              label="Gender Visibility"
-              name="genderVisibility"
-              value={form.genderVisibility}
-              onChange={handleChange}
-              options={[
-                { label: "Both", value: "both" },
-                { label: "Male Only", value: "male_only" },
-                { label: "Female Only", value: "female_only" },
-              ]}
-            />
           </div>
 
           {accountMode === "with_account" && (
@@ -653,16 +609,6 @@ const Employees = () => {
             <div>
               <strong>Salary:</strong>
               <p>{formatCurrency(selectedRecord.salary || 0)}</p>
-            </div>
-
-            <div>
-              <strong>Gender:</strong>
-              <p>{selectedRecord.gender || "-"}</p>
-            </div>
-
-            <div>
-              <strong>Visibility:</strong>
-              <p>{selectedRecord.gender_visibility || "both"}</p>
             </div>
 
             <div>

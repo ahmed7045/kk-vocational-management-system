@@ -3,7 +3,6 @@ import {
   Plus,
   RefreshCcw,
   Search,
-  Receipt,
   WalletCards,
 } from "lucide-react";
 
@@ -331,10 +330,21 @@ const Expenses = () => {
     }
   };
 
-  const totalExpenses = expenses.reduce(
-    (sum, expense) => sum + Number(expense.amount || 0),
-    0
-  );
+  const currentMonthExpenses = expenses
+    .filter((expense) => {
+      const expenseDate = expense.date || expense.expense_date;
+
+      if (!expenseDate) return false;
+
+      const date = new Date(expenseDate);
+      const today = new Date();
+
+      return (
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear()
+      );
+    })
+    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
   const columns = [
     {
@@ -402,20 +412,7 @@ const Expenses = () => {
         </Button>
       </div>
 
-      <div className="expenses-summary-grid">
-        <Card>
-          <div className="expense-summary-card">
-            <div className="expense-summary-icon">
-              <Receipt size={24} />
-            </div>
-
-            <div>
-              <p>Total Expense Records</p>
-              <h2>{expenses.length}</h2>
-            </div>
-          </div>
-        </Card>
-
+      <div className="expenses-summary-grid single">
         <Card>
           <div className="expense-summary-card">
             <div className="expense-summary-icon danger">
@@ -423,8 +420,8 @@ const Expenses = () => {
             </div>
 
             <div>
-              <p>Total Expense Amount</p>
-              <h2>{formatCurrency(totalExpenses)}</h2>
+              <p>Current Month Expenses</p>
+              <h2>{formatCurrency(currentMonthExpenses)}</h2>
             </div>
           </div>
         </Card>

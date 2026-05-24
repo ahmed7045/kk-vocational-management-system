@@ -34,7 +34,7 @@ import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
 import "./welfare.css";
@@ -42,6 +42,7 @@ import "./welfare.css";
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const [dashboard, setDashboard] = useState(null);
@@ -104,9 +105,22 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     donationToDate: "",
 
     applicationSearch: "",
-    applicationStatus: "",
-    applicationSupportType: "",
+    applicationStatus: searchParams.get("caseStatus") || "",
+    // applicationSupportType: "",
   });
+
+  useEffect(() => {
+    const urlCaseStatus = searchParams.get("caseStatus") || "";
+
+    setFilters((prev) => {
+      if (prev.applicationStatus === urlCaseStatus) return prev;
+
+      return {
+        ...prev,
+        applicationStatus: urlCaseStatus,
+      };
+    });
+  }, [searchParams]);
 
   const [donorForm, setDonorForm] = useState({
     fullName: "",
@@ -165,11 +179,8 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     gender: "",
     maritalStatus: "",
     familyMembers: "",
-    residenceType: "",
-    educationLevel: "",
     monthlyIncome: "",
     monthlyExpense: "",
-    supportType: "",
     requestedAmount: "",
     address: "",
     verificationNotes: "",
@@ -274,7 +285,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           limit: 100,
           search: filters.applicationSearch,
           caseStatus: filters.applicationStatus,
-          supportType: filters.applicationSupportType,
+          // supportType: filters.applicationSupportType,
         });
 
         const applicationsRes = await axiosInstance.get(
@@ -319,11 +330,11 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   }, [activeTab, filters]);
 
   const handleChange = (setter) => (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
 
     setter((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -334,6 +345,18 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       ...prev,
       [name]: value,
     }));
+
+    if (name === "applicationStatus") {
+      const params = new URLSearchParams(searchParams);
+
+      if (value) {
+        params.set("caseStatus", value);
+      } else {
+        params.delete("caseStatus");
+      }
+
+      setSearchParams(params);
+    }
   };
 
   const buildQuery = (params) => {
@@ -833,6 +856,20 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       requestedAmount: "",
       address: "",
       verificationNotes: "",
+      area: "",
+      houseStatus: "",
+      community: "",
+      needDescription: "",
+      schoolName: "",
+      verifierName: "",
+      officeRemarks: "",
+      needsSchoolFee: false,
+      needsSchoolDress: false,
+      needsSchoolUniform: false,
+      needsSchoolBag: false,
+      needsSchoolShoes: false,
+      needsUniversityFee: false,
+      needsOtherEducationHelp: false,
     });
   };
 
@@ -876,14 +913,29 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                   gender: applicationForm.gender,
                   marital_status: applicationForm.maritalStatus,
                   family_members: Number(applicationForm.familyMembers || 0),
-                  residence_type: applicationForm.residenceType,
-                  education_level: applicationForm.educationLevel,
+                  // residence_type: applicationForm.residenceType,
+                  // education_level: applicationForm.educationLevel,
                   monthly_income: Number(applicationForm.monthlyIncome || 0),
                   monthly_expense: Number(applicationForm.monthlyExpense || 0),
-                  support_type: applicationForm.supportType,
+                  // support_type: applicationForm.supportType,
                   requested_amount: Number(applicationForm.requestedAmount || 0),
                   address: applicationForm.address,
                   verification_notes: applicationForm.verificationNotes,
+
+                  area: applicationForm.area,
+                  house_status: applicationForm.houseStatus,
+                  community: applicationForm.community,
+                  need_description: applicationForm.needDescription,
+                  school_name: applicationForm.schoolName,
+                  verifier_name: applicationForm.verifierName,
+                  office_remarks: applicationForm.officeRemarks,
+                  needs_school_fee: applicationForm.needsSchoolFee,
+                  needs_school_dress: applicationForm.needsSchoolDress,
+                  needs_school_uniform: applicationForm.needsSchoolUniform,
+                  needs_school_bag: applicationForm.needsSchoolBag,
+                  needs_school_shoes: applicationForm.needsSchoolShoes,
+                  needs_university_fee: applicationForm.needsUniversityFee,
+                  needs_other_education_help: applicationForm.needsOtherEducationHelp,
                 }
                 : application
             )
@@ -904,16 +956,31 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               gender: applicationForm.gender,
               marital_status: applicationForm.maritalStatus,
               family_members: Number(applicationForm.familyMembers || 0),
-              residence_type: applicationForm.residenceType,
-              education_level: applicationForm.educationLevel,
+              // residence_type: applicationForm.residenceType,
+              // education_level: applicationForm.educationLevel,
               monthly_income: Number(applicationForm.monthlyIncome || 0),
               monthly_expense: Number(applicationForm.monthlyExpense || 0),
-              support_type: applicationForm.supportType,
+              // support_type: applicationForm.supportType,
               requested_amount: Number(applicationForm.requestedAmount || 0),
               approved_amount: 0,
               case_status: "pending",
               address: applicationForm.address,
               verification_notes: applicationForm.verificationNotes,
+
+              area: applicationForm.area,
+              house_status: applicationForm.houseStatus,
+              community: applicationForm.community,
+              need_description: applicationForm.needDescription,
+              school_name: applicationForm.schoolName,
+              verifier_name: applicationForm.verifierName,
+              office_remarks: applicationForm.officeRemarks,
+              needs_school_fee: applicationForm.needsSchoolFee,
+              needs_school_dress: applicationForm.needsSchoolDress,
+              needs_school_uniform: applicationForm.needsSchoolUniform,
+              needs_school_bag: applicationForm.needsSchoolBag,
+              needs_school_shoes: applicationForm.needsSchoolShoes,
+              needs_university_fee: applicationForm.needsUniversityFee,
+              needs_other_education_help: applicationForm.needsOtherEducationHelp,
               created_at: new Date().toISOString(),
             },
             ...prev,
@@ -969,14 +1036,28 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         gender: selected.gender || "",
         maritalStatus: selected.marital_status || "",
         familyMembers: selected.family_members || "",
-        residenceType: selected.residence_type || "",
-        educationLevel: selected.education_level || "",
+        // residenceType: selected.residence_type || "",
+        // educationLevel: selected.education_level || "",
         monthlyIncome: selected.monthly_income || "",
         monthlyExpense: selected.monthly_expense || "",
-        supportType: selected.support_type || "",
+        // supportType: selected.support_type || "",
         requestedAmount: selected.requested_amount || "",
         address: selected.address || "",
         verificationNotes: selected.verification_notes || "",
+        area: selected.area || "",
+        houseStatus: selected.house_status || "",
+        community: selected.community || "",
+        needDescription: selected.need_description || "",
+        schoolName: selected.school_name || "",
+        verifierName: selected.verifier_name || "",
+        officeRemarks: selected.office_remarks || "",
+        needsSchoolFee: Boolean(selected.needs_school_fee),
+        needsSchoolDress: Boolean(selected.needs_school_dress),
+        needsSchoolUniform: Boolean(selected.needs_school_uniform),
+        needsSchoolBag: Boolean(selected.needs_school_bag),
+        needsSchoolShoes: Boolean(selected.needs_school_shoes),
+        needsUniversityFee: Boolean(selected.needs_university_fee),
+        needsOtherEducationHelp: Boolean(selected.needs_other_education_help),
       });
 
       setApplicationModalOpen(true);
@@ -1082,39 +1163,36 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     }
   };
 
-  const donorColumns = [
-    {
-      key: "full_name",
-      title: "Donor",
-      render: (row) => (
-        <div>
-          <strong>{row.full_name}</strong>
-          <span className="table-subtext">{row.email || "-"}</span>
-        </div>
-      ),
-    },
-    {
-      key: "phone",
-      title: "Phone",
-      render: (row) => row.phone || "-",
-    },
-    {
-      key: "address",
-      title: "Address",
-      render: (row) => row.address || "-",
-    },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (row) => (
-        <ActionButtons
-          onView={() => handleViewDonor(row)}
-          onEdit={() => handleEditDonor(row)}
-          onDelete={() => handleDeleteDonorClick(row)}
-        />
-      ),
-    },
-  ];
+  const handleDashboardCardClick = (target, status = "") => {
+    if (target === "donations") {
+      navigate("/app/welfare/donations");
+      return;
+    }
+
+    if (target === "expenses") {
+      navigate("/app/expenses");
+      return;
+    }
+
+    if (target === "reports") {
+      navigate("/app/reports");
+      return;
+    }
+
+    if (target === "applications") {
+      if (status) {
+        navigate(`/app/welfare/applications?caseStatus=${status}`);
+      } else {
+        navigate("/app/welfare/applications");
+      }
+
+      return;
+    }
+
+    if (target === "charityRecords") {
+      navigate("/app/welfare/charity-records");
+    }
+  };
 
   const charityColumns = [
     {
@@ -1268,11 +1346,11 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       title: "CNIC",
       render: (row) => row.cnic || "-",
     },
-    {
-      key: "support_type",
-      title: "Support",
-      render: (row) => row.support_type || "-",
-    },
+    // {
+    //   key: "support_type",
+    //   title: "Support",
+    //   render: (row) => row.support_type || "-",
+    // },
     {
       key: "requested_amount",
       title: "Requested",
@@ -1302,22 +1380,25 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             onEdit={() => handleEditApplication(row)}
             onDelete={() => handleDeleteApplicationClick(row)}
           />
+{row.case_status === "pending" && (
+  <>
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={() => openStatusModal(row, "approved")}
+    >
+      <CheckCircle size={14} /> Approve
+    </Button>
 
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => openStatusModal(row, "approved")}
-          >
-            <CheckCircle size={14} /> Approve
-          </Button>
-
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() => openStatusModal(row, "rejected")}
-          >
-            <XCircle size={14} /> Reject
-          </Button>
+    <Button
+      size="sm"
+      variant="danger"
+      onClick={() => openStatusModal(row, "rejected")}
+    >
+      <XCircle size={14} /> Reject
+    </Button>
+  </>
+)}
         </div>
       ),
     },
@@ -1382,7 +1463,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             {activeTab === "dashboard" && "Welfare Dashboard"}
             {activeTab === "donors" && "Donors"}
             {activeTab === "charities" && "Beneficiaries"}
-            {activeTab === "charityRecords" && "Charity Records"}
+            {activeTab === "charityRecords" && "Charity History"}
             {activeTab === "donations" && "Donations"}
             {activeTab === "applications" && "Welfare Applications"}
           </h1>
@@ -1410,10 +1491,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                     Add Donation
                   </button>
 
-                  <button type="button" onClick={() => handleQuickAdd("charity")}>
-                    Add Charity
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => handleQuickAdd("application")}
@@ -1436,11 +1513,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       {activeTab === "dashboard" && (
         <>
           <div className="welfare-summary-grid">
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("donations")}
+            >
               <div className="welfare-summary-card">
                 <div className="welfare-summary-icon">
                   <Wallet size={24} />
                 </div>
+
                 <div>
                   <p>Total Donations</p>
                   <h2>{formatCurrency(dashboard?.totalDonations)}</h2>
@@ -1448,11 +1529,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("expenses")}
+            >
               <div className="welfare-summary-card">
                 <div className="welfare-summary-icon danger">
                   <HeartHandshake size={24} />
                 </div>
+
                 <div>
                   <p>Welfare Expenses</p>
                   <h2>{formatCurrency(dashboard?.totalWelfareExpenses)}</h2>
@@ -1460,11 +1545,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("reports")}
+            >
               <div className="welfare-summary-card">
                 <div className="welfare-summary-icon success">
                   <FileCheck size={24} />
                 </div>
+
                 <div>
                   <p>Available Balance</p>
                   <h2>{formatCurrency(dashboard?.availableBalance)}</h2>
@@ -1472,11 +1561,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("applications")}
+            >
               <div className="welfare-summary-card">
                 <div className="welfare-summary-icon">
                   <Users size={24} />
                 </div>
+
                 <div>
                   <p>Total Cases</p>
                   <h2>{dashboard?.totalCases || 0}</h2>
@@ -1486,35 +1579,46 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           </div>
 
           <div className="welfare-summary-grid small">
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("applications", "pending")}
+            >
               <div className="welfare-mini-stat">
                 <p>Pending Cases</p>
                 <h3>{dashboard?.pendingCases || 0}</h3>
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("applications", "approved")}
+            >
               <div className="welfare-mini-stat">
                 <p>Approved Cases</p>
                 <h3>{dashboard?.approvedCases || 0}</h3>
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("reports")}
+            >
               <div className="welfare-mini-stat">
                 <p>Lives Touched</p>
                 <h3>{dashboard?.livesTouched || 0}</h3>
               </div>
             </Card>
 
-            <Card>
+            <Card
+              className="welfare-click-card"
+              onClick={() => handleDashboardCardClick("applications", "approved")}
+            >
               <div className="welfare-mini-stat">
                 <p>Active Grants</p>
                 <h3>{dashboard?.activeGrants || 0}</h3>
               </div>
             </Card>
           </div>
-
           <div className="welfare-graphs-grid">
             <Card title="Donation by Date" subtitle="Daily donation collection">
               <div className="welfare-chart-box">
@@ -1585,12 +1689,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       {activeTab === "charities" && (
         <Card
           title="Beneficiaries"
-          subtitle="Manage charity recipients and their charity history"
-          action={
-            <Button onClick={openAddCharityModal}>
-              <Plus size={16} /> Add Beneficiary
-            </Button>
-          }
+          subtitle="Beneficiaries are created automatically after application approval"
         >
           <div className="filter-bar">
             <Input
@@ -1612,13 +1711,8 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
 
       {activeTab === "charityRecords" && (
         <Card
-          title="Charity Records"
-          subtitle="View and add all charity given to beneficiaries"
-          action={
-            <Button onClick={openAddCharityModal}>
-              <Plus size={16} /> Add Charity Record
-            </Button>
-          }
+          title="Charity History"
+          subtitle="View all charity records generated from approved applications"
         >
           <div className="filter-bar">
             <Input
@@ -1649,7 +1743,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           <Table
             columns={charityRecordColumns}
             data={charityRecords}
-            emptyText="No charity records found"
+            emptyText="No charity history found"
           />
         </Card>
       )}
@@ -1745,13 +1839,13 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               ]}
             />
 
-            <Input
+            {/* <Input
               label="Support Type"
               name="applicationSupportType"
               value={filters.applicationSupportType}
               onChange={handleFilterChange}
               placeholder="Example: Food, Education, Medical"
-            />
+            /> */}
           </div>
 
           <Table
@@ -2036,11 +2130,29 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               <div className="modal-section-header">
                 <div>
                   <h3>Charity History</h3>
-                  <p>All charity records for this person.</p>
+                  <p>All charity records created from approved applications.</p>
                 </div>
 
-                <Button type="button" onClick={openCharityRecordModal}>
-                  <Plus size={16} /> Add Charity
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setCharityViewModalOpen(false);
+                    setSelectedCharity(null);
+                    setApplicationForm((prev) => ({
+                      ...prev,
+                      applicantName: selectedCharity.charity_name || "",
+                      fatherName: selectedCharity.father_name || "",
+                      phone: selectedCharity.phone || "",
+                      cnic: selectedCharity.cnic || "",
+                      familyMembers: selectedCharity.family_members || "",
+                      monthlyIncome: selectedCharity.monthly_income || "",
+                      address: selectedCharity.address || "",
+                      verificationNotes: selectedCharity.description || "",
+                    }));
+                    setApplicationModalOpen(true);
+                  }}
+                >
+                  <Plus size={16} /> Add Application
                 </Button>
               </div>
 
@@ -2332,17 +2444,151 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             />
 
             <Input label="Family Members" name="familyMembers" type="number" value={applicationForm.familyMembers} onChange={handleChange(setApplicationForm)} />
-            <Input label="Residence Type" name="residenceType" value={applicationForm.residenceType} onChange={handleChange(setApplicationForm)} />
-            <Input label="Education Level" name="educationLevel" value={applicationForm.educationLevel} onChange={handleChange(setApplicationForm)} />
+            {/* <Input label="Residence Type" name="residenceType" value={applicationForm.residenceType} onChange={handleChange(setApplicationForm)} />
+            <Input label="Education Level" name="educationLevel" value={applicationForm.educationLevel} onChange={handleChange(setApplicationForm)} /> */}
             <Input label="Monthly Income" name="monthlyIncome" type="number" value={applicationForm.monthlyIncome} onChange={handleChange(setApplicationForm)} />
             <Input label="Monthly Expense" name="monthlyExpense" type="number" value={applicationForm.monthlyExpense} onChange={handleChange(setApplicationForm)} />
-            <Input label="Support Type" name="supportType" value={applicationForm.supportType} onChange={handleChange(setApplicationForm)} />
+            {/* <Input label="Support Type" name="supportType" value={applicationForm.supportType} onChange={handleChange(setApplicationForm)} /> */}
             <Input label="Requested Amount" name="requestedAmount" type="number" value={applicationForm.requestedAmount} onChange={handleChange(setApplicationForm)} />
           </div>
 
           <Input label="Address" name="address" value={applicationForm.address} onChange={handleChange(setApplicationForm)} />
           <Input label="Verification Notes" name="verificationNotes" value={applicationForm.verificationNotes} onChange={handleChange(setApplicationForm)} />
 
+          <hr style={{ margin: "18px 0", border: "none", borderTop: "1px solid var(--border)" }} />
+
+          <h3 style={{ marginBottom: "12px" }}>Education Help Details</h3>
+
+          <div className="welfare-form-grid">
+            <Input
+              label="Area / Mohalla"
+              name="area"
+              value={applicationForm.area}
+              onChange={handleChange(setApplicationForm)}
+            />
+
+            <Select
+              label="House Status"
+              name="houseStatus"
+              value={applicationForm.houseStatus}
+              onChange={handleChange(setApplicationForm)}
+              options={[
+                { label: "Own House", value: "own" },
+                { label: "Rented House", value: "rented" },
+              ]}
+            />
+
+            <Input
+              label="Community / Biradari"
+              name="community"
+              value={applicationForm.community}
+              onChange={handleChange(setApplicationForm)}
+            />
+
+            <Input
+              label="School Name"
+              name="schoolName"
+              value={applicationForm.schoolName}
+              onChange={handleChange(setApplicationForm)}
+            />
+
+            <Input
+              label="Verifier Name"
+              name="verifierName"
+              value={applicationForm.verifierName}
+              onChange={handleChange(setApplicationForm)}
+            />
+
+            <Input
+              label="Office Remarks"
+              name="officeRemarks"
+              value={applicationForm.officeRemarks}
+              onChange={handleChange(setApplicationForm)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Need Description</label>
+            <textarea
+              name="needDescription"
+              value={applicationForm.needDescription}
+              onChange={handleChange(setApplicationForm)}
+              placeholder="Explain what help is required"
+              rows="3"
+            />
+          </div>
+
+          <div className="education-help-box">
+            <label>
+              <input
+                type="checkbox"
+                name="needsSchoolFee"
+                checked={applicationForm.needsSchoolFee}
+                onChange={handleChange(setApplicationForm)}
+              />
+              School Fee
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsSchoolDress"
+                checked={applicationForm.needsSchoolDress}
+                onChange={handleChange(setApplicationForm)}
+              />
+              School Dress
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsSchoolUniform"
+                checked={applicationForm.needsSchoolUniform}
+                onChange={handleChange(setApplicationForm)}
+              />
+              School Uniform
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsSchoolBag"
+                checked={applicationForm.needsSchoolBag}
+                onChange={handleChange(setApplicationForm)}
+              />
+              School Bag
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsSchoolShoes"
+                checked={applicationForm.needsSchoolShoes}
+                onChange={handleChange(setApplicationForm)}
+              />
+              School Shoes
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsUniversityFee"
+                checked={applicationForm.needsUniversityFee}
+                onChange={handleChange(setApplicationForm)}
+              />
+              University Fee
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="needsOtherEducationHelp"
+                checked={applicationForm.needsOtherEducationHelp}
+                onChange={handleChange(setApplicationForm)}
+              />
+              Other Education Help
+            </label>
+          </div>
           <div className="modal-actions">
             <Button
               type="button"
@@ -2380,16 +2626,40 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             <div><strong>Gender:</strong><p>{selectedApplication.gender || "-"}</p></div>
             <div><strong>Marital Status:</strong><p>{selectedApplication.marital_status || "-"}</p></div>
             <div><strong>Family Members:</strong><p>{selectedApplication.family_members || 0}</p></div>
-            <div><strong>Residence Type:</strong><p>{selectedApplication.residence_type || "-"}</p></div>
-            <div><strong>Education Level:</strong><p>{selectedApplication.education_level || "-"}</p></div>
+            {/* <div><strong>Residence Type:</strong><p>{selectedApplication.residence_type || "-"}</p></div>
+            <div><strong>Education Level:</strong><p>{selectedApplication.education_level || "-"}</p></div> */}
             <div><strong>Monthly Income:</strong><p>{formatCurrency(selectedApplication.monthly_income || 0)}</p></div>
             <div><strong>Monthly Expense:</strong><p>{formatCurrency(selectedApplication.monthly_expense || 0)}</p></div>
-            <div><strong>Support Type:</strong><p>{selectedApplication.support_type || "-"}</p></div>
+            {/* <div><strong>Support Type:</strong><p>{selectedApplication.support_type || "-"}</p></div> */}
             <div><strong>Requested Amount:</strong><p>{formatCurrency(selectedApplication.requested_amount || 0)}</p></div>
             <div><strong>Approved Amount:</strong><p>{formatCurrency(selectedApplication.approved_amount || 0)}</p></div>
             <div><strong>Status:</strong><p>{selectedApplication.case_status || "-"}</p></div>
             <div><strong>Address:</strong><p>{selectedApplication.address || "-"}</p></div>
             <div><strong>Verification Notes:</strong><p>{selectedApplication.verification_notes || "-"}</p></div>
+            <div><strong>Area / Mohalla:</strong><p>{selectedApplication.area || "-"}</p></div>
+            <div><strong>House Status:</strong><p>{selectedApplication.house_status || "-"}</p></div>
+            <div><strong>Community / Biradari:</strong><p>{selectedApplication.community || "-"}</p></div>
+            <div><strong>Need Description:</strong><p>{selectedApplication.need_description || "-"}</p></div>
+            <div><strong>School Name:</strong><p>{selectedApplication.school_name || "-"}</p></div>
+            <div><strong>Verifier Name:</strong><p>{selectedApplication.verifier_name || "-"}</p></div>
+            <div><strong>Office Remarks:</strong><p>{selectedApplication.office_remarks || "-"}</p></div>
+
+            <div>
+              <strong>Required Education Help:</strong>
+              <p>
+                {[
+                  selectedApplication.needs_school_fee && "School Fee",
+                  selectedApplication.needs_school_dress && "School Dress",
+                  selectedApplication.needs_school_uniform && "School Uniform",
+                  selectedApplication.needs_school_bag && "School Bag",
+                  selectedApplication.needs_school_shoes && "School Shoes",
+                  selectedApplication.needs_university_fee && "University Fee",
+                  selectedApplication.needs_other_education_help && "Other Education Help",
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "-"}
+              </p>
+            </div>
           </div>
         )}
       </Modal>

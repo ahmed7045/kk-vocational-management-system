@@ -50,12 +50,12 @@ const Sidebar = () => {
       icon: BookOpen,
       permissions: ["courses.view", "shifts.view"],
     },
-    {
-      label: "Payments",
-      path: "/app/payments",
-      icon: CreditCard,
-      permissions: ["payments.view"],
-    },
+    // {
+    //   label: "Payments",
+    //   path: "/app/payments",
+    //   icon: CreditCard,
+    //   permissions: ["payments.view"],
+    // },
     {
       label: "Expenses",
       path: "/app/expenses",
@@ -96,7 +96,7 @@ const Sidebar = () => {
       permissions: ["welfare.charity.view"],
     },
     {
-      label: "Charity Records",
+      label: "Charity History",
       path: "/app/welfare/charity-records",
       icon: Receipt,
       permissions: ["welfare.charity.view"],

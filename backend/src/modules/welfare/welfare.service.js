@@ -954,14 +954,29 @@ const createWelfareApplication = async (data, currentUser) => {
     gender,
     maritalStatus,
     familyMembers,
-    residenceType,
-    educationLevel,
+    // residenceType,
+    // educationLevel,
     monthlyIncome,
     monthlyExpense,
-    supportType,
+    // supportType,
     requestedAmount,
     address,
     verificationNotes,
+
+    area,
+    houseStatus,
+    community,
+    needDescription,
+    schoolName,
+    verifierName,
+    officeRemarks,
+    needsSchoolFee,
+    needsSchoolDress,
+    needsSchoolUniform,
+    needsSchoolBag,
+    needsSchoolShoes,
+    needsUniversityFee,
+    needsOtherEducationHelp,
   } = data;
 
   if (!applicantName) {
@@ -979,18 +994,36 @@ const createWelfareApplication = async (data, currentUser) => {
       gender,
       marital_status,
       family_members,
-      residence_type,
-      education_level,
+
       monthly_income,
       monthly_expense,
-      support_type,
       requested_amount,
       address,
       verification_notes,
+
+      area,
+      house_status,
+      community,
+      need_description,
+      school_name,
+      verifier_name,
+      office_remarks,
+      needs_school_fee,
+      needs_school_dress,
+      needs_school_uniform,
+      needs_school_bag,
+      needs_school_shoes,
+      needs_university_fee,
+      needs_other_education_help,
+
       created_by
     )
-    VALUES
-    ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+VALUES
+(
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+  $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+  $21,$22,$23,$24,$25,$26,$27
+)
     RETURNING *
     `,
     [
@@ -1000,15 +1033,31 @@ const createWelfareApplication = async (data, currentUser) => {
       cnic || null,
       gender || null,
       maritalStatus || null,
-      familyMembers || 0,
-      residenceType || null,
-      educationLevel || null,
-      monthlyIncome || 0,
-      monthlyExpense || 0,
-      supportType || null,
-      requestedAmount || 0,
+      Number(familyMembers || 0),
+      // residenceType || null,
+      // educationLevel || null,
+      Number(monthlyIncome || 0),
+      Number(monthlyExpense || 0),
+      // supportType || null,
+      Number(requestedAmount || 0),
       address || null,
       verificationNotes || null,
+
+      area || null,
+      houseStatus || null,
+      community || null,
+      needDescription || null,
+      schoolName || null,
+      verifierName || null,
+      officeRemarks || null,
+      Boolean(needsSchoolFee),
+      Boolean(needsSchoolDress),
+      Boolean(needsSchoolUniform),
+      Boolean(needsSchoolBag),
+      Boolean(needsSchoolShoes),
+      Boolean(needsUniversityFee),
+      Boolean(needsOtherEducationHelp),
+
       currentUser.id,
     ]
   );
@@ -1040,14 +1089,29 @@ const updateWelfareApplication = async (id, data, currentUser) => {
     gender,
     maritalStatus,
     familyMembers,
-    residenceType,
-    educationLevel,
+    // residenceType,
+    // educationLevel,
     monthlyIncome,
     monthlyExpense,
-    supportType,
+    // supportType,
     requestedAmount,
     address,
     verificationNotes,
+
+    area,
+    houseStatus,
+    community,
+    needDescription,
+    schoolName,
+    verifierName,
+    officeRemarks,
+    needsSchoolFee,
+    needsSchoolDress,
+    needsSchoolUniform,
+    needsSchoolBag,
+    needsSchoolShoes,
+    needsUniversityFee,
+    needsOtherEducationHelp,
   } = data;
 
   if (!applicantName) {
@@ -1056,27 +1120,40 @@ const updateWelfareApplication = async (id, data, currentUser) => {
 
   const result = await pool.query(
     `
-    UPDATE welfare_applications
-    SET
-      applicant_name = $1,
-      father_name = $2,
-      phone = $3,
-      cnic = $4,
-      gender = $5,
-      marital_status = $6,
-      family_members = $7,
-      residence_type = $8,
-      education_level = $9,
-      monthly_income = $10,
-      monthly_expense = $11,
-      support_type = $12,
-      requested_amount = $13,
-      address = $14,
-      verification_notes = $15,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $16
-    RETURNING *
-    `,
+  UPDATE welfare_applications
+  SET
+    applicant_name = $1,
+    father_name = $2,
+    phone = $3,
+    cnic = $4,
+    gender = $5,
+    marital_status = $6,
+    family_members = $7,
+    monthly_income = $8,
+    monthly_expense = $9,
+    requested_amount = $10,
+    address = $11,
+    verification_notes = $12,
+
+    area = $13,
+    house_status = $14,
+    community = $15,
+    need_description = $16,
+    school_name = $17,
+    verifier_name = $18,
+    office_remarks = $19,
+    needs_school_fee = $20,
+    needs_school_dress = $21,
+    needs_school_uniform = $22,
+    needs_school_bag = $23,
+    needs_school_shoes = $24,
+    needs_university_fee = $25,
+    needs_other_education_help = $26,
+
+    updated_at = CURRENT_TIMESTAMP
+  WHERE id = $27
+  RETURNING *
+  `,
     [
       applicantName,
       fatherName || null,
@@ -1085,14 +1162,27 @@ const updateWelfareApplication = async (id, data, currentUser) => {
       gender || null,
       maritalStatus || null,
       Number(familyMembers || 0),
-      residenceType || null,
-      educationLevel || null,
       Number(monthlyIncome || 0),
       Number(monthlyExpense || 0),
-      supportType || null,
       Number(requestedAmount || 0),
       address || null,
       verificationNotes || null,
+
+      area || null,
+      houseStatus || null,
+      community || null,
+      needDescription || null,
+      schoolName || null,
+      verifierName || null,
+      officeRemarks || null,
+      Boolean(needsSchoolFee),
+      Boolean(needsSchoolDress),
+      Boolean(needsSchoolUniform),
+      Boolean(needsSchoolBag),
+      Boolean(needsSchoolShoes),
+      Boolean(needsUniversityFee),
+      Boolean(needsOtherEducationHelp),
+
       id,
     ]
   );
@@ -1161,16 +1251,30 @@ const getWelfareApplications = async (query) => {
       gender,
       marital_status,
       family_members,
-      residence_type,
-      education_level,
+
       monthly_income,
       monthly_expense,
-      support_type,
       requested_amount,
       approved_amount,
       case_status,
       address,
       verification_notes,
+
+      area,
+      house_status,
+      community,
+      need_description,
+      school_name,
+      verifier_name,
+      office_remarks,
+      needs_school_fee,
+      needs_school_dress,
+      needs_school_uniform,
+      needs_school_bag,
+      needs_school_shoes,
+      needs_university_fee,
+      needs_other_education_help,
+
       created_at
     FROM welfare_applications
     WHERE
@@ -1180,12 +1284,11 @@ const getWelfareApplications = async (query) => {
         OR phone ILIKE $1
         OR cnic ILIKE $1
       )
-      AND ($2::VARCHAR IS NULL OR case_status = $2)
-      AND ($3::VARCHAR IS NULL OR support_type = $3)
-    ORDER BY id DESC
-    LIMIT $4 OFFSET $5
+AND ($2::VARCHAR IS NULL OR case_status = $2)
+ORDER BY id DESC
+LIMIT $3 OFFSET $4
     `,
-    [`%${search}%`, caseStatus, supportType, limit, offset]
+    [`%${search}%`, caseStatus, limit, offset]
   );
 
   return result.rows;
@@ -1213,6 +1316,135 @@ const getWelfareApplicationById = async (id) => {
   return result.rows[0];
 };
 
+const createBeneficiaryAndCharityFromApprovedApplication = async (
+  client,
+  application,
+  currentUser
+) => {
+  let charityId = null;
+
+  if (application.cnic) {
+    const existingByCnic = await client.query(
+      `
+      SELECT id
+      FROM charities
+      WHERE cnic = $1
+      LIMIT 1
+      `,
+      [application.cnic]
+    );
+
+    if (existingByCnic.rows.length > 0) {
+      charityId = existingByCnic.rows[0].id;
+    }
+  }
+
+  if (!charityId && application.phone) {
+    const existingByPhone = await client.query(
+      `
+      SELECT id
+      FROM charities
+      WHERE phone = $1
+      LIMIT 1
+      `,
+      [application.phone]
+    );
+
+    if (existingByPhone.rows.length > 0) {
+      charityId = existingByPhone.rows[0].id;
+    }
+  }
+
+  if (!charityId) {
+    const beneficiaryResult = await client.query(
+      `
+      INSERT INTO charities
+      (
+        charity_name,
+        charity_type,
+        contact_person,
+        father_name,
+        phone,
+        cnic,
+        address,
+        description,
+        family_members,
+        monthly_income,
+        is_active,
+        created_by
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,$11)
+      RETURNING id
+      `,
+      [
+        application.applicant_name,
+        "Education Help",
+        application.applicant_name || null,
+        application.father_name || null,
+        application.phone || null,
+        application.cnic || null,
+        application.address || null,
+        application.need_description || application.verification_notes || null,
+        Number(application.family_members || 0),
+        Number(application.monthly_income || 0),
+        currentUser.id,
+      ]
+    );
+
+    charityId = beneficiaryResult.rows[0].id;
+  }
+
+  const existingRecord = await client.query(
+    `
+    SELECT id
+    FROM charity_records
+    WHERE charity_id = $1
+      AND charity_type = $2
+      AND amount = $3
+      AND note ILIKE $4
+    LIMIT 1
+    `,
+    [
+      charityId,
+      "Education Help",
+      Number(application.approved_amount || 0),
+      `%Application ID ${application.id}%`,
+    ]
+  );
+
+  if (existingRecord.rows.length === 0) {
+    await client.query(
+      `
+      INSERT INTO charity_records
+      (
+        charity_id,
+        charity_type,
+        amount,
+        item_name,
+        quantity,
+        charity_date,
+        note,
+        created_by
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `,
+
+      [
+        charityId,
+        "Education Help",
+        Number(application.approved_amount || 0),
+        null,
+        0,
+        new Date(),
+        `Application ID ${application.id}. ${application.need_description || application.verification_notes || ""}`,
+        currentUser.id,
+      ]
+    );
+  }
+
+  return charityId;
+};
+
 const updateWelfareApplicationStatus = async (id, data, currentUser) => {
   const { caseStatus, approvedAmount, verificationNotes } = data;
 
@@ -1220,48 +1452,71 @@ const updateWelfareApplicationStatus = async (id, data, currentUser) => {
     throw new ApiError(400, "Case status is required");
   }
 
-  const result = await pool.query(
-    `
-    UPDATE welfare_applications
-    SET
-      case_status = $1::VARCHAR,
-      approved_amount = COALESCE($2::NUMERIC, approved_amount),
-      verification_notes = COALESCE($3::TEXT, verification_notes),
-      approved_by = CASE 
-        WHEN $1::VARCHAR IN ('approved', 'rejected', 'completed') THEN $4::INT
-        ELSE approved_by
-      END,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $5::INT
-    RETURNING *
-    `,
-    [
-      caseStatus,
-      approvedAmount !== undefined ? Number(approvedAmount) : null,
-      verificationNotes || null,
-      currentUser.id,
-      id,
-    ]
-  );
+  const client = await pool.connect();
 
-  if (result.rows.length === 0) {
-    throw new ApiError(404, "Welfare application not found");
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `
+      UPDATE welfare_applications
+      SET
+        case_status = $1::VARCHAR,
+        approved_amount = COALESCE($2::NUMERIC, approved_amount),
+        verification_notes = COALESCE($3::TEXT, verification_notes),
+        approved_by = CASE 
+          WHEN $1::VARCHAR IN ('approved', 'rejected', 'completed') THEN $4::INT
+          ELSE approved_by
+        END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5::INT
+      RETURNING *
+      `,
+      [
+        caseStatus,
+        approvedAmount !== undefined ? Number(approvedAmount) : null,
+        verificationNotes || null,
+        currentUser.id,
+        id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "Welfare application not found");
+    }
+
+    const application = result.rows[0];
+
+    if (caseStatus === "approved") {
+      await createBeneficiaryAndCharityFromApprovedApplication(
+        client,
+        application,
+        currentUser
+      );
+    }
+
+    await client.query(
+      `
+      INSERT INTO audit_logs (user_id, action, module_name, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        currentUser.id,
+        "UPDATE_WELFARE_APPLICATION_STATUS",
+        "welfare",
+        `Updated welfare application ID ${id} to ${caseStatus}`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return application;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `
-    INSERT INTO audit_logs (user_id, action, module_name, description)
-    VALUES ($1, $2, $3, $4)
-    `,
-    [
-      currentUser.id,
-      "UPDATE_WELFARE_APPLICATION_STATUS",
-      "welfare",
-      `Updated welfare application ID ${id} to ${caseStatus}`,
-    ]
-  );
-
-  return result.rows[0];
 };
 
 const getDonationMethods = async () => {

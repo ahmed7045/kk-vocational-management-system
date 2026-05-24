@@ -129,6 +129,17 @@
   }
 }
 
+.dashboard-stats-grid > .card {
+  min-height: 98px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-stats-grid > .card .stat-card {
+  width: 100%;
+}
+
 .dashboard-click-card {
   cursor: pointer;
   transition: 0.2s ease;
@@ -146,4 +157,8 @@
 
 .dashboard-click-row:hover {
   background: #f8fafc;
+}
+
+.dashboard-grid-2.single {
+  grid-template-columns: 1fr;
 }
