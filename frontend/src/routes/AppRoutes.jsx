@@ -84,7 +84,10 @@ const AppRoutes = () => {
             path="students"
             element={
               <PortalGuard portal="vocational">
-                <Students />
+                <Students
+                  defaultStudentStatus="active"
+                  pageTitle="Active Students"
+                />
               </PortalGuard>
             }
           />
@@ -93,7 +96,10 @@ const AppRoutes = () => {
             path="students/non-active"
             element={
               <PortalGuard portal="vocational">
-                <Students defaultStudentStatus="non_active" pageTitle="Non-Active Students" />
+                <Students
+                  defaultStudentStatus="non_active"
+                  pageTitle="Non-Active Students"
+                />
               </PortalGuard>
             }
           />
@@ -160,7 +166,14 @@ const AppRoutes = () => {
               </PortalGuard>
             }
           />
-
+          <Route
+            path="welfare/charity-records"
+            element={
+              <PortalGuard portal="welfare">
+                <WelfareDashboard defaultTab="charityRecords" />
+              </PortalGuard>
+            }
+          />
           <Route
             path="welfare/donations"
             element={
@@ -180,6 +193,7 @@ const AppRoutes = () => {
           />
 
           <Route path="reports" element={<Reports />} />
+
           <Route path="expenses" element={<Expenses />} />
         </Route>
       </Routes>

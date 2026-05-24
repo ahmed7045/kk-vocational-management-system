@@ -21,7 +21,7 @@ const create = async (req, res, next) => {
 
 const list = async (req, res, next) => {
   try {
-    const branches = await getBranches(req.query);
+    const branches = await getBranches();
 
     res.status(200).json({
       success: true,

@@ -38,7 +38,9 @@ const Certificates = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
 
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    search: "",
+  });
 
   const [form, setForm] = useState({
     studentId: "",
@@ -64,7 +66,10 @@ const Certificates = () => {
       const params = new URLSearchParams();
 
       if (branchId) params.append("branchId", branchId);
-      if (search) params.append("search", search);
+
+      if (filters.search.trim()) {
+        params.append("search", filters.search.trim());
+      }
 
       params.append("page", "1");
       params.append("limit", "50");
@@ -94,9 +99,27 @@ const Certificates = () => {
   };
 
   useEffect(() => {
-    fetchCertificates();
     fetchStudents();
-  }, []);
+  }, [branchId]);
+
+  useEffect(() => {
+    fetchCertificates();
+  }, [branchId, filters.search]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+    });
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -157,6 +180,11 @@ const Certificates = () => {
       secretaryName: "Aftab Ahmed",
       presidentName: "Muhammad Rafiq Mara",
     });
+  };
+
+  const openGenerateModal = () => {
+    resetForm();
+    setModalOpen(true);
   };
 
   const generateCertificate = async (event) => {
@@ -310,7 +338,7 @@ const Certificates = () => {
           </p>
         </div>
 
-        <Button onClick={() => setModalOpen(true)}>
+        <Button onClick={openGenerateModal}>
           <Plus size={16} /> Generate Certificate
         </Button>
       </div>
@@ -342,14 +370,19 @@ const Certificates = () => {
           <div className="certificates-search">
             <Search size={17} />
             <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
               placeholder="Search by student, course or certificate no..."
             />
           </div>
 
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+
           <Button variant="secondary" onClick={fetchCertificates}>
-            <RefreshCcw size={16} /> Apply
+            <RefreshCcw size={16} /> Refresh
           </Button>
         </div>
 
@@ -365,7 +398,10 @@ const Certificates = () => {
       <Modal
         open={modalOpen}
         title="Generate Certificate"
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          resetForm();
+        }}
         size="lg"
       >
         <form onSubmit={generateCertificate}>
@@ -500,7 +536,10 @@ const Certificates = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                resetForm();
+              }}
             >
               Cancel
             </Button>

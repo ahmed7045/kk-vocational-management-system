@@ -11,11 +11,11 @@ import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
-import Select from "../components/common/Select";
 import Table from "../components/common/Table";
-import Badge from "../components/common/Badge";
 import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
+import ActionButtons from "../components/common/ActionButtons";
+import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 
 import {
   formatCurrency,
@@ -26,35 +26,58 @@ import {
 
 import "./expenses.css";
 
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+
+const getCurrentPortalType = () => {
+  const selectedPortal = localStorage.getItem("selectedPortal");
+
+  if (selectedPortal === "welfare") return "welfare";
+  if (selectedPortal === "vocational") return "vocational";
+
+  const path = window.location.pathname.toLowerCase();
+
+  if (path.includes("welfare")) return "welfare";
+
+  return "vocational";
+};
+
 const Expenses = () => {
-  const branchId = getSelectedBranchId();
-  const branchName = getSelectedBranchName();
+  const branchId =
+    getSelectedBranchId() ||
+    localStorage.getItem("selectedBranchId") ||
+    "1";
+
+  const branchName =
+    getSelectedBranchName() ||
+    localStorage.getItem("selectedBranchName") ||
+    "Branch 1";
+
+  const portalType = getCurrentPortalType();
 
   const [expenses, setExpenses] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const [selectedExpense, setSelectedExpense] = useState(null);
   const [error, setError] = useState("");
 
   const [filters, setFilters] = useState({
     search: "",
-    categoryId: "",
     fromDate: "",
     toDate: "",
-    expenseType: "branch",
   });
 
   const [form, setForm] = useState({
-    categoryId: "",
-    title: "",
+    name: "",
     amount: "",
-    expenseDate: "",
-    description: "",
-    receiptUrl: "",
-    expenseType: "branch",
+    date: "",
+    note: "",
   });
 
   const fetchExpenses = async () => {
@@ -65,14 +88,23 @@ const Expenses = () => {
       const params = new URLSearchParams();
 
       if (branchId) params.append("branchId", branchId);
-      if (filters.search) params.append("search", filters.search);
-      if (filters.categoryId) params.append("categoryId", filters.categoryId);
-      if (filters.fromDate) params.append("fromDate", filters.fromDate);
-      if (filters.toDate) params.append("toDate", filters.toDate);
-      if (filters.expenseType) params.append("expenseType", filters.expenseType);
+
+      params.append("portalType", portalType);
+
+      if (filters.search.trim()) {
+        params.append("search", filters.search.trim());
+      }
+
+      if (filters.fromDate) {
+        params.append("fromDate", filters.fromDate);
+      }
+
+      if (filters.toDate) {
+        params.append("toDate", filters.toDate);
+      }
 
       params.append("page", "1");
-      params.append("limit", "50");
+      params.append("limit", "100");
 
       const response = await axiosInstance.get(`/expenses?${params.toString()}`);
       setExpenses(response.data.data || []);
@@ -83,19 +115,15 @@ const Expenses = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axiosInstance.get("/expenses/categories");
-      setCategories(response.data.data || []);
-    } catch (error) {
-      console.error("Expense category fetch error:", error.response?.data?.message);
-    }
-  };
-
   useEffect(() => {
     fetchExpenses();
-    fetchCategories();
-  }, []);
+  }, [
+    branchId,
+    portalType,
+    filters.search,
+    filters.fromDate,
+    filters.toDate,
+  ]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -104,6 +132,14 @@ const Expenses = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      fromDate: "",
+      toDate: "",
+    });
   };
 
   const handleFormChange = (event) => {
@@ -117,17 +153,20 @@ const Expenses = () => {
 
   const resetForm = () => {
     setForm({
-      categoryId: "",
-      title: "",
+      name: "",
       amount: "",
-      expenseDate: "",
-      description: "",
-      receiptUrl: "",
-      expenseType: "branch",
+      date: "",
+      note: "",
     });
   };
 
-  const createExpense = async (event) => {
+  const openAddModal = () => {
+    setSelectedExpense(null);
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const saveExpense = async (event) => {
     event.preventDefault();
 
     if (!branchId) {
@@ -135,8 +174,8 @@ const Expenses = () => {
       return;
     }
 
-    if (!form.title.trim()) {
-      alert("Expense title is required.");
+    if (!form.name.trim()) {
+      alert("Expense name is required.");
       return;
     }
 
@@ -145,27 +184,150 @@ const Expenses = () => {
       return;
     }
 
+    const payload = {
+      branchId: Number(branchId),
+      portalType,
+      name: form.name.trim(),
+      amount: Number(form.amount),
+      date: form.date || null,
+      note: form.note || null,
+    };
+
     try {
       setSaving(true);
 
-      await axiosInstance.post("/expenses", {
-        branchId: Number(branchId),
-        categoryId: form.categoryId ? Number(form.categoryId) : null,
-        title: form.title,
-        amount: Number(form.amount),
-        expenseDate: form.expenseDate || null,
-        description: form.description || null,
-        receiptUrl: form.receiptUrl || null,
-        expenseType: form.expenseType || "branch",
-      });
+      if (selectedExpense?.id) {
+        if (!isDemoMode) {
+          await axiosInstance.put(`/expenses/${selectedExpense.id}`, payload);
+          await fetchExpenses();
+        } else {
+          setExpenses((prev) =>
+            prev.map((expense) =>
+              expense.id === selectedExpense.id
+                ? {
+                    ...expense,
+                    title: payload.name,
+                    name: payload.name,
+                    amount: payload.amount,
+                    expense_date: payload.date || new Date().toISOString(),
+                    date: payload.date || new Date().toISOString(),
+                    description: payload.note,
+                    note: payload.note,
+                    expense_type: payload.portalType,
+                    portal_type: payload.portalType,
+                  }
+                : expense
+            )
+          );
+        }
+      } else {
+        if (!isDemoMode) {
+          await axiosInstance.post("/expenses", payload);
+          await fetchExpenses();
+        } else {
+          setExpenses((prev) => [
+            {
+              id: Date.now(),
+              branch_id: branchId,
+              branch_name: branchName || "Demo Branch",
+              title: payload.name,
+              name: payload.name,
+              amount: payload.amount,
+              expense_date: payload.date || new Date().toISOString(),
+              date: payload.date || new Date().toISOString(),
+              description: payload.note,
+              note: payload.note,
+              expense_type: payload.portalType,
+              portal_type: payload.portalType,
+              created_by_name: "Admin User",
+            },
+            ...prev,
+          ]);
+        }
+      }
 
       setModalOpen(false);
+      setSelectedExpense(null);
       resetForm();
-      fetchExpenses();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to create expense");
+      alert(error.response?.data?.message || "Failed to save expense");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleViewExpense = async (expense) => {
+    try {
+      setError("");
+
+      if (isDemoMode) {
+        setSelectedExpense(expense);
+        setViewModalOpen(true);
+        return;
+      }
+
+      const response = await axiosInstance.get(`/expenses/${expense.id}`);
+      setSelectedExpense(response.data.data);
+      setViewModalOpen(true);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to fetch expense details");
+    }
+  };
+
+  const handleEditExpense = async (expense) => {
+    try {
+      setError("");
+
+      let expenseData = expense;
+
+      if (!isDemoMode) {
+        const response = await axiosInstance.get(`/expenses/${expense.id}`);
+        expenseData = response.data.data;
+      }
+
+      setSelectedExpense(expenseData);
+
+      setForm({
+        name: expenseData.name || expenseData.title || "",
+        amount: expenseData.amount || "",
+        date:
+          expenseData.date?.split("T")[0] ||
+          expenseData.expense_date?.split("T")[0] ||
+          "",
+        note: expenseData.note || expenseData.description || "",
+      });
+
+      setModalOpen(true);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to load expense for edit");
+    }
+  };
+
+  const handleDeleteClick = (expense) => {
+    setSelectedExpense(expense);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedExpense?.id) return;
+
+    try {
+      setDeleting(true);
+
+      if (!isDemoMode) {
+        await axiosInstance.delete(`/expenses/${selectedExpense.id}`);
+      }
+
+      setExpenses((prev) =>
+        prev.filter((expense) => expense.id !== selectedExpense.id)
+      );
+
+      setDeleteModalOpen(false);
+      setSelectedExpense(null);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete expense");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -174,22 +336,16 @@ const Expenses = () => {
     0
   );
 
-  const branchExpenses = expenses.filter(
-    (expense) => expense.expense_type === "branch"
-  ).length;
-
-  const welfareExpenses = expenses.filter(
-    (expense) => expense.expense_type === "welfare"
-  ).length;
-
   const columns = [
     {
-      key: "title",
+      key: "name",
       title: "Expense",
       render: (row) => (
         <div>
-          <strong>{row.title}</strong>
-          <span className="table-subtext">{row.category_name || "Uncategorized"}</span>
+          <strong>{row.name || row.title}</strong>
+          <span className="table-subtext">
+            {row.note || row.description || "-"}
+          </span>
         </div>
       ),
     },
@@ -201,16 +357,7 @@ const Expenses = () => {
     {
       key: "expense_date",
       title: "Date",
-      render: (row) => formatDate(row.expense_date),
-    },
-    {
-      key: "expense_type",
-      title: "Type",
-      render: (row) => (
-        <Badge type={row.expense_type === "welfare" ? "warning" : "info"}>
-          {row.expense_type}
-        </Badge>
-      ),
+      render: (row) => formatDate(row.date || row.expense_date),
     },
     {
       key: "created_by_name",
@@ -218,9 +365,15 @@ const Expenses = () => {
       render: (row) => row.created_by_name || "-",
     },
     {
-      key: "description",
-      title: "Description",
-      render: (row) => row.description || "-",
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <ActionButtons
+          onView={() => handleViewExpense(row)}
+          onEdit={() => handleEditExpense(row)}
+          onDelete={() => handleDeleteClick(row)}
+        />
+      ),
     },
   ];
 
@@ -236,13 +389,15 @@ const Expenses = () => {
     <div className="page expenses-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Expenses</h1>
+          <h1 className="page-title">
+            {portalType === "welfare" ? "Welfare Expenses" : "Vocational Expenses"}
+          </h1>
           <p className="page-subtitle">
-            Manage branch and welfare expenses for {branchName || "selected branch"}.
+            Manage {portalType} expenses for {branchName || "selected branch"}.
           </p>
         </div>
 
-        <Button onClick={() => setModalOpen(true)}>
+        <Button onClick={openAddModal}>
           <Plus size={16} /> Add Expense
         </Button>
       </div>
@@ -273,55 +428,19 @@ const Expenses = () => {
             </div>
           </div>
         </Card>
-
-        <Card>
-          <div className="expense-mini-stat">
-            <p>Branch Expenses</p>
-            <h3>{branchExpenses}</h3>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="expense-mini-stat">
-            <p>Welfare Expenses</p>
-            <h3>{welfareExpenses}</h3>
-          </div>
-        </Card>
       </div>
 
       <Card>
-        <div className="expenses-toolbar">
+        <div className="expenses-toolbar simple">
           <div className="expenses-search">
             <Search size={17} />
             <input
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
-              placeholder="Search title, category or description..."
+              placeholder="Search expense name or note..."
             />
           </div>
-
-          <Select
-            name="categoryId"
-            value={filters.categoryId}
-            onChange={handleFilterChange}
-            placeholder="All categories"
-            options={categories.map((category) => ({
-              label: category.category_name,
-              value: category.id,
-            }))}
-          />
-
-          <Select
-            name="expenseType"
-            value={filters.expenseType}
-            onChange={handleFilterChange}
-            placeholder="Expense type"
-            options={[
-              { label: "Branch", value: "branch" },
-              { label: "Welfare", value: "welfare" },
-            ]}
-          />
 
           <Input
             name="fromDate"
@@ -337,8 +456,12 @@ const Expenses = () => {
             onChange={handleFilterChange}
           />
 
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+
           <Button variant="secondary" onClick={fetchExpenses}>
-            <RefreshCcw size={16} /> Apply
+            <RefreshCcw size={16} /> Refresh
           </Button>
         </div>
 
@@ -353,79 +476,50 @@ const Expenses = () => {
 
       <Modal
         open={modalOpen}
-        title="Add Expense"
-        onClose={() => setModalOpen(false)}
-        size="lg"
+        title={selectedExpense?.id ? "Edit Expense" : "Add Expense"}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedExpense(null);
+          resetForm();
+        }}
+        size="md"
       >
-        <form onSubmit={createExpense}>
-          <div className="expense-form-grid">
-            <Input
-              label="Title"
-              name="title"
-              value={form.title}
-              onChange={handleFormChange}
-              placeholder="e.g. Electricity Bill May"
-              required
-            />
+        <form onSubmit={saveExpense}>
+          <Input
+            label="Expense Name"
+            name="name"
+            value={form.name}
+            onChange={handleFormChange}
+            placeholder="e.g. Electricity Bill"
+            required
+          />
 
-            <Select
-              label="Category"
-              name="categoryId"
-              value={form.categoryId}
-              onChange={handleFormChange}
-              placeholder="Select category"
-              options={categories.map((category) => ({
-                label: category.category_name,
-                value: category.id,
-              }))}
-            />
+          <Input
+            label="Amount"
+            name="amount"
+            type="number"
+            value={form.amount}
+            onChange={handleFormChange}
+            placeholder="e.g. 12000"
+            required
+          />
 
-            <Input
-              label="Amount"
-              name="amount"
-              type="number"
-              value={form.amount}
-              onChange={handleFormChange}
-              placeholder="e.g. 12000"
-              required
-            />
-
-            <Input
-              label="Expense Date"
-              name="expenseDate"
-              type="date"
-              value={form.expenseDate}
-              onChange={handleFormChange}
-            />
-
-            <Select
-              label="Expense Type"
-              name="expenseType"
-              value={form.expenseType}
-              onChange={handleFormChange}
-              options={[
-                { label: "Branch", value: "branch" },
-                { label: "Welfare", value: "welfare" },
-              ]}
-            />
-
-            <Input
-              label="Receipt URL"
-              name="receiptUrl"
-              value={form.receiptUrl}
-              onChange={handleFormChange}
-              placeholder="Optional receipt link"
-            />
-          </div>
+          <Input
+            label="Date"
+            name="date"
+            type="date"
+            value={form.date}
+            onChange={handleFormChange}
+          />
 
           <div className="form-group">
-            <label>Description</label>
+            <label>Note Optional</label>
             <textarea
-              name="description"
-              value={form.description}
+              name="note"
+              value={form.note}
               onChange={handleFormChange}
               rows="3"
-              placeholder="Short expense description"
+              placeholder="Write note if needed"
             />
           </div>
 
@@ -433,17 +527,81 @@ const Expenses = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                setSelectedExpense(null);
+                resetForm();
+              }}
             >
               Cancel
             </Button>
 
             <Button type="submit" loading={saving}>
-              Save Expense
+              {selectedExpense?.id ? "Update Expense" : "Save Expense"}
             </Button>
           </div>
         </form>
       </Modal>
+
+      <Modal
+        open={viewModalOpen}
+        title="Expense Details"
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedExpense(null);
+        }}
+        size="md"
+      >
+        {selectedExpense && (
+          <div className="expense-detail-grid">
+            <div>
+              <strong>Name:</strong>
+              <p>{selectedExpense.name || selectedExpense.title || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Amount:</strong>
+              <p>{formatCurrency(selectedExpense.amount || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Date:</strong>
+              <p>{formatDate(selectedExpense.date || selectedExpense.expense_date)}</p>
+            </div>
+
+            <div>
+              <strong>Portal:</strong>
+              <p>{selectedExpense.portal_type || selectedExpense.expense_type || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Branch:</strong>
+              <p>{selectedExpense.branch_name || branchName || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Created By:</strong>
+              <p>{selectedExpense.created_by_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Note:</strong>
+              <p>{selectedExpense.note || selectedExpense.description || "-"}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        title="Delete Expense"
+        message={`Are you sure you want to delete ${
+          selectedExpense?.name || selectedExpense?.title || "this expense"
+        }?`}
+        loading={deleting}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

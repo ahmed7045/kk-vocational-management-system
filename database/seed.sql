@@ -332,13 +332,51 @@ ON CONFLICT (name) DO NOTHING;
 -- Note: Best if branches.name is UNIQUE in schema.sql
 -- =====================================================
 
-INSERT INTO branches (name, location, status)
+-- =====================================================
+-- 3. DEFAULT BRANCHES
+-- =====================================================
+
+UPDATE branches
+SET 
+    name = 'Silai Centre',
+    location = 'Ismail Kalhora Campus 1',
+    status = 'active'
+WHERE id = 1;
+
+UPDATE branches
+SET 
+    name = 'Mobile Repairing Centre',
+    location = 'Dawood BD Campus 2',
+    status = 'active'
+WHERE id = 2;
+
+UPDATE branches
+SET 
+    name = 'Beautician Centre',
+    location = 'Haji Bhudda Ganga Campus 3',
+    status = 'active'
+WHERE id = 3;
+
+UPDATE branches
+SET 
+    name = 'IT Centre',
+    location = 'Haji Ali Muhammad Campus 4',
+    status = 'active'
+WHERE id = 4;
+
+INSERT INTO branches (id, name, location, status)
 VALUES
-('Branch 1', 'Main Campus', 'active'),
-('Branch 2', 'Second Campus', 'active'),
-('Branch 3', 'Third Campus', 'active'),
-('Branch 4', 'Fourth Campus', 'maintenance')
-ON CONFLICT DO NOTHING;
+(5, 'Silai Centre', 'Haji Abdullah Lota Campus 5 Baldia', 'active')
+ON CONFLICT (id) DO UPDATE
+SET
+    name = EXCLUDED.name,
+    location = EXCLUDED.location,
+    status = EXCLUDED.status;
+
+SELECT setval(
+  pg_get_serial_sequence('branches', 'id'),
+  (SELECT MAX(id) FROM branches)
+);
 
 
 -- =====================================================

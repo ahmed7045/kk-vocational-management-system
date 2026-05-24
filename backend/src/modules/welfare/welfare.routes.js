@@ -7,16 +7,34 @@ const requirePermission = require("../../middleware/permission.middleware");
 const {
   createDonorController,
   getDonorsController,
+  updateDonorController,
+  deleteDonorController,
+
   createCharityController,
   getCharitiesController,
+  updateCharityController,
+  deleteCharityController,
+  getCharityHistoryController,
+  createCharityForProfileController,
+  getAllCharityRecordsController,
+
   createDonationController,
   getDonationsController,
+  deleteDonationController,
+
+  getDonorDonationsController,
+  createDonationForDonorController,
+
   createApplicationController,
   getApplicationsController,
   getApplicationDetailsController,
+  updateApplicationController,
+  deleteApplicationController,
   updateApplicationStatusController,
+
   getDonationMethodsController,
   createDonationMethodController,
+
   createImpactController,
   dashboardController,
 } = require("./welfare.controller");
@@ -57,10 +75,45 @@ router.post(
 );
 
 router.get(
+  "/donors/:id/donations",
+  authMiddleware,
+  requirePermission("welfare.donation.view"),
+  getDonorDonationsController
+);
+
+router.post(
+  "/donors/:id/donations",
+  authMiddleware,
+  requirePermission("welfare.donation.create"),
+  createDonationForDonorController
+);
+
+router.put(
+  "/donors/:id",
+  authMiddleware,
+  requirePermission("welfare.donor.update"),
+  updateDonorController
+);
+
+router.delete(
+  "/donors/:id",
+  authMiddleware,
+  requirePermission("welfare.donor.delete"),
+  deleteDonorController
+);
+
+router.get(
   "/charities",
   authMiddleware,
   requirePermission("welfare.charity.view"),
   getCharitiesController
+);
+
+router.get(
+  "/charity-records",
+  authMiddleware,
+  requirePermission("welfare.charity.view"),
+  getAllCharityRecordsController
 );
 
 router.post(
@@ -68,6 +121,34 @@ router.post(
   authMiddleware,
   requirePermission("welfare.charity.create"),
   createCharityController
+);
+
+router.get(
+  "/charities/:id/history",
+  authMiddleware,
+  requirePermission("welfare.charity.view"),
+  getCharityHistoryController
+);
+
+router.post(
+  "/charities/:id/history",
+  authMiddleware,
+  requirePermission("welfare.charity.create"),
+  createCharityForProfileController
+);
+
+router.put(
+  "/charities/:id",
+  authMiddleware,
+  requirePermission("welfare.charity.update"),
+  updateCharityController
+);
+
+router.delete(
+  "/charities/:id",
+  authMiddleware,
+  requirePermission("welfare.charity.delete"),
+  deleteCharityController
 );
 
 router.get(
@@ -82,6 +163,13 @@ router.post(
   authMiddleware,
   requirePermission("welfare.donation.create"),
   createDonationController
+);
+
+router.delete(
+  "/donations/:id",
+  authMiddleware,
+  requirePermission("welfare.donation.delete"),
+  deleteDonationController
 );
 
 router.get(
@@ -103,6 +191,20 @@ router.post(
   authMiddleware,
   requirePermission("welfare.application.create"),
   createApplicationController
+);
+
+router.put(
+  "/applications/:id",
+  authMiddleware,
+  requirePermission("welfare.application.update"),
+  updateApplicationController
+);
+
+router.delete(
+  "/applications/:id",
+  authMiddleware,
+  requirePermission("welfare.application.delete"),
+  deleteApplicationController
 );
 
 router.patch(

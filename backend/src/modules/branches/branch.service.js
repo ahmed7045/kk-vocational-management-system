@@ -4,7 +4,7 @@ const ApiError = require("../../utils/ApiError");
 const createBranch = async (data, currentUser) => {
   const { name, location, status } = data;
 
-  if (!name) {
+  if (!name || !name.trim()) {
     throw new ApiError(400, "Branch name is required");
   }
 
@@ -14,7 +14,11 @@ const createBranch = async (data, currentUser) => {
     VALUES ($1, $2, $3)
     RETURNING *
     `,
-    [name, location || null, status || "active"]
+    [
+      name.trim(),
+      location?.trim() || null,
+      status || "active",
+    ]
   );
 
   await pool.query(
@@ -26,33 +30,81 @@ const createBranch = async (data, currentUser) => {
       currentUser.id,
       "CREATE_BRANCH",
       "branches",
-      `Created branch ${name}`,
+      `Created branch ${name.trim()}`,
     ]
   );
 
   return result.rows[0];
 };
 
-const getBranches = async (query) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 20;
-  const offset = (page - 1) * limit;
-  const search = query.search || "";
-
+const getBranches = async () => {
   const result = await pool.query(
     `
-    SELECT 
-      id,
-      name,
-      location,
-      status,
-      created_at
-    FROM branches
-    WHERE name ILIKE $1 OR location ILIKE $1
-    ORDER BY id DESC
-    LIMIT $2 OFFSET $3
-    `,
-    [`%${search}%`, limit, offset]
+    SELECT
+      b.id,
+      b.name,
+      b.location,
+      b.status,
+      b.created_at,
+
+      COALESCE((
+        SELECT COUNT(*)
+        FROM students s
+        WHERE s.branch_id = b.id
+      ), 0) AS students_count,
+
+      COALESCE((
+        SELECT COUNT(*)
+        FROM students s
+        WHERE s.branch_id = b.id
+      ), 0) AS total_students,
+
+      COALESCE((
+        SELECT SUM(p.amount)
+        FROM payments p
+        WHERE p.branch_id = b.id
+      ), 0) AS total_payments,
+
+      COALESCE((
+        SELECT SUM(e.amount)
+        FROM expenses e
+        WHERE e.branch_id = b.id
+        AND e.expense_type IN ('vocational', 'branch')
+      ), 0) AS total_expenses,
+
+      (
+        COALESCE((
+          SELECT SUM(p2.amount)
+          FROM payments p2
+          WHERE p2.branch_id = b.id
+        ), 0)
+        -
+        COALESCE((
+          SELECT SUM(e2.amount)
+          FROM expenses e2
+          WHERE e2.branch_id = b.id
+          AND e2.expense_type IN ('vocational', 'branch')
+        ), 0)
+      ) AS balance,
+
+      (
+        COALESCE((
+          SELECT SUM(p3.amount)
+          FROM payments p3
+          WHERE p3.branch_id = b.id
+        ), 0)
+        -
+        COALESCE((
+          SELECT SUM(e3.amount)
+          FROM expenses e3
+          WHERE e3.branch_id = b.id
+          AND e3.expense_type IN ('vocational', 'branch')
+        ), 0)
+      ) AS monthly_revenue
+
+    FROM branches b
+    ORDER BY b.id ASC
+    `
   );
 
   return result.rows;
@@ -93,7 +145,12 @@ const updateBranch = async (id, data, currentUser) => {
     WHERE id = $4
     RETURNING *
     `,
-    [name || null, location || null, status || null, id]
+    [
+      name?.trim() || null,
+      location?.trim() || null,
+      status || null,
+      id,
+    ]
   );
 
   if (result.rows.length === 0) {

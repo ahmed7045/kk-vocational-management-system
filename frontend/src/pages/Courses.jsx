@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Clock, Plus, RefreshCcw } from "lucide-react";
+import { BookOpen, Clock, Plus, RefreshCcw, Search } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
@@ -9,6 +9,8 @@ import Table from "../components/common/Table";
 import Badge from "../components/common/Badge";
 import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
+import ActionButtons from "../components/common/ActionButtons";
+import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 import {
   formatCurrency,
   getSelectedBranchId,
@@ -16,6 +18,8 @@ import {
 } from "../utils/formatters";
 
 import "./courses.css";
+
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 const Courses = () => {
   const branchId = getSelectedBranchId();
@@ -26,12 +30,25 @@ const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [shifts, setShifts] = useState([]);
 
+  const [allCourses, setAllCourses] = useState([]);
+  const [allShifts, setAllShifts] = useState([]);
+
+  const [filters, setFilters] = useState({
+    search: "",
+  });
+
   const [loading, setLoading] = useState(true);
   const [savingCourse, setSavingCourse] = useState(false);
   const [savingShift, setSavingShift] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [selectedType, setSelectedType] = useState("");
 
   const [error, setError] = useState("");
 
@@ -49,6 +66,40 @@ const Courses = () => {
     endTime: "",
   });
 
+  const applyFilters = (
+    courseRecords = allCourses,
+    shiftRecords = allShifts,
+    currentFilters = filters
+  ) => {
+    const searchText = currentFilters.search.toLowerCase().trim();
+
+    if (!searchText) {
+      setCourses(courseRecords);
+      setShifts(shiftRecords);
+      return;
+    }
+
+    const filteredCourses = courseRecords.filter((course) =>
+      [
+        course.course_name,
+        course.course_code,
+        course.duration,
+        course.description,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(searchText))
+    );
+
+    const filteredShifts = shiftRecords.filter((shift) =>
+      [shift.shift_name, shift.start_time, shift.end_time]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(searchText))
+    );
+
+    setCourses(filteredCourses);
+    setShifts(filteredShifts);
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -59,8 +110,12 @@ const Courses = () => {
         axiosInstance.get(`/shifts?branchId=${branchId || ""}`),
       ]);
 
-      setCourses(coursesRes.data.data || []);
-      setShifts(shiftsRes.data.data || []);
+      const courseData = coursesRes.data.data || [];
+      const shiftData = shiftsRes.data.data || [];
+
+      setAllCourses(courseData);
+      setAllShifts(shiftData);
+      applyFilters(courseData, shiftData);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to fetch courses and shifts");
     } finally {
@@ -70,7 +125,26 @@ const Courses = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [branchId]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters.search, allCourses, allShifts]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+    });
+  };
 
   const handleCourseChange = (event) => {
     const { name, value } = event.target;
@@ -108,7 +182,19 @@ const Courses = () => {
     });
   };
 
-  const createCourse = async (event) => {
+  const openAddCourseModal = () => {
+    setSelectedRecord(null);
+    resetCourseForm();
+    setCourseModalOpen(true);
+  };
+
+  const openAddShiftModal = () => {
+    setSelectedRecord(null);
+    resetShiftForm();
+    setShiftModalOpen(true);
+  };
+
+  const saveCourse = async (event) => {
     event.preventDefault();
 
     if (!branchId) {
@@ -116,29 +202,71 @@ const Courses = () => {
       return;
     }
 
+    const payload = {
+      branchId: Number(branchId),
+      courseName: courseForm.courseName,
+      courseCode: courseForm.courseCode,
+      duration: courseForm.duration,
+      fee: Number(courseForm.fee || 0),
+      description: courseForm.description,
+    };
+
     try {
       setSavingCourse(true);
 
-      await axiosInstance.post("/courses", {
-        branchId: Number(branchId),
-        courseName: courseForm.courseName,
-        courseCode: courseForm.courseCode,
-        duration: courseForm.duration,
-        fee: Number(courseForm.fee || 0),
-        description: courseForm.description,
-      });
+      if (selectedRecord?.id) {
+        if (!isDemoMode) {
+          await axiosInstance.put(`/courses/${selectedRecord.id}`, payload);
+          await fetchData();
+        } else {
+          const updatedCourses = allCourses.map((course) =>
+            course.id === selectedRecord.id
+              ? {
+                  ...course,
+                  course_name: payload.courseName,
+                  course_code: payload.courseCode,
+                  duration: payload.duration,
+                  fee: payload.fee,
+                  description: payload.description,
+                }
+              : course
+          );
+
+          setAllCourses(updatedCourses);
+          applyFilters(updatedCourses, allShifts);
+        }
+      } else {
+        if (!isDemoMode) {
+          await axiosInstance.post("/courses", payload);
+          await fetchData();
+        } else {
+          const newCourse = {
+            id: Date.now(),
+            course_name: payload.courseName,
+            course_code: payload.courseCode,
+            duration: payload.duration,
+            fee: payload.fee,
+            description: payload.description,
+            is_active: true,
+          };
+
+          const updatedCourses = [newCourse, ...allCourses];
+          setAllCourses(updatedCourses);
+          applyFilters(updatedCourses, allShifts);
+        }
+      }
 
       setCourseModalOpen(false);
+      setSelectedRecord(null);
       resetCourseForm();
-      fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to create course");
+      alert(error.response?.data?.message || "Failed to save course");
     } finally {
       setSavingCourse(false);
     }
   };
 
-  const createShift = async (event) => {
+  const saveShift = async (event) => {
     event.preventDefault();
 
     if (!branchId) {
@@ -146,23 +274,147 @@ const Courses = () => {
       return;
     }
 
+    const payload = {
+      branchId: Number(branchId),
+      shiftName: shiftForm.shiftName,
+      startTime: shiftForm.startTime,
+      endTime: shiftForm.endTime,
+    };
+
     try {
       setSavingShift(true);
 
-      await axiosInstance.post("/shifts", {
-        branchId: Number(branchId),
-        shiftName: shiftForm.shiftName,
-        startTime: shiftForm.startTime,
-        endTime: shiftForm.endTime,
-      });
+      if (selectedRecord?.id) {
+        if (!isDemoMode) {
+          await axiosInstance.put(`/shifts/${selectedRecord.id}`, payload);
+          await fetchData();
+        } else {
+          const updatedShifts = allShifts.map((shift) =>
+            shift.id === selectedRecord.id
+              ? {
+                  ...shift,
+                  shift_name: payload.shiftName,
+                  start_time: payload.startTime,
+                  end_time: payload.endTime,
+                }
+              : shift
+          );
+
+          setAllShifts(updatedShifts);
+          applyFilters(allCourses, updatedShifts);
+        }
+      } else {
+        if (!isDemoMode) {
+          await axiosInstance.post("/shifts", payload);
+          await fetchData();
+        } else {
+          const newShift = {
+            id: Date.now(),
+            shift_name: payload.shiftName,
+            start_time: payload.startTime,
+            end_time: payload.endTime,
+            is_active: true,
+          };
+
+          const updatedShifts = [newShift, ...allShifts];
+          setAllShifts(updatedShifts);
+          applyFilters(allCourses, updatedShifts);
+        }
+      }
 
       setShiftModalOpen(false);
+      setSelectedRecord(null);
       resetShiftForm();
-      fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to create shift");
+      alert(error.response?.data?.message || "Failed to save shift");
     } finally {
       setSavingShift(false);
+    }
+  };
+
+  const handleViewCourse = (course) => {
+    setSelectedType("course");
+    setSelectedRecord(course);
+    setViewModalOpen(true);
+  };
+
+  const handleViewShift = (shift) => {
+    setSelectedType("shift");
+    setSelectedRecord(shift);
+    setViewModalOpen(true);
+  };
+
+  const handleEditCourse = (course) => {
+    setSelectedRecord(course);
+
+    setCourseForm({
+      courseName: course.course_name || "",
+      courseCode: course.course_code || "",
+      duration: course.duration || "",
+      fee: course.fee || "",
+      description: course.description || "",
+    });
+
+    setCourseModalOpen(true);
+  };
+
+  const handleEditShift = (shift) => {
+    setSelectedRecord(shift);
+
+    setShiftForm({
+      shiftName: shift.shift_name || "",
+      startTime: shift.start_time || "",
+      endTime: shift.end_time || "",
+    });
+
+    setShiftModalOpen(true);
+  };
+
+  const handleDeleteClick = (record, type) => {
+    setSelectedRecord(record);
+    setSelectedType(type);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedRecord?.id || !selectedType) return;
+
+    try {
+      setDeleting(true);
+
+      if (selectedType === "course") {
+        if (!isDemoMode) {
+          await axiosInstance.delete(`/courses/${selectedRecord.id}`);
+        }
+
+        const updatedCourses = allCourses.filter(
+          (course) => course.id !== selectedRecord.id
+        );
+
+        setAllCourses(updatedCourses);
+        applyFilters(updatedCourses, allShifts);
+      }
+
+      if (selectedType === "shift") {
+        if (!isDemoMode) {
+          await axiosInstance.delete(`/shifts/${selectedRecord.id}`);
+        }
+
+        const updatedShifts = allShifts.filter(
+          (shift) => shift.id !== selectedRecord.id
+        );
+
+        setAllShifts(updatedShifts);
+        applyFilters(allCourses, updatedShifts);
+      }
+
+      setDeleteModalOpen(false);
+      setSelectedRecord(null);
+      setSelectedType("");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete record");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -201,6 +453,17 @@ const Courses = () => {
       title: "Description",
       render: (row) => row.description || "-",
     },
+    {
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <ActionButtons
+          onView={() => handleViewCourse(row)}
+          onEdit={() => handleEditCourse(row)}
+          onDelete={() => handleDeleteClick(row, "course")}
+        />
+      ),
+    },
   ];
 
   const shiftColumns = [
@@ -226,6 +489,17 @@ const Courses = () => {
         <Badge type={row.is_active ? "success" : "danger"}>
           {row.is_active ? "Active" : "Inactive"}
         </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <ActionButtons
+          onView={() => handleViewShift(row)}
+          onEdit={() => handleEditShift(row)}
+          onDelete={() => handleDeleteClick(row, "shift")}
+        />
       ),
     },
   ];
@@ -254,11 +528,11 @@ const Courses = () => {
           </Button>
 
           {activeTab === "courses" ? (
-            <Button onClick={() => setCourseModalOpen(true)}>
+            <Button onClick={openAddCourseModal}>
               <Plus size={16} /> Add Course
             </Button>
           ) : (
-            <Button onClick={() => setShiftModalOpen(true)}>
+            <Button onClick={openAddShiftModal}>
               <Plus size={16} /> Add Shift
             </Button>
           )}
@@ -273,7 +547,7 @@ const Courses = () => {
             </div>
             <div>
               <p>Total Courses</p>
-              <h2>{courses.length}</h2>
+              <h2>{allCourses.length}</h2>
             </div>
           </div>
         </Card>
@@ -285,7 +559,7 @@ const Courses = () => {
             </div>
             <div>
               <p>Total Shifts</p>
-              <h2>{shifts.length}</h2>
+              <h2>{allShifts.length}</h2>
             </div>
           </div>
         </Card>
@@ -308,6 +582,26 @@ const Courses = () => {
           </button>
         </div>
 
+        <div className="course-filter-bar">
+          <div className="course-search">
+            <Search size={17} />
+            <input
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder={
+                activeTab === "courses"
+                  ? "Search course name, code, duration..."
+                  : "Search shift name or time..."
+              }
+            />
+          </div>
+
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+        </div>
+
         {error && <div className="courses-error">{error}</div>}
 
         {activeTab === "courses" ? (
@@ -327,11 +621,15 @@ const Courses = () => {
 
       <Modal
         open={courseModalOpen}
-        title="Add New Course"
-        onClose={() => setCourseModalOpen(false)}
+        title={selectedRecord?.id ? "Edit Course" : "Add New Course"}
+        onClose={() => {
+          setCourseModalOpen(false);
+          setSelectedRecord(null);
+          resetCourseForm();
+        }}
         size="md"
       >
-        <form onSubmit={createCourse}>
+        <form onSubmit={saveCourse}>
           <Input
             label="Course Name"
             name="courseName"
@@ -381,13 +679,17 @@ const Courses = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setCourseModalOpen(false)}
+              onClick={() => {
+                setCourseModalOpen(false);
+                setSelectedRecord(null);
+                resetCourseForm();
+              }}
             >
               Cancel
             </Button>
 
             <Button type="submit" loading={savingCourse}>
-              Save Course
+              {selectedRecord?.id ? "Update Course" : "Save Course"}
             </Button>
           </div>
         </form>
@@ -395,11 +697,15 @@ const Courses = () => {
 
       <Modal
         open={shiftModalOpen}
-        title="Add Shift Timing"
-        onClose={() => setShiftModalOpen(false)}
+        title={selectedRecord?.id ? "Edit Shift Timing" : "Add Shift Timing"}
+        onClose={() => {
+          setShiftModalOpen(false);
+          setSelectedRecord(null);
+          resetShiftForm();
+        }}
         size="md"
       >
-        <form onSubmit={createShift}>
+        <form onSubmit={saveShift}>
           <Input
             label="Shift Name"
             name="shiftName"
@@ -431,17 +737,103 @@ const Courses = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setShiftModalOpen(false)}
+              onClick={() => {
+                setShiftModalOpen(false);
+                setSelectedRecord(null);
+                resetShiftForm();
+              }}
             >
               Cancel
             </Button>
 
             <Button type="submit" loading={savingShift}>
-              Save Shift
+              {selectedRecord?.id ? "Update Shift" : "Save Shift"}
             </Button>
           </div>
         </form>
       </Modal>
+
+      <Modal
+        open={viewModalOpen}
+        title={selectedType === "course" ? "Course Details" : "Shift Details"}
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedRecord(null);
+          setSelectedType("");
+        }}
+        size="md"
+      >
+        {selectedRecord && selectedType === "course" && (
+          <div className="course-detail-grid">
+            <div>
+              <strong>Course Name:</strong>
+              <p>{selectedRecord.course_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Course Code:</strong>
+              <p>{selectedRecord.course_code || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Duration:</strong>
+              <p>{selectedRecord.duration || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Fee:</strong>
+              <p>{formatCurrency(selectedRecord.fee || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Status:</strong>
+              <p>{selectedRecord.is_active ? "Active" : "Inactive"}</p>
+            </div>
+
+            <div>
+              <strong>Description:</strong>
+              <p>{selectedRecord.description || "-"}</p>
+            </div>
+          </div>
+        )}
+
+        {selectedRecord && selectedType === "shift" && (
+          <div className="course-detail-grid">
+            <div>
+              <strong>Shift Name:</strong>
+              <p>{selectedRecord.shift_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Start Time:</strong>
+              <p>{selectedRecord.start_time || "-"}</p>
+            </div>
+
+            <div>
+              <strong>End Time:</strong>
+              <p>{selectedRecord.end_time || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Status:</strong>
+              <p>{selectedRecord.is_active ? "Active" : "Inactive"}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        title={selectedType === "course" ? "Delete Course" : "Delete Shift"}
+        message={`Are you sure you want to delete ${
+          selectedType === "course"
+            ? selectedRecord?.course_name || "this course"
+            : selectedRecord?.shift_name || "this shift"
+        }?`}
+        loading={deleting}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

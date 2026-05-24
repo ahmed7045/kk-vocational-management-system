@@ -23,7 +23,6 @@
 // export default ProtectedRoute;
 
 // DEMO MODE
-
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import Loader from "../components/common/Loader";

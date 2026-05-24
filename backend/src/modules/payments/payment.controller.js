@@ -5,6 +5,7 @@ const {
   getRecentPayments,
   getPaymentMethods,
   createPaymentMethod,
+  deletePayment,
 } = require("./payment.service");
 
 const create = async (req, res, next) => {
@@ -91,6 +92,19 @@ const createMethod = async (req, res, next) => {
   }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    await deletePayment(req.params.id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Payment deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   create,
   list,
@@ -98,4 +112,5 @@ module.exports = {
   recent,
   methods,
   createMethod,
+  remove,
 };

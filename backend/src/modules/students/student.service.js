@@ -218,48 +218,48 @@ const getStudents = async (filters = {}) => {
   return result.rows;
 };
 
-const getStudentById = async (id, currentUser) => {
-  const result = await pool.query(
-    `
-    SELECT
-      s.*,
-      b.name AS branch_name,
-      st.shift_name,
-      e.full_name AS teacher_name,
-      COALESCE(
-        JSON_AGG(
-          DISTINCT JSONB_BUILD_OBJECT(
-            'id', c.id,
-            'courseName', c.course_name,
-            'courseCode', c.course_code
-          )
-        ) FILTER (WHERE c.id IS NOT NULL),
-        '[]'
-      ) AS courses
-    FROM students s
-    LEFT JOIN branches b ON b.id = s.branch_id
-    LEFT JOIN shift_timings st ON st.id = s.shift_id
-    LEFT JOIN employees e ON e.id = s.assigned_teacher_id
-    LEFT JOIN student_courses sc ON sc.student_id = s.id
-    LEFT JOIN courses c ON c.id = sc.course_id
-    WHERE s.id = $1
-    GROUP BY s.id, b.name, st.shift_name, e.full_name
-    `,
-    [id]
-  );
+  const getStudentById = async (id, currentUser) => {
+    const result = await pool.query(
+      `
+      SELECT
+        s.*,
+        b.name AS branch_name,
+        st.shift_name,
+        e.full_name AS teacher_name,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSONB_BUILD_OBJECT(
+              'id', c.id,
+              'courseName', c.course_name,
+              'courseCode', c.course_code
+            )
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'
+        ) AS courses
+      FROM students s
+      LEFT JOIN branches b ON b.id = s.branch_id
+      LEFT JOIN shift_timings st ON st.id = s.shift_id
+      LEFT JOIN employees e ON e.id = s.assigned_teacher_id
+      LEFT JOIN student_courses sc ON sc.student_id = s.id
+      LEFT JOIN courses c ON c.id = sc.course_id
+      WHERE s.id = $1
+      GROUP BY s.id, b.name, st.shift_name, e.full_name
+      `,
+      [id]
+    );
 
-  if (result.rows.length === 0) {
-    throw new ApiError(404, "Student not found");
-  }
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "Student not found");
+    }
 
-  const student = result.rows[0];
+    const student = result.rows[0];
 
-  if (!canAccessBranch(currentUser, student.branch_id)) {
-    throw new ApiError(403, "You cannot view this student");
-  }
+    if (!canAccessBranch(currentUser, student.branch_id)) {
+      throw new ApiError(403, "You cannot view this student");
+    }
 
-  return student;
-};
+    return student;
+  };
 
 const updateStudent = async (id, data, currentUser) => {
   const existing = await pool.query(
@@ -424,21 +424,71 @@ const updateStudentStatus = async (id, data, currentUser) => {
   return result.rows[0];
 };
 
-const deleteStudent = async (studentId, user) => {
-  const result = await pool.query(
+const deleteStudent = async (studentId, currentUser) => {
+  const student = await getStudentById(studentId, currentUser);
+
+  const paymentCheck = await pool.query(
     `
-    DELETE FROM students
-    WHERE id = $1
-    RETURNING id
+    SELECT COUNT(*) AS total_payments
+    FROM payments
+    WHERE student_id = $1
     `,
     [studentId]
   );
 
-  if (result.rows.length === 0) {
-    throw new ApiError(404, "Student not found");
+  const totalPayments = Number(paymentCheck.rows[0].total_payments);
+
+  if (totalPayments > 0) {
+    throw new ApiError(
+      400,
+      "This student has payment records. You cannot delete this student."
+    );
   }
 
-  return result.rows[0];
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM student_courses
+      WHERE student_id = $1
+      `,
+      [studentId]
+    );
+
+    const result = await client.query(
+      `
+      DELETE FROM students
+      WHERE id = $1
+      RETURNING id, full_name
+      `,
+      [studentId]
+    );
+
+    await client.query(
+      `
+      INSERT INTO audit_logs (user_id, action, module_name, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        currentUser.id,
+        "DELETE_STUDENT",
+        "students",
+        `Deleted student ${student.full_name}`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 module.exports = {

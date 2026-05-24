@@ -128,3 +128,22 @@
     grid-template-columns: 1fr;
   }
 }
+
+.dashboard-click-card {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.dashboard-click-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-click-row {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.dashboard-click-row:hover {
+  background: #f8fafc;
+}

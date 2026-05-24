@@ -1,108 +1,3 @@
-// import { createContext, useContext, useEffect, useState } from "react";
-// import axiosInstance from "../api/axiosInstance";
-
-// const AuthContext = createContext(null);
-
-// export const AuthProvider = ({ children }) => {
-//   const [user, setUser] = useState(() => {
-//     const savedUser = localStorage.getItem("user");
-//     return savedUser ? JSON.parse(savedUser) : null;
-//   });
-
-//   const [loading, setLoading] = useState(true);
-
-//   const isAuthenticated = Boolean(user && localStorage.getItem("accessToken"));
-
-// const login = async ({ email, password, rememberDevice }) => {
-//   const response = await axiosInstance.post("/auth/login", {
-//     email: email.trim(),
-//     password,
-//     rememberDevice,
-//   });
-
-//   const { accessToken, user } = response.data.data;
-
-//   localStorage.setItem("accessToken", accessToken);
-//   localStorage.setItem("user", JSON.stringify(user));
-
-//   setUser(user);
-
-//   return user;
-// };
-
-//   const logout = async () => {
-//     try {
-//       await axiosInstance.post("/auth/logout");
-//     } catch (error) {
-//       console.error("Logout error:", error.message);
-//     } finally {
-//       localStorage.removeItem("accessToken");
-//       localStorage.removeItem("user");
-//       setUser(null);
-//       window.location.href = "/login";
-//     }
-//   };
-
-//   const hasPermission = (permission) => {
-//     if (!user?.permissions) return false;
-//     return user.permissions.includes(permission);
-//   };
-
-//   const hasAnyPermission = (permissions = []) => {
-//     if (!user?.permissions) return false;
-//     return permissions.some((permission) => user.permissions.includes(permission));
-//   };
-
-//   const fetchMe = async () => {
-//     try {
-//       const token = localStorage.getItem("accessToken");
-
-//       if (!token) {
-//         setLoading(false);
-//         return;
-//       }
-
-//       const response = await axiosInstance.get("/auth/me");
-//       const freshUser = response.data.data.user;
-
-//       localStorage.setItem("user", JSON.stringify(freshUser));
-//       setUser(freshUser);
-//     } catch (error) {
-//       localStorage.removeItem("accessToken");
-//       localStorage.removeItem("user");
-//       setUser(null);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchMe();
-//   }, []);
-
-//   return (
-//     <AuthContext.Provider
-//       value={{
-//         user,
-//         loading,
-//         isAuthenticated,
-//         login,
-//         logout,
-//         hasPermission,
-//         hasAnyPermission,
-//       }}
-//     >
-//       {children}
-//     </AuthContext.Provider>
-//   );
-// };
-
-// export const useAuth = () => {
-//   return useContext(AuthContext);
-// };
-
-
-//DEMO MODE - REMOVE THIS IN PRODUCTION
 import { createContext, useContext, useEffect, useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 
@@ -120,8 +15,24 @@ const demoUser = {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(isDemoMode ? demoUser : null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(() => {
+    if (isDemoMode) return demoUser;
+
+    const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("accessToken");
+
+    if (savedUser && savedToken) {
+      try {
+        return JSON.parse(savedUser);
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  });
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -134,15 +45,35 @@ export const AuthProvider = ({ children }) => {
     }
 
     const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("accessToken");
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    if (savedUser && savedToken) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        setUser(null);
+      }
+    } else {
+      setUser(null);
     }
 
     setLoading(false);
   }, []);
 
-  const login = async (email, password, rememberDevice = true) => {
+  const login = async (emailOrData, passwordValue, rememberDeviceValue = true) => {
+    let email = emailOrData;
+    let password = passwordValue;
+    let rememberDevice = rememberDeviceValue;
+
+    if (typeof emailOrData === "object") {
+      email = emailOrData.email;
+      password = emailOrData.password;
+      rememberDevice = emailOrData.rememberDevice ?? true;
+    }
+
     if (isDemoMode) {
       localStorage.setItem("accessToken", "demo-access-token");
       localStorage.setItem("refreshToken", "demo-refresh-token");
@@ -156,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const response = await axiosInstance.post("/auth/login", {
-      email,
+      email: email?.trim(),
       password,
       rememberDevice,
     });
@@ -164,11 +95,17 @@ export const AuthProvider = ({ children }) => {
     const data = response.data.data || response.data;
 
     const loggedInUser = data.user;
-    const accessToken = data.accessToken;
-    const refreshToken = data.refreshToken;
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+
+    if (!loggedInUser || !accessToken) {
+      throw new Error("Login response is missing user or access token");
+    }
 
     localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
     localStorage.setItem("user", JSON.stringify(loggedInUser));
 
     setUser(loggedInUser);
@@ -210,6 +147,8 @@ export const AuthProvider = ({ children }) => {
     return permissions.some((permission) => hasPermission(permission));
   };
 
+  const isAuthenticated = Boolean(user && localStorage.getItem("accessToken"));
+
   return (
     <AuthContext.Provider
       value={{
@@ -219,7 +158,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         hasPermission,
         hasAnyPermission,
-        isAuthenticated: Boolean(user),
+        isAuthenticated,
       }}
     >
       {children}

@@ -60,6 +60,15 @@ const Reports = () => {
     }));
   };
 
+  const clearFilters = () => {
+    setFilters({
+      fromDate: "",
+      toDate: "",
+      feeStatus: "",
+      studentStatus: "",
+    });
+  };
+
   const buildQuery = (type) => {
     const params = new URLSearchParams();
 
@@ -67,11 +76,19 @@ const Reports = () => {
       params.append("branchId", branchId);
     }
 
-    if (filters.fromDate) params.append("fromDate", filters.fromDate);
-    if (filters.toDate) params.append("toDate", filters.toDate);
+    if (filters.fromDate) {
+      params.append("fromDate", filters.fromDate);
+    }
+
+    if (filters.toDate) {
+      params.append("toDate", filters.toDate);
+    }
 
     if (type === "students") {
-      if (filters.feeStatus) params.append("feeStatus", filters.feeStatus);
+      if (filters.feeStatus) {
+        params.append("feeStatus", filters.feeStatus);
+      }
+
       if (filters.studentStatus) {
         params.append("studentStatus", filters.studentStatus);
       }
@@ -91,7 +108,6 @@ const Reports = () => {
 
     if (isWelfarePortal) {
       const response = await axiosInstance.get(`/reports/welfare?${query}`);
-
       const welfareData = response.data.data;
 
       setFinancialReport({
@@ -142,7 +158,14 @@ const Reports = () => {
 
   useEffect(() => {
     fetchActiveReport();
-  }, [activeTab]);
+  }, [
+    activeTab,
+    branchId,
+    filters.fromDate,
+    filters.toDate,
+    filters.feeStatus,
+    filters.studentStatus,
+  ]);
 
   const downloadFile = async (url, filename) => {
     try {
@@ -277,7 +300,7 @@ const Reports = () => {
     {
       key: "title",
       title: "Expense",
-      render: (row) => row.title || "-",
+      render: (row) => row.title || row.name || "-",
     },
     {
       key: "category_name",
@@ -292,7 +315,7 @@ const Reports = () => {
     {
       key: "expense_date",
       title: "Date",
-      render: (row) => formatDate(row.expense_date),
+      render: (row) => formatDate(row.expense_date || row.date),
     },
   ];
 
@@ -443,6 +466,7 @@ const Reports = () => {
                 onChange={handleFilterChange}
                 placeholder="Fee status"
                 options={[
+                  { label: "All Fee Status", value: "" },
                   { label: "Paid", value: "paid" },
                   { label: "Pending", value: "pending" },
                   { label: "Partial", value: "partial" },
@@ -455,10 +479,12 @@ const Reports = () => {
                 onChange={handleFilterChange}
                 placeholder="Student status"
                 options={[
+                  { label: "All Student Status", value: "" },
                   { label: "Active", value: "active" },
                   { label: "Non Active", value: "non_active" },
                   { label: "Completed", value: "completed" },
                   { label: "Dropped", value: "dropped" },
+                  { label: "Left", value: "left" },
                 ]}
               />
             </>
@@ -482,8 +508,8 @@ const Reports = () => {
             </>
           )}
 
-          <Button variant="secondary" onClick={fetchActiveReport}>
-            Apply Filters
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
           </Button>
         </div>
       </Card>
@@ -569,7 +595,11 @@ const Reports = () => {
                   <div className="report-summary-card danger">
                     <Wallet size={24} />
                     <div>
-                      <p>{isWelfarePortal ? "Approved Support" : "Total Expenses"}</p>
+                      <p>
+                        {isWelfarePortal
+                          ? "Approved Support"
+                          : "Total Expenses"}
+                      </p>
                       <h2>
                         {formatCurrency(financialReport?.summary?.totalExpenses)}
                       </h2>
@@ -581,14 +611,17 @@ const Reports = () => {
                   <div className="report-summary-card success">
                     <Wallet size={24} />
                     <div>
-                      <p>{isWelfarePortal ? "Remaining Balance" : "Profit / Balance"}</p>
-                      <h2>
-                        {formatCurrency(financialReport?.summary?.profit)}
-                      </h2>
+                      <p>
+                        {isWelfarePortal
+                          ? "Remaining Balance"
+                          : "Profit / Balance"}
+                      </p>
+                      <h2>{formatCurrency(financialReport?.summary?.profit)}</h2>
                     </div>
                   </div>
                 </Card>
               </div>
+
               <div className="reports-grid-2">
                 <Card title={isWelfarePortal ? "Donations" : "Payments"}>
                   <Table
@@ -602,9 +635,17 @@ const Reports = () => {
                   />
                 </Card>
 
-                <Card title={isWelfarePortal ? "Approved / Support Cases" : "Expenses"}>
+                <Card
+                  title={
+                    isWelfarePortal ? "Approved / Support Cases" : "Expenses"
+                  }
+                >
                   <Table
-                    columns={isWelfarePortal ? welfareApplicationColumns : expenseColumns}
+                    columns={
+                      isWelfarePortal
+                        ? welfareApplicationColumns
+                        : expenseColumns
+                    }
                     data={financialReport?.expenses || []}
                     emptyText={
                       isWelfarePortal

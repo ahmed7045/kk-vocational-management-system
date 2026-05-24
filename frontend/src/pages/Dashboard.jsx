@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   UserCheck,
@@ -26,10 +27,16 @@ import Loader from "../components/common/Loader";
 import Badge from "../components/common/Badge";
 import Table from "../components/common/Table";
 import Button from "../components/common/Button";
-import { formatCurrency, getSelectedBranchId, getSelectedBranchName } from "../utils/formatters";
+import {
+  formatCurrency,
+  getSelectedBranchId,
+  getSelectedBranchName,
+} from "../utils/formatters";
 import "./dashboard.css";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,7 +63,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [branchId]);
 
   if (loading) {
     return <Loader text="Loading dashboard..." />;
@@ -85,36 +92,42 @@ const Dashboard = () => {
       value: summary.totalStudents || 0,
       icon: Users,
       type: "info",
+      route: "/vocational/students",
     },
     {
       title: "Paid Students",
       value: summary.paidStudents || 0,
       icon: UserCheck,
       type: "success",
+      route: "/vocational/students?feeStatus=paid",
     },
     {
       title: "Pending Students",
       value: summary.pendingStudents || 0,
       icon: Clock,
       type: "warning",
+      route: "/vocational/students?feeStatus=pending",
     },
     {
       title: "Monthly Revenue",
       value: formatCurrency(summary.monthlyRevenue),
       icon: Wallet,
       type: "success",
+      route: "/vocational/payments",
     },
     {
       title: "Monthly Expenses",
       value: formatCurrency(summary.monthlyExpenses),
       icon: Receipt,
       type: "danger",
+      route: "/vocational/expenses",
     },
     {
       title: "Monthly Balance",
       value: formatCurrency(summary.monthlyBalance),
       icon: TrendingUp,
       type: summary.monthlyBalance >= 0 ? "success" : "danger",
+      route: "/vocational/reports",
     },
   ];
 
@@ -163,7 +176,11 @@ const Dashboard = () => {
           const Icon = item.icon;
 
           return (
-            <Card key={item.title}>
+            <Card
+              key={item.title}
+              className="dashboard-click-card"
+              onClick={() => navigate(item.route)}
+            >
               <div className="stat-card">
                 <div className={`stat-icon stat-${item.type}`}>
                   <Icon size={24} />
@@ -228,7 +245,11 @@ const Dashboard = () => {
               <p className="empty-text">No course data found</p>
             ) : (
               coursePopularity.map((course) => (
-                <div className="course-row" key={course.id}>
+                <div
+                  className="course-row dashboard-click-row"
+                  key={course.id}
+                  onClick={() => navigate("/vocational/courses")}
+                >
                   <div>
                     <strong>{course.courseName}</strong>
                     <span>{course.totalStudents} students</span>

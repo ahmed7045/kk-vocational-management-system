@@ -7,21 +7,38 @@ import {
   Users,
   Wallet,
   ArrowLeft,
+  Plus,
 } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
 import { useAuth } from "../auth/AuthContext";
 import Loader from "../components/common/Loader";
 import Button from "../components/common/Button";
+import Input from "../components/common/Input";
+import Select from "../components/common/Select";
+import Modal from "../components/common/Modal";
+import { formatCurrency } from "../utils/formatters";
 import "./branchSelection.css";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
 
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const [branchModalOpen, setBranchModalOpen] = useState(false);
+
+  const [branchForm, setBranchForm] = useState({
+    name: "",
+    location: "",
+    status: "active",
+  });
+
+  const canCreateBranch =
+    user?.role === "super_admin" || hasPermission?.("branches.create");
 
   const fetchBranches = async () => {
     try {
@@ -41,6 +58,50 @@ const BranchSelection = () => {
     fetchBranches();
   }, []);
 
+  const handleBranchFormChange = (event) => {
+    const { name, value } = event.target;
+
+    setBranchForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const resetBranchForm = () => {
+    setBranchForm({
+      name: "",
+      location: "",
+      status: "active",
+    });
+  };
+
+  const handleCreateBranch = async (event) => {
+    event.preventDefault();
+
+    if (!branchForm.name.trim()) {
+      alert("Branch name is required.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await axiosInstance.post("/branches", {
+        name: branchForm.name.trim(),
+        location: branchForm.location.trim() || null,
+        status: branchForm.status || "active",
+      });
+
+      setBranchModalOpen(false);
+      resetBranchForm();
+      await fetchBranches();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to create branch");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSelectBranch = (branch) => {
     localStorage.setItem("selectedPortal", "vocational");
     localStorage.setItem("selectedBranchId", branch.id);
@@ -48,6 +109,24 @@ const BranchSelection = () => {
     localStorage.setItem("selectedBranchStatus", branch.status || "active");
 
     navigate("/app/dashboard");
+  };
+
+  const getStudentCount = (branch) => {
+    return Number(
+      branch.students_count ??
+        branch.total_students ??
+        branch.student_count ??
+        0
+    );
+  };
+
+  const getBranchBalance = (branch) => {
+    return Number(
+      branch.balance ??
+        branch.monthly_revenue ??
+        branch.total_balance ??
+        0
+    );
   };
 
   if (loading) {
@@ -72,8 +151,14 @@ const BranchSelection = () => {
             <ArrowLeft size={16} /> Back
           </Button>
 
+          {canCreateBranch && (
+            <Button size="sm" onClick={() => setBranchModalOpen(true)}>
+              <Plus size={16} /> Add Branch
+            </Button>
+          )}
+
           <div>
-            <strong>{user?.fullName || "Admin User"}</strong>
+            <strong>{user?.fullName || user?.full_name || "Admin User"}</strong>
             <span>{user?.role || "User"}</span>
           </div>
 
@@ -119,24 +204,79 @@ const BranchSelection = () => {
               <div className="branch-stats">
                 <div>
                   <Users size={17} />
-                  <span>{Number(branch.total_students || 0)} Students</span>
+                  <span>{getStudentCount(branch)} Students</span>
                 </div>
 
                 <div>
                   <Wallet size={17} />
-                  <span>
-                    Rs {Number(branch.monthly_revenue || 0).toLocaleString()}
-                  </span>
+                  <span>{formatCurrency(getBranchBalance(branch))}</span>
                 </div>
               </div>
 
-              <button className="branch-open-btn">
+              <button type="button" className="branch-open-btn">
                 Open Dashboard <ArrowRight size={17} />
               </button>
             </article>
           ))
         )}
       </section>
+
+      <Modal
+        open={branchModalOpen}
+        title="Add New Branch"
+        onClose={() => {
+          setBranchModalOpen(false);
+          resetBranchForm();
+        }}
+        size="md"
+      >
+        <form onSubmit={handleCreateBranch}>
+          <Input
+            label="Branch Name"
+            name="name"
+            value={branchForm.name}
+            onChange={handleBranchFormChange}
+            placeholder="Example: IT Centre"
+            required
+          />
+
+          <Input
+            label="Location"
+            name="location"
+            value={branchForm.location}
+            onChange={handleBranchFormChange}
+            placeholder="Example: Haji Ali Muhammad Campus 4"
+          />
+
+          <Select
+            label="Status"
+            name="status"
+            value={branchForm.status}
+            onChange={handleBranchFormChange}
+            options={[
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ]}
+          />
+
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setBranchModalOpen(false);
+                resetBranchForm();
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button type="submit" loading={saving}>
+              Save Branch
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

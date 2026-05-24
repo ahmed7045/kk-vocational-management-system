@@ -17,6 +17,8 @@ import Table from "../components/common/Table";
 import Badge from "../components/common/Badge";
 import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
+import ActionButtons from "../components/common/ActionButtons";
+import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 
 import {
   formatCurrency,
@@ -27,28 +29,35 @@ import {
 
 import "./payments.css";
 
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+
 const Payments = () => {
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
 
   const [payments, setPayments] = useState([]);
+  const [allPayments, setAllPayments] = useState([]);
   const [students, setStudents] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
 
   const [studentHistory, setStudentHistory] = useState(null);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const [error, setError] = useState("");
 
   const [filters, setFilters] = useState({
     search: "",
-    studentId: "",
+    paymentMethodId: "",
     fromDate: "",
     toDate: "",
   });
@@ -62,6 +71,49 @@ const Payments = () => {
     note: "",
   });
 
+  const applyClientFilters = (records, currentFilters = filters) => {
+    let filtered = [...records];
+
+    if (currentFilters.search.trim()) {
+      const searchText = currentFilters.search.toLowerCase().trim();
+
+      filtered = filtered.filter((payment) =>
+        [
+          payment.student_name,
+          payment.branch_name,
+          payment.payment_method,
+          payment.reference_no,
+          payment.note,
+          payment.created_by_name,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchText))
+      );
+    }
+
+    if (currentFilters.paymentMethodId) {
+      const selectedMethod = paymentMethods.find(
+        (method) => Number(method.id) === Number(currentFilters.paymentMethodId)
+      );
+
+      filtered = filtered.filter((payment) => {
+        if (payment.payment_method_id) {
+          return (
+            Number(payment.payment_method_id) ===
+            Number(currentFilters.paymentMethodId)
+          );
+        }
+
+        return (
+          selectedMethod?.method_name &&
+          payment.payment_method === selectedMethod.method_name
+        );
+      });
+    }
+
+    setPayments(filtered);
+  };
+
   const fetchPayments = async () => {
     try {
       setLoading(true);
@@ -70,32 +122,17 @@ const Payments = () => {
       const params = new URLSearchParams();
 
       if (branchId) params.append("branchId", branchId);
-      if (filters.studentId) params.append("studentId", filters.studentId);
       if (filters.fromDate) params.append("fromDate", filters.fromDate);
       if (filters.toDate) params.append("toDate", filters.toDate);
 
       params.append("page", "1");
-      params.append("limit", "50");
+      params.append("limit", "100");
 
       const response = await axiosInstance.get(`/payments?${params.toString()}`);
-      let data = response.data.data || [];
+      const data = response.data.data || [];
 
-      if (filters.search) {
-        const searchText = filters.search.toLowerCase();
-
-        data = data.filter((payment) =>
-          [
-            payment.student_name,
-            payment.payment_method,
-            payment.reference_no,
-            payment.note,
-          ]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(searchText))
-        );
-      }
-
-      setPayments(data);
+      setAllPayments(data);
+      applyClientFilters(data);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to fetch payments");
     } finally {
@@ -118,9 +155,16 @@ const Payments = () => {
   };
 
   useEffect(() => {
-    fetchPayments();
     fetchDropdownData();
-  }, []);
+  }, [branchId]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [branchId, filters.fromDate, filters.toDate]);
+
+  useEffect(() => {
+    applyClientFilters(allPayments);
+  }, [filters.search, filters.paymentMethodId, paymentMethods]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -129,6 +173,15 @@ const Payments = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      paymentMethodId: "",
+      fromDate: "",
+      toDate: "",
+    });
   };
 
   const handleFormChange = (event) => {
@@ -164,10 +217,18 @@ const Payments = () => {
       return;
     }
 
+    const selectedStudentForPayment = students.find(
+      (student) => Number(student.id) === Number(form.studentId)
+    );
+
+    const selectedMethod = paymentMethods.find(
+      (method) => Number(method.id) === Number(form.paymentMethodId)
+    );
+
     try {
       setSaving(true);
 
-      await axiosInstance.post("/payments", {
+      const payload = {
         studentId: Number(form.studentId),
         amount: Number(form.amount),
         paymentMethodId: form.paymentMethodId
@@ -176,12 +237,36 @@ const Payments = () => {
         paymentDate: form.paymentDate || null,
         referenceNo: form.referenceNo || null,
         note: form.note || null,
-      });
+      };
+
+      if (!isDemoMode) {
+        await axiosInstance.post("/payments", payload);
+        await fetchPayments();
+        await fetchDropdownData();
+      } else {
+        const newPayment = {
+          id: Date.now(),
+          student_id: payload.studentId,
+          payment_method_id: payload.paymentMethodId,
+          student_name: selectedStudentForPayment?.full_name || "Demo Student",
+          branch_name: branchName || "Demo Branch",
+          amount: payload.amount,
+          payment_method: selectedMethod?.method_name || "Cash",
+          payment_date: payload.paymentDate || new Date().toISOString(),
+          reference_no: payload.referenceNo,
+          note: payload.note,
+          created_by_name: "Admin User",
+        };
+
+        setAllPayments((prev) => {
+          const updated = [newPayment, ...prev];
+          applyClientFilters(updated);
+          return updated;
+        });
+      }
 
       setPaymentModalOpen(false);
       resetForm();
-      fetchPayments();
-      fetchDropdownData();
     } catch (error) {
       alert(error.response?.data?.message || "Failed to add payment");
     } finally {
@@ -196,6 +281,28 @@ const Payments = () => {
       setHistoryLoading(true);
       setHistoryModalOpen(true);
 
+      if (isDemoMode) {
+        const student = students.find(
+          (item) => Number(item.id) === Number(studentId)
+        );
+
+        const studentPayments = allPayments.filter(
+          (payment) => Number(payment.student_id) === Number(studentId)
+        );
+
+        setStudentHistory({
+          student: student || {
+            full_name: "Demo Student",
+            total_fee: 0,
+            paid_fee: 0,
+            remaining_fee: 0,
+          },
+          payments: studentPayments,
+        });
+
+        return;
+      }
+
       const response = await axiosInstance.get(`/payments/student/${studentId}`);
       setStudentHistory(response.data.data);
     } catch (error) {
@@ -203,6 +310,42 @@ const Payments = () => {
       setHistoryModalOpen(false);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const handleViewPayment = (payment) => {
+    setSelectedPayment(payment);
+    setViewModalOpen(true);
+  };
+
+  const handleDeleteClick = (payment) => {
+    setSelectedPayment(payment);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedPayment?.id) return;
+
+    try {
+      setDeleting(true);
+
+      if (!isDemoMode) {
+        await axiosInstance.delete(`/payments/${selectedPayment.id}`);
+      }
+
+      const updatedPayments = allPayments.filter(
+        (payment) => payment.id !== selectedPayment.id
+      );
+
+      setAllPayments(updatedPayments);
+      applyClientFilters(updatedPayments);
+
+      setDeleteModalOpen(false);
+      setSelectedPayment(null);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete payment");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -257,13 +400,24 @@ const Payments = () => {
       key: "actions",
       title: "Actions",
       render: (row) => (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => openStudentHistory(row.student_id)}
-        >
-          <History size={14} /> History
-        </Button>
+        <div className="payment-actions">
+          <ActionButtons
+            onView={() => handleViewPayment(row)}
+            onEdit={null}
+            onDelete={() => handleDeleteClick(row)}
+            canView={true}
+            canEdit={false}
+            canDelete={true}
+          />
+
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => openStudentHistory(row.student_id)}
+          >
+            <History size={14} /> History
+          </Button>
+        </div>
       ),
     },
   ];
@@ -332,14 +486,17 @@ const Payments = () => {
           </div>
 
           <Select
-            name="studentId"
-            value={filters.studentId}
+            name="paymentMethodId"
+            value={filters.paymentMethodId}
             onChange={handleFilterChange}
-            placeholder="All students"
-            options={students.map((student) => ({
-              label: `${student.full_name} (${student.phone || "No phone"})`,
-              value: student.id,
-            }))}
+            placeholder="Payment method"
+            options={[
+              { label: "All Methods", value: "" },
+              ...paymentMethods.map((method) => ({
+                label: method.method_name,
+                value: method.id,
+              })),
+            ]}
           />
 
           <Input
@@ -356,8 +513,12 @@ const Payments = () => {
             onChange={handleFilterChange}
           />
 
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+
           <Button variant="secondary" onClick={fetchPayments}>
-            <RefreshCcw size={16} /> Apply
+            <RefreshCcw size={16} /> Refresh
           </Button>
         </div>
 
@@ -373,7 +534,10 @@ const Payments = () => {
       <Modal
         open={paymentModalOpen}
         title="Add Student Payment"
-        onClose={() => setPaymentModalOpen(false)}
+        onClose={() => {
+          setPaymentModalOpen(false);
+          resetForm();
+        }}
         size="lg"
       >
         <form onSubmit={handleCreatePayment}>
@@ -464,8 +628,8 @@ const Payments = () => {
                     selectedStudent.fee_status === "paid"
                       ? "success"
                       : selectedStudent.fee_status === "partial"
-                      ? "warning"
-                      : "danger"
+                        ? "warning"
+                        : "danger"
                   }
                 >
                   {selectedStudent.fee_status}
@@ -478,7 +642,10 @@ const Payments = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setPaymentModalOpen(false)}
+              onClick={() => {
+                setPaymentModalOpen(false);
+                resetForm();
+              }}
             >
               Cancel
             </Button>
@@ -488,6 +655,60 @@ const Payments = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={viewModalOpen}
+        title="Payment Details"
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedPayment(null);
+        }}
+        size="md"
+      >
+        {selectedPayment && (
+          <div className="payment-detail-grid">
+            <div>
+              <strong>Student:</strong>
+              <p>{selectedPayment.student_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Branch:</strong>
+              <p>{selectedPayment.branch_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Amount:</strong>
+              <p>{formatCurrency(selectedPayment.amount || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Method:</strong>
+              <p>{selectedPayment.payment_method || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Date:</strong>
+              <p>{formatDate(selectedPayment.payment_date)}</p>
+            </div>
+
+            <div>
+              <strong>Reference:</strong>
+              <p>{selectedPayment.reference_no || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Created By:</strong>
+              <p>{selectedPayment.created_by_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Note:</strong>
+              <p>{selectedPayment.note || "-"}</p>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <Modal
@@ -561,6 +782,17 @@ const Payments = () => {
           </>
         )}
       </Modal>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        title="Delete Payment"
+        message={`Are you sure you want to delete this payment of ${formatCurrency(
+          selectedPayment?.amount || 0
+        )}?`}
+        loading={deleting}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

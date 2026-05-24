@@ -22,11 +22,9 @@ import {
 
 import "./students.css";
 
-const Students = ({
-  defaultStudentStatus = "",
-  pageTitle = "Students",
-}) => {
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
+const Students = ({ defaultStudentStatus = "active", pageTitle = "Students" }) => {
   const { hasPermission } = useAuth();
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -44,14 +42,12 @@ const Students = ({
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const [filters, setFilters] = useState({
     search: "",
     feeStatus: "",
-    studentStatus: defaultStudentStatus,
   });
 
   const [form, setForm] = useState({
@@ -65,6 +61,7 @@ const Students = ({
     shiftId: "",
     admissionDate: "",
     admissionStatus: "confirmed",
+    studentStatus: "active",
     totalFee: "",
     paidFee: "",
   });
@@ -77,10 +74,10 @@ const Students = ({
       const params = new URLSearchParams();
 
       if (branchId) params.append("branchId", branchId);
-      if (filters.search) params.append("search", filters.search);
+      if (filters.search.trim()) params.append("search", filters.search.trim());
       if (filters.feeStatus) params.append("feeStatus", filters.feeStatus);
-      if (filters.studentStatus) params.append("studentStatus", filters.studentStatus);
 
+      params.append("studentStatus", defaultStudentStatus);
       params.append("page", "1");
       params.append("limit", "50");
 
@@ -110,16 +107,12 @@ const Students = ({
   };
 
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      studentStatus: defaultStudentStatus,
-    }));
-  }, [defaultStudentStatus]);
+    fetchDropdownData();
+  }, [branchId]);
 
   useEffect(() => {
     fetchStudents();
-    fetchDropdownData();
-  }, [defaultStudentStatus]);
+  }, [branchId, defaultStudentStatus, filters.search, filters.feeStatus]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -128,6 +121,13 @@ const Students = ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      feeStatus: "",
+    });
   };
 
   const handleFormChange = (event) => {
@@ -151,12 +151,19 @@ const Students = ({
       shiftId: "",
       admissionDate: "",
       admissionStatus: "confirmed",
+      studentStatus: defaultStudentStatus === "non_active" ? "non_active" : "active",
       totalFee: "",
       paidFee: "",
     });
   };
 
-  const handleCreateStudent = async (event) => {
+  const openAddModal = () => {
+    setSelectedRecord(null);
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const handleSubmitStudent = async (event) => {
     event.preventDefault();
 
     if (!branchId) {
@@ -164,45 +171,159 @@ const Students = ({
       return;
     }
 
+    const payload = {
+      branchId: Number(branchId),
+      fullName: form.fullName,
+      fatherName: form.fatherName,
+      phone: form.phone,
+      city: form.city,
+      address: form.address,
+      courseIds: form.courseId ? [Number(form.courseId)] : [],
+      assignedTeacherId: form.assignedTeacherId
+        ? Number(form.assignedTeacherId)
+        : null,
+      shiftId: form.shiftId ? Number(form.shiftId) : null,
+      admissionDate: form.admissionDate || null,
+      admissionStatus: form.admissionStatus,
+      studentStatus: form.studentStatus,
+      totalFee: Number(form.totalFee || 0),
+      paidFee: Number(form.paidFee || 0),
+    };
+
     try {
       setSaving(true);
 
-      await axiosInstance.post("/students", {
-        branchId: Number(branchId),
-        fullName: form.fullName,
-        fatherName: form.fatherName,
-        phone: form.phone,
-        city: form.city,
-        address: form.address,
-        courseIds: form.courseId ? [Number(form.courseId)] : [],
-        assignedTeacherId: form.assignedTeacherId
-          ? Number(form.assignedTeacherId)
-          : null,
-        shiftId: form.shiftId ? Number(form.shiftId) : null,
-        admissionDate: form.admissionDate || null,
-        admissionStatus: form.admissionStatus,
-        totalFee: Number(form.totalFee || 0),
-        paidFee: Number(form.paidFee || 0),
-      });
+      if (selectedRecord?.id) {
+        if (!isDemoMode) {
+          await axiosInstance.put(`/students/${selectedRecord.id}`, payload);
+          await fetchStudents();
+        } else {
+          setStudents((prev) =>
+            prev
+              .map((student) =>
+                student.id === selectedRecord.id
+                  ? {
+                      ...student,
+                      full_name: payload.fullName,
+                      father_name: payload.fatherName,
+                      phone: payload.phone,
+                      city: payload.city,
+                      address: payload.address,
+                      total_fee: payload.totalFee,
+                      paid_fee: payload.paidFee,
+                      remaining_fee: Math.max(
+                        payload.totalFee - payload.paidFee,
+                        0
+                      ),
+                      student_status: payload.studentStatus,
+                      admission_status: payload.admissionStatus,
+                      admission_date: payload.admissionDate,
+                    }
+                  : student
+              )
+              .filter(
+                (student) => student.student_status === defaultStudentStatus
+              )
+          );
+        }
+      } else {
+        if (!isDemoMode) {
+          await axiosInstance.post("/students", payload);
+          await fetchStudents();
+        } else {
+          const newStudent = {
+            id: Date.now(),
+            full_name: payload.fullName,
+            father_name: payload.fatherName,
+            phone: payload.phone,
+            city: payload.city,
+            address: payload.address,
+            courses: [],
+            total_fee: payload.totalFee,
+            paid_fee: payload.paidFee,
+            remaining_fee: Math.max(payload.totalFee - payload.paidFee, 0),
+            fee_status:
+              payload.paidFee <= 0
+                ? "pending"
+                : payload.paidFee >= payload.totalFee
+                  ? "paid"
+                  : "partial",
+            student_status: payload.studentStatus || "active",
+            admission_status: payload.admissionStatus,
+            admission_date: payload.admissionDate,
+          };
+
+          setStudents((prev) => {
+            if (newStudent.student_status !== defaultStudentStatus) {
+              return prev;
+            }
+
+            return [newStudent, ...prev];
+          });
+        }
+      }
 
       setModalOpen(false);
+      setSelectedRecord(null);
       resetForm();
-      fetchStudents();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to create student");
+      alert(error.response?.data?.message || "Failed to save student");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleView = (row) => {
-    setSelectedRecord(row);
-    setViewModalOpen(true);
+  const handleView = async (row) => {
+    try {
+      setError("");
+
+      if (isDemoMode) {
+        setSelectedRecord(row);
+        setViewModalOpen(true);
+        return;
+      }
+
+      const response = await axiosInstance.get(`/students/${row.id}`);
+      setSelectedRecord(response.data.data);
+      setViewModalOpen(true);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to fetch student details");
+    }
   };
 
-  const handleEdit = (row) => {
-    setSelectedRecord(row);
-    setEditModalOpen(true);
+  const handleEdit = async (row) => {
+    try {
+      setError("");
+
+      let student = row;
+
+      if (!isDemoMode) {
+        const response = await axiosInstance.get(`/students/${row.id}`);
+        student = response.data.data;
+      }
+
+      setSelectedRecord(student);
+
+      setForm({
+        fullName: student.full_name || "",
+        fatherName: student.father_name || "",
+        phone: student.phone || "",
+        city: student.city || "",
+        address: student.address || "",
+        courseId: student.courses?.[0]?.id || "",
+        assignedTeacherId: student.assigned_teacher_id || "",
+        shiftId: student.shift_id || "",
+        admissionDate: student.admission_date?.split("T")[0] || "",
+        admissionStatus: student.admission_status || "confirmed",
+        studentStatus: student.student_status || "active",
+        totalFee: student.total_fee || "",
+        paidFee: student.paid_fee || "",
+      });
+
+      setModalOpen(true);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to load student for edit");
+    }
   };
 
   const handleDeleteClick = (row) => {
@@ -211,14 +332,21 @@ const Students = ({
   };
 
   const confirmDelete = async () => {
+    if (!selectedRecord?.id) return;
+
     try {
       setDeleting(true);
 
-      await axiosInstance.delete(`/students/${selectedRecord.id}`);
+      if (!isDemoMode) {
+        await axiosInstance.delete(`/students/${selectedRecord.id}`);
+      }
+
+      setStudents((prev) =>
+        prev.filter((student) => student.id !== selectedRecord.id)
+      );
 
       setDeleteModalOpen(false);
       setSelectedRecord(null);
-      fetchStudents();
     } catch (error) {
       alert(error.response?.data?.message || "Failed to delete student");
     } finally {
@@ -235,13 +363,9 @@ const Students = ({
   const getStudentBadgeType = (status) => {
     if (status === "active") return "success";
     if (status === "completed") return "info";
+    if (status === "non_active") return "danger";
     return "warning";
   };
-
-  const canUseStudentActions =
-  hasPermission("students.view") ||
-  hasPermission("students.update") ||
-  hasPermission("students.delete");
 
   const columns = [
     {
@@ -321,8 +445,6 @@ const Students = ({
     },
   ];
 
-  
-
   if (loading) {
     return (
       <div className="page">
@@ -345,7 +467,7 @@ const Students = ({
 
         {defaultStudentStatus !== "non_active" &&
           hasPermission("students.create") && (
-            <Button onClick={() => setModalOpen(true)}>
+            <Button onClick={openAddModal}>
               <Plus size={16} /> Add Student
             </Button>
           )}
@@ -369,48 +491,38 @@ const Students = ({
             onChange={handleFilterChange}
             placeholder="Fee status"
             options={[
+              { label: "All Fee Status", value: "" },
               { label: "Paid", value: "paid" },
               { label: "Pending", value: "pending" },
               { label: "Partial", value: "partial" },
             ]}
           />
 
-          {defaultStudentStatus !== "non_active" && (
-            <Select
-              name="studentStatus"
-              value={filters.studentStatus}
-              onChange={handleFilterChange}
-              placeholder="Student status"
-              options={[
-                { label: "Active", value: "active" },
-                { label: "Non Active", value: "non_active" },
-                { label: "Completed", value: "completed" },
-                { label: "Dropped", value: "dropped" },
-              ]}
-            />
-          )}
+          <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button>
 
           <Button variant="secondary" onClick={fetchStudents}>
-            <RefreshCcw size={16} /> Apply
+            <RefreshCcw size={16} /> Refresh
           </Button>
         </div>
 
         {error && <div className="students-error">{error}</div>}
 
-        <Table
-          columns={columns}
-          data={students}
-          emptyText="No students found"
-        />
+        <Table columns={columns} data={students} emptyText="No students found" />
       </Card>
 
       <Modal
         open={modalOpen}
-        title="Add New Student"
-        onClose={() => setModalOpen(false)}
+        title={selectedRecord?.id ? "Edit Student" : "Add New Student"}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedRecord(null);
+          resetForm();
+        }}
         size="lg"
       >
-        <form onSubmit={handleCreateStudent}>
+        <form onSubmit={handleSubmitStudent}>
           <div className="student-form-grid">
             <Input
               label="Student Full Name"
@@ -497,6 +609,19 @@ const Students = ({
               value={form.paidFee}
               onChange={handleFormChange}
             />
+
+            <Select
+              label="Student Status"
+              name="studentStatus"
+              value={form.studentStatus}
+              onChange={handleFormChange}
+              options={[
+                { label: "Active", value: "active" },
+                { label: "Non Active", value: "non_active" },
+                { label: "Completed", value: "completed" },
+                { label: "Left", value: "left" },
+              ]}
+            />
           </div>
 
           <div className="form-group">
@@ -514,22 +639,95 @@ const Students = ({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                setSelectedRecord(null);
+                resetForm();
+              }}
             >
               Cancel
             </Button>
 
             <Button type="submit" loading={saving}>
-              Save Student
+              {selectedRecord?.id ? "Update Student" : "Save Student"}
             </Button>
           </div>
         </form>
       </Modal>
+
+      <Modal
+        open={viewModalOpen}
+        title="Student Details"
+        onClose={() => setViewModalOpen(false)}
+        size="lg"
+      >
+        {selectedRecord && (
+          <div className="student-detail-grid">
+            <div>
+              <strong>Name:</strong>
+              <p>{selectedRecord.full_name}</p>
+            </div>
+
+            <div>
+              <strong>Father Name:</strong>
+              <p>{selectedRecord.father_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Phone:</strong>
+              <p>{selectedRecord.phone || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Branch:</strong>
+              <p>{selectedRecord.branch_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Courses:</strong>
+              <p>
+                {selectedRecord.courses?.length
+                  ? selectedRecord.courses
+                      .map((course) => course.courseName)
+                      .join(", ")
+                  : "-"}
+              </p>
+            </div>
+
+            <div>
+              <strong>Shift:</strong>
+              <p>{selectedRecord.shift_name || "-"}</p>
+            </div>
+
+            <div>
+              <strong>Total Fee:</strong>
+              <p>{formatCurrency(selectedRecord.total_fee || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Paid Fee:</strong>
+              <p>{formatCurrency(selectedRecord.paid_fee || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Remaining Fee:</strong>
+              <p>{formatCurrency(selectedRecord.remaining_fee || 0)}</p>
+            </div>
+
+            <div>
+              <strong>Status:</strong>
+              <p>{selectedRecord.student_status || "-"}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title="Delete Student"
-        message={`Are you sure you want to delete ${selectedRecord?.full_name || "this student"
-          }?`}
+        message={`Are you sure you want to delete ${
+          selectedRecord?.full_name || "this student"
+        }?`}
         loading={deleting}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}

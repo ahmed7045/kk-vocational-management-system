@@ -1,7 +1,7 @@
 const {
   createStudent,
   getStudents,
-  getStudentDetails,
+  getStudentById,
   updateStudent,
   updateStudentStatus,
   deleteStudent,

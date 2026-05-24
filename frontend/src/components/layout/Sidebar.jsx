@@ -90,9 +90,15 @@ const Sidebar = () => {
       permissions: ["welfare.donor.view"],
     },
     {
-      label: "Charities",
+      label: "Beneficiaries",
       path: "/app/welfare/charities",
       icon: HeartHandshake,
+      permissions: ["welfare.charity.view"],
+    },
+    {
+      label: "Charity Records",
+      path: "/app/welfare/charity-records",
+      icon: Receipt,
       permissions: ["welfare.charity.view"],
     },
     {
@@ -121,8 +127,7 @@ const Sidebar = () => {
     },
   ];
 
-  const items =
-    selectedPortal === "welfare" ? welfareItems : vocationalItems;
+  const items = selectedPortal === "welfare" ? welfareItems : vocationalItems;
 
   const switchPortal = () => {
     navigate("/portal-selection");

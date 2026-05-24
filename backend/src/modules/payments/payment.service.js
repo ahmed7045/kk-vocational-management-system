@@ -117,6 +117,82 @@ const recalculateStudentFee = async (client, studentId) => {
   return updatedStudent.rows[0];
 };
 
+const deletePayment = async (paymentId, currentUser) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const paymentResult = await client.query(
+      `
+      SELECT
+        p.id,
+        p.student_id,
+        p.branch_id,
+        p.amount,
+        s.full_name AS student_name
+      FROM payments p
+      LEFT JOIN students s ON s.id = p.student_id
+      WHERE p.id = $1
+      `,
+      [paymentId]
+    );
+
+    if (paymentResult.rows.length === 0) {
+      throw new ApiError(404, "Payment not found");
+    }
+
+    const payment = paymentResult.rows[0];
+
+    if (!canAccessBranch(currentUser, payment.branch_id)) {
+      throw new ApiError(403, "You cannot delete payment for this branch");
+    }
+
+    await client.query(
+      `
+      DELETE FROM payments
+      WHERE id = $1
+      `,
+      [paymentId]
+    );
+
+    const updatedStudent = await recalculateStudentFee(
+      client,
+      payment.student_id
+    );
+
+    await client.query(
+      `
+      INSERT INTO audit_logs (user_id, action, module_name, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        currentUser.id,
+        "DELETE_PAYMENT",
+        "payments",
+        `Deleted payment of ${payment.amount} for student ${payment.student_name}`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      deletedPaymentId: payment.id,
+      studentFee: {
+        totalFee: updatedStudent.total_fee,
+        paidFee: updatedStudent.paid_fee,
+        remainingFee: updatedStudent.remaining_fee,
+        feeStatus: updatedStudent.fee_status,
+      },
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 const createPayment = async (data, currentUser) => {
   const {
     studentId,
@@ -399,4 +475,5 @@ module.exports = {
   getRecentPayments,
   getPaymentMethods,
   createPaymentMethod,
+  deletePayment,
 };

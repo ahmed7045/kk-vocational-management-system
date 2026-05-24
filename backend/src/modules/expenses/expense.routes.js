@@ -9,6 +9,7 @@ const {
   list,
   details,
   update,
+  remove,
   categories,
   createCategory,
 } = require("./expense.controller");
@@ -53,6 +54,13 @@ router.put(
   authMiddleware,
   requirePermission("expenses.update"),
   update
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("expenses.delete"),
+  remove
 );
 
 module.exports = router;

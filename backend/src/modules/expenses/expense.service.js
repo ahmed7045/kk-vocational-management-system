@@ -6,20 +6,24 @@ const canAccessBranch = (user, branchId) => {
   return Number(user.branchId) === Number(branchId);
 };
 
-const createExpense = async (data, currentUser) => {
-  const {
-    branchId,
-    categoryId,
-    title,
-    amount,
-    expenseDate,
-    description,
-    receiptUrl,
-    expenseType,
-  } = data;
+const normalizePortalType = (value) => {
+  if (value === "welfare") return "welfare";
+  if (value === "vocational") return "vocational";
+  if (value === "branch") return "vocational";
 
-  if (!branchId || !title || !amount) {
-    throw new ApiError(400, "Branch, title and amount are required");
+  return "vocational";
+};
+
+const createExpense = async (data, currentUser) => {
+  const branchId = data.branchId;
+  const name = data.name || data.title;
+  const amount = data.amount;
+  const date = data.date || data.expenseDate;
+  const note = data.note || data.description;
+  const portalType = normalizePortalType(data.portalType || data.expenseType);
+
+  if (!branchId || !name || !amount) {
+    throw new ApiError(400, "Branch, name and amount are required");
   }
 
   if (Number(amount) <= 0) {
@@ -49,13 +53,13 @@ const createExpense = async (data, currentUser) => {
     `,
     [
       branchId,
-      categoryId || null,
-      title,
+      data.categoryId || null,
+      name,
       Number(amount),
-      expenseDate || new Date(),
-      description || null,
-      receiptUrl || null,
-      expenseType || "branch",
+      date || new Date(),
+      note || null,
+      data.receiptUrl || null,
+      portalType,
       currentUser.id,
     ]
   );
@@ -69,7 +73,7 @@ const createExpense = async (data, currentUser) => {
       currentUser.id,
       "CREATE_EXPENSE",
       "expenses",
-      `Created expense ${title} with amount ${amount}`,
+      `Created ${portalType} expense ${name} with amount ${amount}`,
     ]
   );
 
@@ -85,7 +89,7 @@ const getExpenses = async (query, currentUser) => {
   const categoryId = query.categoryId || null;
   const fromDate = query.fromDate || null;
   const toDate = query.toDate || null;
-  const expenseType = query.expenseType || "branch";
+  const portalType = normalizePortalType(query.portalType || query.expenseType);
 
   let branchId = query.branchId;
 
@@ -102,11 +106,15 @@ const getExpenses = async (query, currentUser) => {
       e.category_id,
       ec.category_name,
       e.title,
+      e.title AS name,
       e.amount,
       e.expense_date,
+      e.expense_date AS date,
       e.description,
+      e.description AS note,
       e.receipt_url,
       e.expense_type,
+      e.expense_type AS portal_type,
       e.created_at,
       u.full_name AS created_by_name
     FROM expenses e
@@ -132,7 +140,7 @@ const getExpenses = async (query, currentUser) => {
       categoryId,
       fromDate,
       toDate,
-      expenseType,
+      portalType,
       `%${search}%`,
       limit,
       offset,
@@ -147,6 +155,10 @@ const getExpenseById = async (id, currentUser) => {
     `
     SELECT
       e.*,
+      e.title AS name,
+      e.expense_date AS date,
+      e.description AS note,
+      e.expense_type AS portal_type,
       b.name AS branch_name,
       ec.category_name,
       u.full_name AS created_by_name
@@ -188,15 +200,11 @@ const updateExpense = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this expense");
   }
 
-  const {
-    categoryId,
-    title,
-    amount,
-    expenseDate,
-    description,
-    receiptUrl,
-    expenseType,
-  } = data;
+  const name = data.name || data.title;
+  const amount = data.amount;
+  const date = data.date || data.expenseDate;
+  const note = data.note || data.description;
+  const portalType = data.portalType || data.expenseType;
 
   if (amount !== undefined && Number(amount) <= 0) {
     throw new ApiError(400, "Expense amount must be greater than zero");
@@ -210,7 +218,7 @@ const updateExpense = async (id, data, currentUser) => {
       title = COALESCE($2, title),
       amount = COALESCE($3, amount),
       expense_date = COALESCE($4, expense_date),
-      description = COALESCE($5, description),
+      description = $5,
       receipt_url = COALESCE($6, receipt_url),
       expense_type = COALESCE($7, expense_type),
       updated_at = CURRENT_TIMESTAMP
@@ -218,13 +226,13 @@ const updateExpense = async (id, data, currentUser) => {
     RETURNING *
     `,
     [
-      categoryId || null,
-      title || null,
+      data.categoryId || null,
+      name || null,
       amount !== undefined ? Number(amount) : null,
-      expenseDate || null,
-      description || null,
-      receiptUrl || null,
-      expenseType || null,
+      date || null,
+      note || null,
+      data.receiptUrl || null,
+      portalType ? normalizePortalType(portalType) : null,
       id,
     ]
   );
@@ -239,6 +247,38 @@ const updateExpense = async (id, data, currentUser) => {
       "UPDATE_EXPENSE",
       "expenses",
       `Updated expense ID ${id}`,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const deleteExpense = async (id, currentUser) => {
+  const expense = await getExpenseById(id, currentUser);
+
+  const result = await pool.query(
+    `
+    DELETE FROM expenses
+    WHERE id = $1
+    RETURNING id
+    `,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Expense not found");
+  }
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "DELETE_EXPENSE",
+      "expenses",
+      `Deleted expense ${expense.title}`,
     ]
   );
 
@@ -287,6 +327,7 @@ module.exports = {
   getExpenses,
   getExpenseById,
   updateExpense,
+  deleteExpense,
   getExpenseCategories,
   createExpenseCategory,
 };

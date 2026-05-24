@@ -3,6 +3,7 @@ const {
   getExpenses,
   getExpenseById,
   updateExpense,
+  deleteExpense,
   getExpenseCategories,
   createExpenseCategory,
 } = require("./expense.service");
@@ -63,6 +64,19 @@ const update = async (req, res, next) => {
   }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    await deleteExpense(req.params.id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Expense deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const categories = async (req, res, next) => {
   try {
     const data = await getExpenseCategories();
@@ -96,6 +110,7 @@ module.exports = {
   list,
   details,
   update,
+  remove,
   categories,
   createCategory,
 };

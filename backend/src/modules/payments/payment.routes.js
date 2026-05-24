@@ -11,6 +11,7 @@ const {
   recent,
   methods,
   createMethod,
+  remove,
 } = require("./payment.controller");
 
 router.get(
@@ -55,4 +56,10 @@ router.post(
   create
 );
 
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("payments.delete"),
+  remove
+);
 module.exports = router;
