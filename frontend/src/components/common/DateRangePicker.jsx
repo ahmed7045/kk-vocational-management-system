@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight, X } from "lucide-react";
-import "./dateRangePicker.css";
+import "./DateRangePicker.css";
 
 const pad = (num) => String(num).padStart(2, "0");
 
