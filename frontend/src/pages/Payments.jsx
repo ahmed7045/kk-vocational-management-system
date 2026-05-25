@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   Plus,
-  RefreshCcw,
   Search,
   History,
   CreditCard,
@@ -19,7 +18,7 @@ import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
-
+import DateRangePicker from "../components/common/DateRangePicker";
 import {
   formatCurrency,
   formatDate,
@@ -175,14 +174,14 @@ const Payments = () => {
     }));
   };
 
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      paymentMethodId: "",
-      fromDate: "",
-      toDate: "",
-    });
-  };
+  // const clearFilters = () => {
+  //   setFilters({
+  //     search: "",
+  //     paymentMethodId: "",
+  //     fromDate: "",
+  //     toDate: "",
+  //   });
+  // };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -499,7 +498,7 @@ const Payments = () => {
             ]}
           />
 
-          <Input
+          {/* <Input
             name="fromDate"
             type="date"
             value={filters.fromDate}
@@ -511,15 +510,26 @@ const Payments = () => {
             type="date"
             value={filters.toDate}
             onChange={handleFilterChange}
+          /> */}
+
+          <DateRangePicker
+            fromDate={filters.fromDate}
+            toDate={filters.toDate}
+            onChange={({ fromDate, toDate }) => {
+              setFilters((prev) => ({
+                ...prev,
+                fromDate,
+                toDate,
+              }));
+            }}
           />
-
-          <Button variant="secondary" onClick={clearFilters}>
+          {/* <Button variant="secondary" onClick={clearFilters}>
             Clear Filters
-          </Button>
+          </Button> */}
 
-          <Button variant="secondary" onClick={fetchPayments}>
+          {/* <Button variant="secondary" onClick={fetchPayments}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
         </div>
 
         {error && <div className="payments-error">{error}</div>}

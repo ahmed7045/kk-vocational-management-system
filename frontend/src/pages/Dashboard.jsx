@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import {
+  Plus,
   Users,
   UserCheck,
   Clock,
-  // Wallet,
-  Receipt,
-  TrendingUp,
-  RefreshCcw,
+  // Receipt,
+  // TrendingUp,
 } from "lucide-react";
 import {
   BarChart,
@@ -25,10 +25,9 @@ import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Loader from "../components/common/Loader";
 import Badge from "../components/common/Badge";
-import Table from "../components/common/Table";
 import Button from "../components/common/Button";
 import {
-  formatCurrency,
+  // formatCurrency,
   getSelectedBranchId,
   getSelectedBranchName,
 } from "../utils/formatters";
@@ -36,6 +35,14 @@ import "./dashboard.css";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const todayText = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,12 +88,18 @@ const Dashboard = () => {
   }
 
   const summary = dashboardData?.summary || {};
-  // const recentPayments = dashboardData?.recentPayments || [];
   const revenueAnalytics = dashboardData?.revenueAnalytics || [];
   const expenseAnalytics = dashboardData?.expenseAnalytics || [];
   const coursePopularity = dashboardData?.coursePopularity || [];
 
   const statCards = [
+    {
+      title: "Add Student",
+      value: "New",
+      icon: Plus,
+      type: "info",
+      route: "/app/students?openAdd=true",
+    },
     {
       title: "Total Students",
       value: summary.totalStudents || 0,
@@ -109,66 +122,40 @@ const Dashboard = () => {
       route: "/app/students?feeStatus=pending",
     },
     // {
-    //   title: "Monthly Revenue",
-    //   value: formatCurrency(summary.monthlyRevenue),
-    //   icon: Wallet,
-    //   type: "success",
-    //   route: "/app/payments",
+    //   title: "Monthly Expenses",
+    //   value: formatCurrency(summary.monthlyExpenses),
+    //   icon: Receipt,
+    //   type: "danger",
+    //   route: "/app/expenses",
     // },
-    {
-      title: "Monthly Expenses",
-      value: formatCurrency(summary.monthlyExpenses),
-      icon: Receipt,
-      type: "danger",
-      route: "/app/expenses",
-    },
-    {
-      title: "Monthly Balance",
-      value: formatCurrency(summary.monthlyBalance),
-      icon: TrendingUp,
-      type: summary.monthlyBalance >= 0 ? "success" : "danger",
-      route: "/app/reports",
-    },
+    // {
+    //   title: "Monthly Balance",
+    //   value: formatCurrency(summary.monthlyBalance),
+    //   icon: TrendingUp,
+    //   type: summary.monthlyBalance >= 0 ? "success" : "danger",
+    //   route: "/app/reports",
+    // },
   ];
-
-  // const paymentColumns = [
-  //   {
-  //     key: "student_name",
-  //     title: "Student",
-  //   },
-  //   {
-  //     key: "amount",
-  //     title: "Amount",
-  //     render: (row) => formatCurrency(row.amount),
-  //   },
-  //   {
-  //     key: "payment_method",
-  //     title: "Method",
-  //     render: (row) => row.payment_method || "-",
-  //   },
-  //   {
-  //     key: "payment_date",
-  //     title: "Date",
-  //     render: (row) =>
-  //       row.payment_date
-  //         ? new Date(row.payment_date).toLocaleDateString("en-GB")
-  //         : "-",
-  //   },
-  // ];
 
   return (
     <div className="page dashboard-page">
       <div className="page-header">
-        <div>
+        <div className="dashboard-welcome-header">
+          <div>
+            <h1>Welcome back, {user?.fullName || user?.full_name || "User"}</h1>
+            <p>{todayText}</p>
+          </div>
+        </div>
+        {/* <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">
             Overview for {branchName || "All Branches"}
           </p>
-        </div>
+        </div> */}
 
-        <Button variant="secondary" onClick={fetchDashboard}>
+        {/* <Button variant="secondary" onClick={fetchDashboard}>
           <RefreshCcw size={16} /> Refresh
-        </Button>
+        </Button> */}
       </div>
 
       <div className="dashboard-stats-grid">

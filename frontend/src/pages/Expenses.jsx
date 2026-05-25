@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Plus,
-  RefreshCcw,
   Search,
-  WalletCards,
 } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
@@ -15,7 +13,7 @@ import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
-
+import DateRangePicker from "../components/common/DateRangePicker";
 import {
   formatCurrency,
   formatDate,
@@ -133,13 +131,7 @@ const Expenses = () => {
     }));
   };
 
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      fromDate: "",
-      toDate: "",
-    });
-  };
+
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -204,17 +196,17 @@ const Expenses = () => {
             prev.map((expense) =>
               expense.id === selectedExpense.id
                 ? {
-                    ...expense,
-                    title: payload.name,
-                    name: payload.name,
-                    amount: payload.amount,
-                    expense_date: payload.date || new Date().toISOString(),
-                    date: payload.date || new Date().toISOString(),
-                    description: payload.note,
-                    note: payload.note,
-                    expense_type: payload.portalType,
-                    portal_type: payload.portalType,
-                  }
+                  ...expense,
+                  title: payload.name,
+                  name: payload.name,
+                  amount: payload.amount,
+                  expense_date: payload.date || new Date().toISOString(),
+                  date: payload.date || new Date().toISOString(),
+                  description: payload.note,
+                  note: payload.note,
+                  expense_type: payload.portalType,
+                  portal_type: payload.portalType,
+                }
                 : expense
             )
           );
@@ -403,7 +395,7 @@ const Expenses = () => {
             {portalType === "welfare" ? "Welfare Expenses" : "Vocational Expenses"}
           </h1>
           <p className="page-subtitle">
-            Manage {portalType} expenses for {branchName || "selected branch"}.
+            Manage {portalType} expenses.
           </p>
         </div>
 
@@ -412,64 +404,41 @@ const Expenses = () => {
         </Button>
       </div>
 
-      <div className="expenses-summary-grid single">
-        <Card>
-          <div className="expense-summary-card">
-            <div className="expense-summary-icon danger">
-              <WalletCards size={24} />
-            </div>
+      
 
-            <div>
-              <p>Current Month Expenses</p>
-              <h2>{formatCurrency(currentMonthExpenses)}</h2>
-            </div>
-          </div>
-        </Card>
-      </div>
+<Card className="expenses-list-card">
+  <div className="expenses-toolbar donation-like">
+    <div className="expenses-search donation-like-search">
+      <Search size={17} />
+      <input
+        name="search"
+        value={filters.search}
+        onChange={handleFilterChange}
+        placeholder="Search expense name or note..."
+      />
+    </div>
 
-      <Card>
-        <div className="expenses-toolbar simple">
-          <div className="expenses-search">
-            <Search size={17} />
-            <input
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Search expense name or note..."
-            />
-          </div>
+    <DateRangePicker
+      fromDate={filters.fromDate}
+      toDate={filters.toDate}
+      onChange={({ fromDate, toDate }) => {
+        setFilters((prev) => ({
+          ...prev,
+          fromDate,
+          toDate,
+        }));
+      }}
+    />
+  </div>
 
-          <Input
-            name="fromDate"
-            type="date"
-            value={filters.fromDate}
-            onChange={handleFilterChange}
-          />
+  {error && <div className="expenses-error">{error}</div>}
 
-          <Input
-            name="toDate"
-            type="date"
-            value={filters.toDate}
-            onChange={handleFilterChange}
-          />
-
-          <Button variant="secondary" onClick={clearFilters}>
-            Clear Filters
-          </Button>
-
-          <Button variant="secondary" onClick={fetchExpenses}>
-            <RefreshCcw size={16} /> Refresh
-          </Button>
-        </div>
-
-        {error && <div className="expenses-error">{error}</div>}
-
-        <Table
-          columns={columns}
-          data={expenses}
-          emptyText="No expenses found"
-        />
-      </Card>
+  <Table
+    columns={columns}
+    data={expenses}
+    emptyText="No expenses found"
+  />
+</Card>
 
       <Modal
         open={modalOpen}
@@ -592,9 +561,8 @@ const Expenses = () => {
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title="Delete Expense"
-        message={`Are you sure you want to delete ${
-          selectedExpense?.name || selectedExpense?.title || "this expense"
-        }?`}
+        message={`Are you sure you want to delete ${selectedExpense?.name || selectedExpense?.title || "this expense"
+          }?`}
         loading={deleting}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}

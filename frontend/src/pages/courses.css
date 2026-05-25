@@ -9,7 +9,9 @@
   gap: 12px;
   align-items: center;
 }
-
+.course-card{
+  padding : 40px  20px;
+}
 .course-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -21,6 +23,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 14px;
 }
 
 .summary-icon {
@@ -48,8 +51,9 @@
 .tabs {
   display: flex;
   gap: 10px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 18px;
-  border-bottom: 1px solid var(--border);
   padding-bottom: 14px;
 }
 
@@ -102,6 +106,7 @@
   padding: 11px 12px;
   outline: none;
   resize: vertical;
+  width: 100%;
 }
 
 .form-group textarea:focus {
@@ -166,7 +171,7 @@
 }
 
 .course-search input {
-  width: 100%;
+  width: 450px;
   border: none;
   outline: none;
   background: transparent;

@@ -5,7 +5,11 @@
     radial-gradient(circle at top right, #dbeafe 0, transparent 30%),
     linear-gradient(135deg, #f8fafc, #ffffff);
 }
-
+.branch-header-items{
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
 .branch-header {
   max-width: 1180px;
   margin: 0 auto 42px;
@@ -24,7 +28,6 @@
   place-items: center;
   font-weight: 800;
   font-size: 20px;
-  margin-bottom: 18px;
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
 }
 
@@ -36,7 +39,7 @@
 
 .branch-header p {
   color: var(--text-muted);
-  margin-top: 10px;
+  margin-top: 5px;
   font-size: 16px;
 }
 

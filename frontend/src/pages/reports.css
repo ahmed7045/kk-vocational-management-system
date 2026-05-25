@@ -4,6 +4,18 @@
   gap: 8px;
 }
 
+.reports-filter-card{
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.table-wrapper{
+  padding: 0px 20px;
+}
+.card-header{
+  margin-top:10px
+}
 .reports-header-actions {
   display: flex;
   gap: 12px;
@@ -12,9 +24,14 @@
 
 .reports-tabs {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 22px;
-  flex-wrap: wrap;
+}
+.reports-tabs-left{
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .reports-tabs button {
@@ -46,6 +63,8 @@
   gap: 14px;
   align-items: start;
   flex-wrap: wrap;
+  border: none;
+
 }
 
 .reports-filter-bar .form-group {
@@ -116,6 +135,31 @@
   color: var(--text-muted);
   font-size: 12px;
   margin-top: 4px;
+}
+
+.reports-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.reports-filter-bar .date-range-picker {
+  width: 180px;
+  flex: 0 0 180px;
+}
+
+.reports-filter-bar .form-group {
+  margin-bottom: 0;
+}
+
+.reports-filter-bar select,
+.reports-filter-bar input {
+  height: 44px;
+}
+
+.reports-grid-2.single {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 1150px) {

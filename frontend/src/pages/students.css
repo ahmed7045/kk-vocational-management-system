@@ -3,13 +3,13 @@
   align-items: center;
   gap: 8px;
 }
-
+.student-card{
+  padding : 40px  20px;
+}
 .students-toolbar {
-  display: grid;
-  grid-template-columns: 1.6fr 220px 220px auto;
-  gap: 14px;
-  align-items: start;
-  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .students-search {
@@ -21,6 +21,7 @@
   align-items: center;
   padding: 0 12px;
   gap: 8px;
+  width: 450px;
 }
 
 .students-search input {
@@ -30,6 +31,9 @@
   width: 100%;
 }
 
+.table-wrapper{
+  margin-top: 20px;
+}
 .table-subtext {
   display: block;
   color: var(--text-muted);
@@ -50,7 +54,9 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
-
+.form-group {
+  margin-bottom: 0px !important;
+}
 .form-group textarea {
   border: 1px solid var(--border);
   border-radius: 10px;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, RefreshCcw, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import { useAuth } from "../auth/AuthContext";
 import ActionButtons from "../components/common/ActionButtons";
@@ -60,15 +60,29 @@ const Students = ({
     fullName: "",
     fatherName: "",
     phone: "",
-    city: "",
-    address: "",
     courseId: "",
-    assignedTeacherId: "",
-    shiftId: "",
     admissionDate: "",
-    admissionStatus: "confirmed",
     paidFee: "",
+    feeStatus: "paid",
   });
+
+  const resetForm = () => {
+    setForm({
+      fullName: "",
+      fatherName: "",
+      phone: "",
+      courseId: "",
+      admissionDate: "",
+      paidFee: "",
+      feeStatus: "paid",
+    });
+  };
+
+  const openAddModal = () => {
+    setSelectedRecord(null);
+    resetForm();
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     const urlFeeStatus = searchParams.get("feeStatus") || "";
@@ -82,6 +96,22 @@ const Students = ({
       };
     });
   }, [searchParams]);
+
+  useEffect(() => {
+    const shouldOpenAddModal = searchParams.get("openAdd") === "true";
+
+    if (
+      shouldOpenAddModal &&
+      defaultStudentStatus !== "non_active" &&
+      hasPermission("students.create")
+    ) {
+      openAddModal();
+
+      const params = new URLSearchParams(searchParams);
+      params.delete("openAdd");
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, defaultStudentStatus, hasPermission, setSearchParams]);
 
   const fetchStudents = async () => {
     try {
@@ -170,28 +200,6 @@ const Students = ({
     }));
   };
 
-  const resetForm = () => {
-    setForm({
-      fullName: "",
-      fatherName: "",
-      phone: "",
-      city: "",
-      address: "",
-      courseId: "",
-      assignedTeacherId: "",
-      shiftId: "",
-      admissionDate: "",
-      admissionStatus: "confirmed",
-      paidFee: "",
-    });
-  };
-
-  const openAddModal = () => {
-    setSelectedRecord(null);
-    resetForm();
-    setModalOpen(true);
-  };
-
   const handleSubmitStudent = async (event) => {
     event.preventDefault();
 
@@ -200,27 +208,25 @@ const Students = ({
       return;
     }
 
-    const paidFee = Number(form.paidFee || 0);
-
+    const feeAmount = Number(form.paidFee || 0);
     const payload = {
       branchId: Number(branchId),
       fullName: form.fullName,
       fatherName: form.fatherName,
       phone: form.phone,
-      city: form.city,
-      address: form.address,
+      city: "",
+      address: "",
       courseIds: form.courseId ? [Number(form.courseId)] : [],
-      assignedTeacherId: form.assignedTeacherId
-        ? Number(form.assignedTeacherId)
-        : null,
-      shiftId: form.shiftId ? Number(form.shiftId) : null,
+      assignedTeacherId: null,
+      shiftId: null,
       admissionDate: form.admissionDate || null,
-      admissionStatus: form.admissionStatus,
+      admissionStatus: "confirmed",
       studentStatus: "active",
-      totalFee: paidFee,
-      paidFee,
-      remainingFee: 0,
-      feeStatus: "paid",
+
+      totalFee: feeAmount,
+      paidFee: form.feeStatus === "paid" ? feeAmount : 0,
+      remainingFee: form.feeStatus === "paid" ? 0 : feeAmount,
+      feeStatus: form.feeStatus,
     };
 
     try {
@@ -236,20 +242,24 @@ const Students = ({
               .map((student) =>
                 student.id === selectedRecord.id
                   ? {
-                      ...student,
-                      full_name: payload.fullName,
-                      father_name: payload.fatherName,
-                      phone: payload.phone,
-                      city: payload.city,
-                      address: payload.address,
-                      total_fee: payload.paidFee,
-                      paid_fee: payload.paidFee,
-                      remaining_fee: 0,
-                      fee_status: "paid",
-                      student_status: "active",
-                      admission_status: payload.admissionStatus,
-                      admission_date: payload.admissionDate,
-                    }
+                    ...student,
+                    full_name: payload.fullName,
+                    father_name: payload.fatherName,
+                    phone: payload.phone,
+                    courses: courses
+                      .filter((course) => Number(course.id) === Number(form.courseId))
+                      .map((course) => ({
+                        id: course.id,
+                        courseName: course.course_name,
+                      })),
+                    total_fee: payload.totalFee,
+                    paid_fee: payload.paidFee,
+                    remaining_fee: payload.remainingFee,
+                    fee_status: payload.feeStatus,
+                    student_status: "active",
+                    admission_status: payload.admissionStatus,
+                    admission_date: payload.admissionDate,
+                  }
                   : student
               )
               .filter((student) => student.student_status === defaultStudentStatus)
@@ -265,13 +275,18 @@ const Students = ({
             full_name: payload.fullName,
             father_name: payload.fatherName,
             phone: payload.phone,
-            city: payload.city,
-            address: payload.address,
-            courses: [],
-            total_fee: payload.paidFee,
+            city: "",
+            address: "",
+            courses: courses
+              .filter((course) => Number(course.id) === Number(form.courseId))
+              .map((course) => ({
+                id: course.id,
+                courseName: course.course_name,
+              })),
+            total_fee: payload.totalFee,
             paid_fee: payload.paidFee,
-            remaining_fee: 0,
-            fee_status: "paid",
+            remaining_fee: payload.remainingFee,
+            fee_status: payload.feeStatus,
             student_status: "active",
             admission_status: payload.admissionStatus,
             admission_date: payload.admissionDate,
@@ -332,14 +347,10 @@ const Students = ({
         fullName: student.full_name || "",
         fatherName: student.father_name || "",
         phone: student.phone || "",
-        city: student.city || "",
-        address: student.address || "",
         courseId: student.courses?.[0]?.id || "",
-        assignedTeacherId: student.assigned_teacher_id || "",
-        shiftId: student.shift_id || "",
         admissionDate: student.admission_date?.split("T")[0] || "",
-        admissionStatus: student.admission_status || "confirmed",
-        paidFee: student.paid_fee || "",
+        paidFee: student.total_fee || student.paid_fee || "",
+        feeStatus: student.fee_status || "paid",
       });
 
       setModalOpen(true);
@@ -408,13 +419,13 @@ const Students = ({
   const columns = [
     {
       key: "full_name",
-      title: "Student",
-      render: (row) => (
-        <div>
-          <strong>{row.full_name}</strong>
-          <span className="table-subtext">{row.father_name || "-"}</span>
-        </div>
-      ),
+      title: "Name",
+      render: (row) => <strong>{row.full_name}</strong>,
+    },
+    {
+      key: "father_name",
+      title: "Father Name",
+      render: (row) => row.father_name || "-",
     },
     {
       key: "phone",
@@ -430,32 +441,23 @@ const Students = ({
           : "-",
     },
     {
+      key: "admission_date",
+      title: "Joining Date",
+      render: (row) => formatDate(row.admission_date),
+    },
+    {
+      key: "total_fee",
+      title: "Fees",
+      render: (row) => formatCurrency(row.total_fee || row.paid_fee || 0),
+    },
+    {
       key: "fee_status",
-      title: "Fee Status",
+      title: "Fees Status",
       render: (row) => (
         <Badge type={getFeeBadgeType(row.fee_status)}>
-          {row.fee_status}
+          {row.fee_status || "pending"}
         </Badge>
       ),
-    },
-    {
-      key: "student_status",
-      title: "Status",
-      render: (row) => (
-        <Badge type={getStudentBadgeType(row.student_status)}>
-          {row.student_status}
-        </Badge>
-      ),
-    },
-    {
-      key: "paid_fee",
-      title: "Paid Fee",
-      render: (row) => formatCurrency(row.paid_fee),
-    },
-    {
-      key: "admission_date",
-      title: "Admission",
-      render: (row) => formatDate(row.admission_date),
     },
     {
       key: "actions",
@@ -497,7 +499,7 @@ const Students = ({
           )}
       </div>
 
-      <Card>
+      <Card className="student-card">
         <div className="students-toolbar">
           <div className="students-search">
             <Search size={17} />
@@ -522,13 +524,13 @@ const Students = ({
             ]}
           />
 
-          <Button variant="secondary" onClick={clearFilters}>
+          {/* <Button variant="secondary" onClick={clearFilters}>
             Clear Filters
-          </Button>
+          </Button> */}
 
-          <Button variant="secondary" onClick={fetchStudents}>
+          {/* <Button variant="secondary" onClick={fetchStudents}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
         </div>
 
         {error && <div className="students-error">{error}</div>}
@@ -549,7 +551,7 @@ const Students = ({
         <form onSubmit={handleSubmitStudent}>
           <div className="student-form-grid">
             <Input
-              label="Student Full Name"
+              label="Student Name"
               name="fullName"
               value={form.fullName}
               onChange={handleFormChange}
@@ -570,13 +572,6 @@ const Students = ({
               onChange={handleFormChange}
             />
 
-            <Input
-              label="City"
-              name="city"
-              value={form.city}
-              onChange={handleFormChange}
-            />
-
             <Select
               label="Course"
               name="courseId"
@@ -588,30 +583,8 @@ const Students = ({
               }))}
             />
 
-            <Select
-              label="Assign Teacher"
-              name="assignedTeacherId"
-              value={form.assignedTeacherId}
-              onChange={handleFormChange}
-              options={teachers.map((teacher) => ({
-                label: teacher.full_name,
-                value: teacher.id,
-              }))}
-            />
-
-            <Select
-              label="Shift Timing"
-              name="shiftId"
-              value={form.shiftId}
-              onChange={handleFormChange}
-              options={shifts.map((shift) => ({
-                label: `${shift.shift_name} (${shift.start_time} - ${shift.end_time})`,
-                value: shift.id,
-              }))}
-            />
-
             <Input
-              label="Admission Date"
+              label="Joining Date"
               name="admissionDate"
               type="date"
               value={form.admissionDate}
@@ -619,25 +592,26 @@ const Students = ({
             />
 
             <Input
-              label="Paid Fee"
+              label="Fees"
               name="paidFee"
               type="number"
               value={form.paidFee}
               onChange={handleFormChange}
               required
             />
-          </div>
 
-          <div className="form-group">
-            <label>Full Address</label>
-            <textarea
-              name="address"
-              value={form.address}
+            <Select
+              label="Fees Status"
+              name="feeStatus"
+              value={form.feeStatus}
               onChange={handleFormChange}
-              placeholder="Enter residential address"
-              rows="3"
+              options={[
+                { label: "Paid", value: "paid" },
+                { label: "Pending", value: "pending" },
+              ]}
             />
           </div>
+
 
           <div className="modal-actions">
             <Button
@@ -683,34 +657,29 @@ const Students = ({
             </div>
 
             <div>
-              <strong>Branch:</strong>
-              <p>{selectedRecord.branch_name || "-"}</p>
-            </div>
-
-            <div>
               <strong>Courses:</strong>
               <p>
                 {selectedRecord.courses?.length
-                  ? selectedRecord.courses
-                      .map((course) => course.courseName)
-                      .join(", ")
+                  ? selectedRecord.courses.map((course) => course.courseName).join(", ")
                   : "-"}
               </p>
             </div>
 
             <div>
-              <strong>Shift:</strong>
-              <p>{selectedRecord.shift_name || "-"}</p>
+              <strong>Joining Date:</strong>
+              <p>{formatDate(selectedRecord.admission_date)}</p>
             </div>
 
             <div>
-              <strong>Paid Fee:</strong>
-              <p>{formatCurrency(selectedRecord.paid_fee || 0)}</p>
+              <strong>Fees:</strong>
+              <p>
+                {formatCurrency(selectedRecord.total_fee || selectedRecord.paid_fee || 0)}
+              </p>
             </div>
 
             <div>
-              <strong>Status:</strong>
-              <p>{selectedRecord.student_status || "-"}</p>
+              <strong>Fees Status:</strong>
+              <p>{selectedRecord.fee_status || "-"}</p>
             </div>
           </div>
         )}
@@ -719,9 +688,8 @@ const Students = ({
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title="Delete Student"
-        message={`Are you sure you want to delete ${
-          selectedRecord?.full_name || "this student"
-        }?`}
+        message={`Are you sure you want to delete ${selectedRecord?.full_name || "this student"
+          }?`}
         loading={deleting}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}

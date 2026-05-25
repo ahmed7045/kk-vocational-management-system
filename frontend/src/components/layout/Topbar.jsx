@@ -1,4 +1,4 @@
-import { LogOut, Search, ArrowLeft } from "lucide-react";
+import { LogOut, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -13,10 +13,10 @@ const Topbar = () => {
           <ArrowLeft size={18} />
         </button>
 
-        <div className="topbar-search">
+        {/* <div className="topbar-search">
           <Search size={18} />
           <input placeholder="Search..." />
-        </div>
+        </div> */}
       </div>
 
       <div className="topbar-user">

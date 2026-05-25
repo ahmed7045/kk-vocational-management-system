@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   FileText,
   Download,
-  RefreshCcw,
   Users,
   Wallet,
   HeartHandshake,
@@ -11,12 +10,10 @@ import {
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import Input from "../components/common/Input";
 import Select from "../components/common/Select";
 import Table from "../components/common/Table";
 import Badge from "../components/common/Badge";
 import Loader from "../components/common/Loader";
-
 import {
   formatCurrency,
   formatDate,
@@ -45,8 +42,6 @@ const Reports = () => {
   const [welfareReport, setWelfareReport] = useState(null);
 
   const [filters, setFilters] = useState({
-    fromDate: "",
-    toDate: "",
     feeStatus: "",
     studentStatus: "",
   });
@@ -60,14 +55,7 @@ const Reports = () => {
     }));
   };
 
-  const clearFilters = () => {
-    setFilters({
-      fromDate: "",
-      toDate: "",
-      feeStatus: "",
-      studentStatus: "",
-    });
-  };
+
 
   const buildQuery = (type) => {
     const params = new URLSearchParams();
@@ -76,13 +64,6 @@ const Reports = () => {
       params.append("branchId", branchId);
     }
 
-    if (filters.fromDate) {
-      params.append("fromDate", filters.fromDate);
-    }
-
-    if (filters.toDate) {
-      params.append("toDate", filters.toDate);
-    }
 
     if (type === "students") {
       if (filters.feeStatus) {
@@ -162,8 +143,6 @@ const Reports = () => {
     activeTab,
     branchId,
     filters.fromDate,
-    filters.toDate,
-    filters.feeStatus,
     filters.studentStatus,
   ]);
 
@@ -234,15 +213,7 @@ const Reports = () => {
       key: "fee_status",
       title: "Fee Status",
       render: (row) => (
-        <Badge
-          type={
-            row.fee_status === "paid"
-              ? "success"
-              : row.fee_status === "partial"
-                ? "warning"
-                : "danger"
-          }
-        >
+        <Badge type={row.fee_status === "paid" ? "success" : "danger"}>
           {row.fee_status}
         </Badge>
       ),
@@ -273,28 +244,6 @@ const Reports = () => {
     },
   ];
 
-  const paymentColumns = [
-    {
-      key: "student_name",
-      title: "Student",
-      render: (row) => row.student_name || "-",
-    },
-    {
-      key: "amount",
-      title: "Amount",
-      render: (row) => formatCurrency(row.amount),
-    },
-    {
-      key: "payment_method",
-      title: "Method",
-      render: (row) => row.payment_method || "-",
-    },
-    {
-      key: "payment_date",
-      title: "Date",
-      render: (row) => formatDate(row.payment_date),
-    },
-  ];
 
   const expenseColumns = [
     {
@@ -415,9 +364,9 @@ const Reports = () => {
         </div>
 
         <div className="reports-header-actions">
-          <Button variant="secondary" onClick={fetchActiveReport}>
+          {/* <Button variant="secondary" onClick={fetchActiveReport}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
 
           <Button variant="secondary" onClick={() => handleExport("pdf")}>
             <Download size={16} /> PDF
@@ -430,89 +379,72 @@ const Reports = () => {
       </div>
 
       <div className="reports-tabs">
-        {!isWelfarePortal && (
-          <button
-            className={activeTab === "students" ? "active" : ""}
-            onClick={() => setActiveTab("students")}
-          >
-            <Users size={16} /> Student Report
-          </button>
-        )}
 
-        <button
-          className={activeTab === "financial" ? "active" : ""}
-          onClick={() => setActiveTab("financial")}
-        >
-          <Wallet size={16} /> Financial Report
-        </button>
-
-        {isWelfarePortal && (
-          <button
-            className={activeTab === "welfare" ? "active" : ""}
-            onClick={() => setActiveTab("welfare")}
-          >
-            <HeartHandshake size={16} /> Welfare Report
-          </button>
-        )}
-      </div>
-
-      <Card>
-        <div className="reports-filter-bar">
-          {activeTab === "students" && (
-            <>
-              <Select
-                name="feeStatus"
-                value={filters.feeStatus}
-                onChange={handleFilterChange}
-                placeholder="Fee status"
-                options={[
-                  { label: "All Fee Status", value: "" },
-                  { label: "Paid", value: "paid" },
-                  { label: "Pending", value: "pending" },
-                  { label: "Partial", value: "partial" },
-                ]}
-              />
-
-              <Select
-                name="studentStatus"
-                value={filters.studentStatus}
-                onChange={handleFilterChange}
-                placeholder="Student status"
-                options={[
-                  { label: "All Student Status", value: "" },
-                  { label: "Active", value: "active" },
-                  { label: "Non Active", value: "non_active" },
-                  { label: "Completed", value: "completed" },
-                  { label: "Dropped", value: "dropped" },
-                  { label: "Left", value: "left" },
-                ]}
-              />
-            </>
+        <div className="reports-tabs-left">
+          {!isWelfarePortal && (
+            <button
+              className={activeTab === "students" ? "active" : ""}
+              onClick={() => setActiveTab("students")}
+            >
+              <Users size={16} /> Student Report
+            </button>
           )}
 
-          {(activeTab === "financial" || activeTab === "welfare") && (
-            <>
-              <Input
-                name="fromDate"
-                type="date"
-                value={filters.fromDate}
-                onChange={handleFilterChange}
-              />
-
-              <Input
-                name="toDate"
-                type="date"
-                value={filters.toDate}
-                onChange={handleFilterChange}
-              />
-            </>
+          {!isWelfarePortal && (
+            <button
+              className={activeTab === "financial" ? "active" : ""}
+              onClick={() => setActiveTab("financial")}
+            >
+              <Wallet size={16} /> Financial Report
+            </button>
           )}
-
-          <Button variant="secondary" onClick={clearFilters}>
-            Clear Filters
-          </Button>
         </div>
-      </Card>
+
+
+        <div>
+
+          <Card className="reports-filter-card">
+            <div className="reports-filter-bar">
+              {activeTab === "students" && (
+                <>
+                  <Select
+                    name="feeStatus"
+                    value={filters.feeStatus}
+                    onChange={handleFilterChange}
+                    placeholder="Fee status"
+                    options={[
+                      { label: "All Fee Status", value: "" },
+                      { label: "Paid", value: "paid" },
+                      { label: "Pending", value: "pending" },
+                    ]}
+                  />
+
+                  <Select
+                    name="studentStatus"
+                    value={filters.studentStatus}
+                    onChange={handleFilterChange}
+                    placeholder="Student status"
+                    options={[
+                      { label: "All Student Status", value: "" },
+                      { label: "Active", value: "active" },
+                      { label: "Non Active", value: "non_active" },
+
+                    ]}
+                  />
+                </>
+              )}
+
+
+
+              {/* <Button variant="secondary" onClick={clearFilters}>
+            Clear Filters
+          </Button> */}
+            </div>
+          </Card>
+
+        </div>
+
+      </div>
 
       {error && <div className="reports-error">{error}</div>}
 
@@ -524,48 +456,6 @@ const Reports = () => {
         <>
           {activeTab === "students" && (
             <>
-              <div className="reports-summary-grid">
-                <Card>
-                  <div className="report-summary-card">
-                    <FileText size={24} />
-                    <div>
-                      <p>Total Students</p>
-                      <h2>{totalStudents}</h2>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="report-summary-card">
-                    <FileText size={24} />
-                    <div>
-                      <p>Total Fee</p>
-                      <h2>{formatCurrency(totalFee)}</h2>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="report-summary-card">
-                    <FileText size={24} />
-                    <div>
-                      <p>Total Paid</p>
-                      <h2>{formatCurrency(totalPaid)}</h2>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="report-summary-card">
-                    <FileText size={24} />
-                    <div>
-                      <p>Total Remaining</p>
-                      <h2>{formatCurrency(totalRemaining)}</h2>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
               <Card title="Student Report">
                 <Table
                   columns={studentColumns}
@@ -578,63 +468,8 @@ const Reports = () => {
 
           {activeTab === "financial" && (
             <>
-              <div className="reports-summary-grid">
-                <Card>
-                  <div className="report-summary-card">
-                    <Wallet size={24} />
-                    <div>
-                      <p>{isWelfarePortal ? "Total Donations" : "Total Revenue"}</p>
-                      <h2>
-                        {formatCurrency(financialReport?.summary?.totalRevenue)}
-                      </h2>
-                    </div>
-                  </div>
-                </Card>
 
-                <Card>
-                  <div className="report-summary-card danger">
-                    <Wallet size={24} />
-                    <div>
-                      <p>
-                        {isWelfarePortal
-                          ? "Approved Support"
-                          : "Total Expenses"}
-                      </p>
-                      <h2>
-                        {formatCurrency(financialReport?.summary?.totalExpenses)}
-                      </h2>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="report-summary-card success">
-                    <Wallet size={24} />
-                    <div>
-                      <p>
-                        {isWelfarePortal
-                          ? "Remaining Balance"
-                          : "Profit / Balance"}
-                      </p>
-                      <h2>{formatCurrency(financialReport?.summary?.profit)}</h2>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="reports-grid-2">
-                <Card title={isWelfarePortal ? "Donations" : "Payments"}>
-                  <Table
-                    columns={isWelfarePortal ? donationColumns : paymentColumns}
-                    data={financialReport?.payments || []}
-                    emptyText={
-                      isWelfarePortal
-                        ? "No donation records found"
-                        : "No payment records found"
-                    }
-                  />
-                </Card>
-
+              <div className="reports-grid-2 single ">
                 <Card
                   title={
                     isWelfarePortal ? "Approved / Support Cases" : "Expenses"

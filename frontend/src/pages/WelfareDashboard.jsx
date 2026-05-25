@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../auth/AuthContext";
 import {
   HeartHandshake,
   Users,
   Wallet,
   FileCheck,
   Plus,
-  RefreshCcw,
+  // RefreshCcw,
   CheckCircle,
   XCircle,
   ChevronDown,
@@ -34,6 +35,7 @@ import Modal from "../components/common/Modal";
 import Loader from "../components/common/Loader";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
+import DateRangePicker from "../components/common/DateRangePicker";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
@@ -42,6 +44,14 @@ import "./welfare.css";
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
+  const { user } = useAuth();
+
+  const todayText = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(defaultTab);
 
@@ -1380,25 +1390,25 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             onEdit={() => handleEditApplication(row)}
             onDelete={() => handleDeleteApplicationClick(row)}
           />
-{row.case_status === "pending" && (
-  <>
-    <Button
-      size="sm"
-      variant="secondary"
-      onClick={() => openStatusModal(row, "approved")}
-    >
-      <CheckCircle size={14} /> Approve
-    </Button>
+          {row.case_status === "pending" && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => openStatusModal(row, "approved")}
+              >
+                <CheckCircle size={14} /> Approve
+              </Button>
 
-    <Button
-      size="sm"
-      variant="danger"
-      onClick={() => openStatusModal(row, "rejected")}
-    >
-      <XCircle size={14} /> Reject
-    </Button>
-  </>
-)}
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => openStatusModal(row, "rejected")}
+              >
+                <XCircle size={14} /> Reject
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -1455,25 +1465,41 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     );
   }
 
+  const donorColumns = [
+    {
+      key: "donor_name",
+      title: "Donor Name",
+      render: (row) => row.donor_name || row.full_name || row.name || "-",
+    },
+    {
+      key: "phone",
+      title: "Phone",
+      render: (row) => row.phone || "-",
+    },
+    {
+      key: "email",
+      title: "Email",
+      render: (row) => row.email || "-",
+    },
+    {
+      key: "address",
+      title: "Address",
+      render: (row) => row.address || "-",
+    },
+  ];
+
   return (
     <div className="page welfare-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            {activeTab === "dashboard" && "Welfare Dashboard"}
-            {activeTab === "donors" && "Donors"}
-            {activeTab === "charities" && "Beneficiaries"}
-            {activeTab === "charityRecords" && "Charity History"}
-            {activeTab === "donations" && "Donations"}
-            {activeTab === "applications" && "Welfare Applications"}
-          </h1>
-          <p className="page-subtitle">
-            Manage welfare records, donations, donors, charities and applications.
-          </p>
-        </div>
+      {activeTab === "dashboard" ? (
+        <div className="dashboard-welcome-header">
+          <div>
+            <h1>
+              Welcome back, {user?.fullName || user?.full_name || "User"}
+            </h1>
+            <p>{todayText}</p>
+          </div>
 
-        <div className="welfare-header-actions">
-          {activeTab === "dashboard" && (
+          <div className="welfare-header-actions">
             <div className="quick-add-wrapper">
               <button
                 type="button"
@@ -1487,7 +1513,10 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
 
               {quickAddOpen && (
                 <div className="quick-add-menu">
-                  <button type="button" onClick={() => handleQuickAdd("donation")}>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdd("donation")}
+                  >
                     Add Donation
                   </button>
 
@@ -1500,13 +1529,45 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      ) : (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">
+              {activeTab === "donors" && "Donors"}
+              {activeTab === "charities" && "Beneficiaries"}
+              {activeTab === "charityRecords" && "Charity History"}
+              {activeTab === "donations" && "Donations"}
+              {activeTab === "applications" && "Welfare Applications"}
+            </h1>
+
+            <p className="page-subtitle">
+              Manage welfare records, donations, donors, charities and applications.
+            </p>
+          </div>
+
+          {activeTab === "donors" && (
+            <Button onClick={openAddDonorModal}>
+              <Plus size={16} /> Add Donor
+            </Button>
           )}
 
-          <Button variant="secondary" onClick={fetchWelfareData}>
-            <RefreshCcw size={16} /> Refresh
-          </Button>
+          {activeTab === "donations" && (
+            <Button onClick={() => setDonationModalOpen(true)}>
+              <Plus size={16} /> Add Donation
+            </Button>
+          )}
+
+          {activeTab === "applications" && (
+            <Button onClick={openAddApplicationModal}>
+              <Plus size={16} /> Add Application
+            </Button>
+          )}
+
+
         </div>
-      </div>
+      )}
 
       {error && <div className="welfare-error">{error}</div>}
 
@@ -1531,7 +1592,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
 
             <Card
               className="welfare-click-card"
-              onClick={() => handleDashboardCardClick("expenses")}
+              onClick={() => handleDashboardCardClick("charityRecords")}
             >
               <div className="welfare-summary-card">
                 <div className="welfare-summary-icon danger">
@@ -1539,7 +1600,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                 </div>
 
                 <div>
-                  <p>Welfare Expenses</p>
+                  <p>Charity</p>
                   <h2>{formatCurrency(dashboard?.totalWelfareExpenses)}</h2>
                 </div>
               </div>
@@ -1662,38 +1723,26 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         </>
       )}
 
-      {activeTab === "donors" && (
-        <Card
-          title="Donors"
-          subtitle="Manage welfare donors"
-          action={
-            <Button onClick={openAddDonorModal}>
-              <Plus size={16} /> Add Donor
-            </Button>
-          }
-        >
-          <div className="filter-bar">
-            <Input
-              label="Search"
-              name="donorSearch"
-              value={filters.donorSearch}
-              onChange={handleFilterChange}
-              placeholder="Search donor name, phone, email"
-            />
-          </div>
+{activeTab === "donors" && (
+  <Card className="donors-card">
+    <div className="filter-bar">
+      <Input
+        className="donor-search-input"
+        name="donorSearch"
+        value={filters.donorSearch}
+        onChange={handleFilterChange}
+        placeholder="Search donor name, phone, email"
+      />
+    </div>
 
-          <Table columns={donorColumns} data={donors} emptyText="No donors found" />
-        </Card>
-      )}
+    <Table columns={donorColumns} data={donors} emptyText="No donors found" />
+  </Card>
+)}
 
       {activeTab === "charities" && (
-        <Card
-          title="Beneficiaries"
-          subtitle="Beneficiaries are created automatically after application approval"
-        >
+        <Card className="charities-card">
           <div className="filter-bar">
             <Input
-              label="Search"
               name="beneficiarySearch"
               value={filters.beneficiarySearch}
               onChange={handleFilterChange}
@@ -1723,20 +1772,18 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               placeholder="Search beneficiary, type, item, note"
             />
 
-            <Input
-              label="From Date"
-              name="charityRecordFromDate"
-              type="date"
-              value={filters.charityRecordFromDate}
-              onChange={handleFilterChange}
-            />
 
-            <Input
-              label="To Date"
-              name="charityRecordToDate"
-              type="date"
-              value={filters.charityRecordToDate}
-              onChange={handleFilterChange}
+
+            <DateRangePicker
+              fromDate={filters.charityRecordFromDate}
+              toDate={filters.charityRecordToDate}
+              onChange={({ fromDate, toDate }) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  charityRecordFromDate: fromDate,
+                  charityRecordToDate: toDate,
+                }));
+              }}
             />
           </div>
 
@@ -1749,53 +1796,46 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       )}
 
       {activeTab === "donations" && (
-        <Card
-          title="Donations"
-          subtitle="Manage donation records"
-          action={
-            <Button onClick={() => setDonationModalOpen(true)}>
-              <Plus size={16} /> Add Donation
-            </Button>
-          }
-        >
+        <Card className="donations-card">
           <div className="filter-bar">
             <Input
-              label="Search"
+              className="donation-search-input"
               name="donationSearch"
               value={filters.donationSearch}
               onChange={handleFilterChange}
               placeholder="Search donor, phone, method"
             />
+            <div className="donation-filter-right">
+              <DateRangePicker
+                fromDate={filters.donationFromDate}
+                toDate={filters.donationToDate}
+                onChange={({ fromDate, toDate }) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    donationFromDate: fromDate,
+                    donationToDate: toDate,
+                  }));
+                }}
+              />
 
-            <Select
-              label="Method"
-              name="donationMethodId"
-              value={filters.donationMethodId}
-              onChange={handleFilterChange}
-              options={[
-                { label: "All Methods", value: "" },
-                ...donationMethods.map((method) => ({
-                  label: method.method_name,
-                  value: method.id,
-                })),
-              ]}
-            />
+              <Select
 
-            <Input
-              label="From Date"
-              name="donationFromDate"
-              type="date"
-              value={filters.donationFromDate}
-              onChange={handleFilterChange}
-            />
+                name="donationMethodId"
+                value={filters.donationMethodId}
+                onChange={handleFilterChange}
+                options={[
+                  { label: "All Methods", value: "" },
+                  ...donationMethods.map((method) => ({
+                    label: method.method_name,
+                    value: method.id,
+                  })),
+                ]}
+              />
 
-            <Input
-              label="To Date"
-              name="donationToDate"
-              type="date"
-              value={filters.donationToDate}
-              onChange={handleFilterChange}
-            />
+            </div>
+
+
+
           </div>
 
           <Table
@@ -1807,18 +1847,9 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       )}
 
       {activeTab === "applications" && (
-        <Card
-          title="Welfare Applications"
-          subtitle="Manage welfare cases and approvals"
-          action={
-            <Button onClick={openAddApplicationModal}>
-              <Plus size={16} /> Add Application
-            </Button>
-          }
-        >
+        <Card className="applications-card">
           <div className="filter-bar">
             <Input
-              label="Search"
               name="applicationSearch"
               value={filters.applicationSearch}
               onChange={handleFilterChange}
@@ -1826,7 +1857,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             />
 
             <Select
-              label="Status"
               name="applicationStatus"
               value={filters.applicationStatus}
               onChange={handleFilterChange}

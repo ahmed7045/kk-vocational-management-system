@@ -5,12 +5,25 @@
     radial-gradient(circle at top left, #dbeafe 0, transparent 32%),
     linear-gradient(135deg, #f8fafc, #ffffff);
 }
+.portal-header-items{
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-direction: row !important;
+}
 
 .portal-header {
   max-width: 1180px;
-  margin: 0 auto 42px;
+  margin: 0 auto 58px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Left side: KK logo + heading + subtitle */
+.portal-header > div:first-child {
+  display: flex;
   align-items: center;
 }
 
@@ -24,7 +37,6 @@
   place-items: center;
   font-weight: 800;
   font-size: 20px;
-  margin-bottom: 18px;
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
 }
 
@@ -32,14 +44,16 @@
   font-size: 38px;
   margin: 0;
   letter-spacing: -0.04em;
+  line-height: 1.1;
 }
 
 .portal-header p {
   color: var(--text-muted);
-  margin-top: 10px;
+  margin: 10px 0 0;
   font-size: 16px;
 }
 
+/* Right side: Admin User box */
 .portal-user-box {
   background: white;
   border: 1px solid var(--border);
@@ -49,6 +63,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .portal-user-box > div {
@@ -163,6 +178,7 @@
   margin: 0;
 }
 
+
 @media (max-width: 800px) {
   .portal-page {
     padding: 22px;
@@ -172,14 +188,17 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 20px;
-  }
-
-  .portal-grid {
-    grid-template-columns: 1fr;
+    margin-bottom: 34px;
   }
 
   .portal-user-box {
     width: 100%;
     justify-content: space-between;
+    margin-top: 0;
+  }
+
+  .portal-grid {
+    grid-template-columns: 1fr;
   }
 }
+

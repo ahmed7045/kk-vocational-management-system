@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, RefreshCcw, Search, UserCog } from "lucide-react";
+import { Plus, Search, UserCog } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
@@ -399,7 +399,7 @@ const Employees = () => {
         </Button>
       </div>
 
-      <Card>
+      <Card className="employee-card">
         <div className="employees-toolbar">
           <div className="employees-search">
             <Search size={17} />
@@ -423,13 +423,13 @@ const Employees = () => {
             ]}
           />
 
-          <Button variant="secondary" onClick={clearFilters}>
+          {/* <Button variant="secondary" onClick={clearFilters}>
             Clear Filters
-          </Button>
+          </Button> */}
 
-          <Button variant="secondary" onClick={fetchEmployees}>
+          {/* <Button variant="secondary" onClick={fetchEmployees}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
         </div>
 
         {error && <div className="employees-error">{error}</div>}

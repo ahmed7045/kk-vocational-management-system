@@ -296,20 +296,24 @@ VALUES
 ('welfare.donor.view', 'Can view donors'),
 ('welfare.donor.create', 'Can create donors'),
 ('welfare.donor.update', 'Can update donors'),
+('welfare.donor.delete', 'Can delete donors'),
 
 -- Welfare Charities
 ('welfare.charity.view', 'Can view charities'),
 ('welfare.charity.create', 'Can create charities'),
 ('welfare.charity.update', 'Can update charities'),
+('welfare.charity.delete', 'Can delete charities'),
 
 -- Welfare Donations
 ('welfare.donation.view', 'Can view donations'),
 ('welfare.donation.create', 'Can create donations'),
+('welfare.donation.delete', 'Can delete donations'),
 
 -- Welfare Applications / Cases
 ('welfare.application.view', 'Can view welfare applications'),
 ('welfare.application.create', 'Can create welfare applications'),
 ('welfare.application.update', 'Can update welfare applications'),
+('welfare.application.delete', 'Can delete welfare applications'),
 ('welfare.application.approve', 'Can approve welfare applications'),
 
 -- Welfare Expenses / Reports
@@ -331,47 +335,22 @@ ON CONFLICT (name) DO NOTHING;
 -- 3. DEFAULT BRANCHES
 -- Note: Best if branches.name is UNIQUE in schema.sql
 -- =====================================================
-
 -- =====================================================
 -- 3. DEFAULT BRANCHES
 -- =====================================================
 
-UPDATE branches
-SET 
-    name = 'Silai Centre',
-    location = 'Ismail Kalhora Campus 1',
-    status = 'active'
-WHERE id = 1;
-
-UPDATE branches
-SET 
-    name = 'Mobile Repairing Centre',
-    location = 'Dawood BD Campus 2',
-    status = 'active'
-WHERE id = 2;
-
-UPDATE branches
-SET 
-    name = 'Beautician Centre',
-    location = 'Haji Bhudda Ganga Campus 3',
-    status = 'active'
-WHERE id = 3;
-
-UPDATE branches
-SET 
-    name = 'IT Centre',
-    location = 'Haji Ali Muhammad Campus 4',
-    status = 'active'
-WHERE id = 4;
-
 INSERT INTO branches (id, name, location, status)
 VALUES
+(1, 'Silai Centre', 'Ismail Kalhora Campus 1', 'active'),
+(2, 'Mobile Repairing Centre', 'Dawood BD Campus 2', 'active'),
+(3, 'Beautician Centre', 'Haji Bhudda Ganga Campus 3', 'active'),
+(4, 'IT Centre', 'Haji Ali Muhammad Campus 4', 'active'),
 (5, 'Silai Centre', 'Haji Abdullah Lota Campus 5 Baldia', 'active')
 ON CONFLICT (id) DO UPDATE
 SET
-    name = EXCLUDED.name,
-    location = EXCLUDED.location,
-    status = EXCLUDED.status;
+  name = EXCLUDED.name,
+  location = EXCLUDED.location,
+  status = EXCLUDED.status;
 
 SELECT setval(
   pg_get_serial_sequence('branches', 'id'),

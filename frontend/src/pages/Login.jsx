@@ -210,7 +210,7 @@ const Login = () => {
       </div>
 
       <div className="login-right">
-        <Card>
+        <Card className="login-card">
           <div className="login-card-header">
             <h2>Welcome Back</h2>
             <p>Login to access your management dashboard</p>

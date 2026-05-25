@@ -34,23 +34,23 @@ const PortalSelection = () => {
     fetchPortals();
   }, []);
 
-const handleOpenPortal = (portalKey) => {
-  localStorage.setItem("selectedPortal", portalKey);
+  const handleOpenPortal = (portalKey) => {
+    localStorage.setItem("selectedPortal", portalKey);
 
-  if (portalKey === "vocational") {
-    navigate("/branch-selection");
-    return;
-  }
+    if (portalKey === "vocational") {
+      navigate("/branch-selection");
+      return;
+    }
 
-  if (portalKey === "welfare") {
-    localStorage.removeItem("selectedBranchId");
-    localStorage.removeItem("selectedBranchName");
-    localStorage.removeItem("selectedBranchStatus");
+    if (portalKey === "welfare") {
+      localStorage.removeItem("selectedBranchId");
+      localStorage.removeItem("selectedBranchName");
+      localStorage.removeItem("selectedBranchStatus");
 
-    navigate("/app/welfare");
-    return;
-  }
-};
+      navigate("/app/welfare");
+      return;
+    }
+  };
 
   const getPortalIcon = (key) => {
     if (key === "welfare") return <HeartHandshake size={32} />;
@@ -64,12 +64,14 @@ const handleOpenPortal = (portalKey) => {
   return (
     <div className="portal-page">
       <header className="portal-header">
-        <div>
+        <div className="portal-header-items">
           <div className="portal-brand">KK</div>
-          <h1>Choose Your Portal</h1>
-          <p>
-            Select the management system you want to access.
-          </p>
+          <div className="portal-title">
+            <h1>Choose Your Portal</h1>
+            <p>
+              Select the management system you want to access.
+            </p>
+          </div>
         </div>
 
         <div className="portal-user-box">

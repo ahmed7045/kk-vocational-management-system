@@ -3,7 +3,10 @@
   align-items: center;
   gap: 8px;
 }
-
+.certificates-card
+{
+  padding : 40px  20px;
+}
 .certificates-summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -58,6 +61,7 @@
   align-items: center;
   padding: 0 12px;
   gap: 8px;
+  width: 450px;
 }
 
 .certificates-search input {
@@ -81,6 +85,7 @@
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 16px;
+  margin-top: 20px;
 }
 
 .certificate-form-section h4 {

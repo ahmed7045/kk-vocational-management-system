@@ -136,10 +136,14 @@ const BranchSelection = () => {
   return (
     <div className="branch-page">
       <header className="branch-header">
-        <div>
+        <div className="branch-header-items">
           <div className="branch-brand">KK</div>
-          <h1>Select Branch</h1>
-          <p>Choose a vocational branch to access its dashboard and records.</p>
+          <div className="branch-title">
+            <h1>Choose Your Branch</h1>
+            <p>
+              Select the branch you want to access.
+            </p>
+          </div>
         </div>
 
         <div className="branch-user-box">

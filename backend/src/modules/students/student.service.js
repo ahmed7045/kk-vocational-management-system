@@ -15,9 +15,9 @@ const canAccessBranch = (user, branchId) => {
 //   return "partial";
 // };
 
-const calculateFeeStatus = () => {
-  return "paid";
-};
+// const calculateFeeStatus = () => {
+//   return "paid";
+// };
 
 const updateCompletedStudentsStatus = async (branchId = null) => {
   const values = [];
@@ -68,22 +68,24 @@ const updateCompletedStudentsStatus = async (branchId = null) => {
   );
 };
 const createStudent = async (data, currentUser) => {
-  const {
-    branchId,
-    fullName,
-    fatherName,
-    phone,
-    city,
-    address,
-    photoUrl,
-    courseIds,
-    assignedTeacherId,
-    shiftId,
-    admissionDate,
-    admissionStatus,
-    totalFee,
-    paidFee,
-  } = data;
+const {
+  branchId,
+  fullName,
+  fatherName,
+  phone,
+  city,
+  address,
+  photoUrl,
+  courseIds,
+  assignedTeacherId,
+  shiftId,
+  admissionDate,
+  admissionStatus,
+  totalFee,
+  paidFee,
+  remainingFee,
+  feeStatus,
+} = data;
 
   if (!branchId || !fullName) {
     throw new ApiError(400, "Branch and student name are required");
@@ -93,10 +95,14 @@ const createStudent = async (data, currentUser) => {
     throw new ApiError(403, "You cannot create student for this branch");
   }
 
-  const paid = Number(paidFee) || 0;
-  const total = paid;
-  const remaining = 0;
-  const feeStatus = "paid";
+const total = Number(totalFee) || Number(paidFee) || 0;
+const paid = Number(paidFee) || 0;
+const remaining =
+  remainingFee !== undefined
+    ? Number(remainingFee)
+    : Math.max(total - paid, 0);
+
+const finalFeeStatus = feeStatus || (paid >= total ? "paid" : "pending");
 
   const client = await pool.connect();
 
@@ -141,7 +147,7 @@ const createStudent = async (data, currentUser) => {
         shiftId || null,
         admissionDate || null,
         admissionStatus || "draft",
-        feeStatus,
+        finalFeeStatus,
         total,
         paid,
         remaining,
@@ -331,29 +337,38 @@ const updateStudent = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this student");
   }
 
-  const {
-    fullName,
-    fatherName,
-    phone,
-    city,
-    address,
-    photoUrl,
-    assignedTeacherId,
-    shiftId,
-    admissionDate,
-    admissionStatus,
-    studentStatus,
-    totalFee,
-    paidFee,
-    courseIds,
-  } = data;
+const {
+  fullName,
+  fatherName,
+  phone,
+  city,
+  address,
+  photoUrl,
+  assignedTeacherId,
+  shiftId,
+  admissionDate,
+  admissionStatus,
+  studentStatus,
+  totalFee,
+  paidFee,
+  remainingFee,
+  feeStatus,
+  courseIds,
+} = data;
 
-  const finalPaidFee =
-    paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
+const finalTotalFee =
+  totalFee !== undefined ? Number(totalFee) : Number(oldStudent.total_fee);
 
-  const finalTotalFee = finalPaidFee;
-  const finalRemainingFee = 0;
-  const finalFeeStatus = "paid";
+const finalPaidFee =
+  paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
+
+const finalRemainingFee =
+  remainingFee !== undefined
+    ? Number(remainingFee)
+    : Math.max(finalTotalFee - finalPaidFee, 0);
+
+const finalFeeStatus =
+  feeStatus || (finalPaidFee >= finalTotalFee ? "paid" : "pending");
 
   const client = await pool.connect();
 

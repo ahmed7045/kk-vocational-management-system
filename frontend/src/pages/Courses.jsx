@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Clock, Plus, RefreshCcw, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
@@ -222,13 +222,13 @@ const Courses = () => {
           const updatedCourses = allCourses.map((course) =>
             course.id === selectedRecord.id
               ? {
-                  ...course,
-                  course_name: payload.courseName,
-                  course_code: payload.courseCode,
-                  duration: payload.duration,
-                  fee: payload.fee,
-                  description: payload.description,
-                }
+                ...course,
+                course_name: payload.courseName,
+                course_code: payload.courseCode,
+                duration: payload.duration,
+                fee: payload.fee,
+                description: payload.description,
+              }
               : course
           );
 
@@ -292,11 +292,11 @@ const Courses = () => {
           const updatedShifts = allShifts.map((shift) =>
             shift.id === selectedRecord.id
               ? {
-                  ...shift,
-                  shift_name: payload.shiftName,
-                  start_time: payload.startTime,
-                  end_time: payload.endTime,
-                }
+                ...shift,
+                shift_name: payload.shiftName,
+                start_time: payload.startTime,
+                end_time: payload.endTime,
+              }
               : shift
           );
 
@@ -513,6 +513,7 @@ const Courses = () => {
   }
 
   return (
+    <>
     <div className="page courses-page">
       <div className="page-header">
         <div>
@@ -523,9 +524,9 @@ const Courses = () => {
         </div>
 
         <div className="course-header-actions">
-          <Button variant="secondary" onClick={fetchData}>
+          {/* <Button variant="secondary" onClick={fetchData}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
 
           {activeTab === "courses" ? (
             <Button onClick={openAddCourseModal}>
@@ -539,68 +540,43 @@ const Courses = () => {
         </div>
       </div>
 
-      <div className="course-summary-grid">
-        <Card>
-          <div className="summary-card">
-            <div className="summary-icon">
-              <BookOpen size={24} />
-            </div>
-            <div>
-              <p>Total Courses</p>
-              <h2>{allCourses.length}</h2>
-            </div>
-          </div>
-        </Card>
 
-        <Card>
-          <div className="summary-card">
-            <div className="summary-icon">
-              <Clock size={24} />
-            </div>
-            <div>
-              <p>Total Shifts</p>
-              <h2>{allShifts.length}</h2>
-            </div>
-          </div>
-        </Card>
-      </div>
 
-      <Card>
+      <Card className="course-card">
         <div className="tabs">
-          <button
-            className={activeTab === "courses" ? "active" : ""}
-            onClick={() => setActiveTab("courses")}
-          >
-            Courses
-          </button>
-
-          <button
-            className={activeTab === "shifts" ? "active" : ""}
-            onClick={() => setActiveTab("shifts")}
-          >
-            Shift Timings
-          </button>
-        </div>
-
-        <div className="course-filter-bar">
-          <div className="course-search">
-            <Search size={17} />
-            <input
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder={
-                activeTab === "courses"
-                  ? "Search course name, code, duration..."
-                  : "Search shift name or time..."
-              }
-            />
+          <div>
+            <div className="course-search">
+              <Search size={17} />
+              <input
+                name="search"
+                value={filters.search}
+                onChange={handleFilterChange}
+                placeholder={
+                  activeTab === "courses"
+                    ? "Search course name, code, duration..."
+                    : "Search shift name or time..."
+                }
+              />
+            </div>
           </div>
 
-          <Button variant="secondary" onClick={clearFilters}>
-            Clear Filters
-          </Button>
+          <div>
+            <button
+              className={activeTab === "courses" ? "active" : ""}
+              onClick={() => setActiveTab("courses")}
+            >
+              Courses
+            </button>
+
+            <button
+              className={activeTab === "shifts" ? "active" : ""}
+              onClick={() => setActiveTab("shifts")}
+            >
+              Shift Timings
+            </button>
+          </div>
         </div>
+        
 
         {error && <div className="courses-error">{error}</div>}
 
@@ -825,16 +801,16 @@ const Courses = () => {
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title={selectedType === "course" ? "Delete Course" : "Delete Shift"}
-        message={`Are you sure you want to delete ${
-          selectedType === "course"
-            ? selectedRecord?.course_name || "this course"
-            : selectedRecord?.shift_name || "this shift"
-        }?`}
+        message={`Are you sure you want to delete ${selectedType === "course"
+          ? selectedRecord?.course_name || "this course"
+          : selectedRecord?.shift_name || "this shift"
+          }?`}
         loading={deleting}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
       />
     </div>
+    </>
   );
 };
 

@@ -3,7 +3,6 @@ import {
   Award,
   Download,
   Plus,
-  RefreshCcw,
   Search,
 } from "lucide-react";
 
@@ -343,29 +342,7 @@ const Certificates = () => {
         </Button>
       </div>
 
-      <div className="certificates-summary-grid">
-        <Card>
-          <div className="certificate-summary-card">
-            <div className="certificate-summary-icon">
-              <Award size={24} />
-            </div>
-
-            <div>
-              <p>Total Certificates</p>
-              <h2>{certificates.length}</h2>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="certificate-mini-stat">
-            <p>Branch</p>
-            <h3>{branchName || "All Branches"}</h3>
-          </div>
-        </Card>
-      </div>
-
-      <Card>
+      <Card className="certificates-card">
         <div className="certificates-toolbar">
           <div className="certificates-search">
             <Search size={17} />
@@ -377,13 +354,13 @@ const Certificates = () => {
             />
           </div>
 
-          <Button variant="secondary" onClick={clearFilters}>
+          {/* <Button variant="secondary" onClick={clearFilters}>
             Clear Filters
-          </Button>
+          </Button> */}
 
-          <Button variant="secondary" onClick={fetchCertificates}>
+          {/* <Button variant="secondary" onClick={fetchCertificates}>
             <RefreshCcw size={16} /> Refresh
-          </Button>
+          </Button> */}
         </div>
 
         {error && <div className="certificates-error">{error}</div>}

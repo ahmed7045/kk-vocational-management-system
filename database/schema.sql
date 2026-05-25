@@ -364,6 +364,56 @@ ADD COLUMN IF NOT EXISTS needs_school_shoes BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS needs_university_fee BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS needs_other_education_help BOOLEAN DEFAULT FALSE;
 
+-- =====================================================
+-- PRODUCTION SAFETY PATCHES
+-- =====================================================
+
+-- Keep student statuses clean
+ALTER TABLE students
+DROP CONSTRAINT IF EXISTS chk_students_fee_status;
+
+ALTER TABLE students
+ADD CONSTRAINT chk_students_fee_status
+CHECK (fee_status IN ('paid', 'pending'));
+
+ALTER TABLE students
+DROP CONSTRAINT IF EXISTS chk_students_status;
+
+ALTER TABLE students
+ADD CONSTRAINT chk_students_status
+CHECK (student_status IN ('active', 'non_active'));
+
+-- Helpful timestamps
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE branches
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE courses
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE shift_timings
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE donors
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE donations
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE payment_methods
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE expense_categories
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE donation_methods
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 
 -- // INDEXING BLOCK
 -- =====================================================
@@ -485,7 +535,7 @@ SELECT create_index_if_column_exists('idx_users_branch_id', 'users', 'branch_id'
 SELECT create_index_if_column_exists('idx_users_is_active', 'users', 'is_active');
 
 SELECT create_index_if_column_exists('idx_refresh_tokens_user_id', 'refresh_tokens', 'user_id');
-SELECT create_index_if_column_exists('idx_refresh_tokens_token', 'refresh_tokens', 'token');
+SELECT create_index_if_column_exists('idx_refresh_tokens_token_hash', 'refresh_tokens', 'token_hash');
 SELECT create_index_if_column_exists('idx_refresh_tokens_expires_at', 'refresh_tokens', 'expires_at');
 
 
@@ -591,7 +641,7 @@ SELECT create_index_if_three_columns_exist('idx_expenses_branch_type_date', 'exp
 -- =========================
 -- EXPENSE CATEGORIES
 -- =========================
-SELECT create_index_if_column_exists('idx_expense_categories_name', 'expense_categories', 'name');
+SELECT create_index_if_column_exists('idx_expense_categories_category_name', 'expense_categories', 'category_name');
 SELECT create_index_if_column_exists('idx_expense_categories_is_active', 'expense_categories', 'is_active');
 
 
@@ -701,10 +751,10 @@ SELECT create_index_if_column_exists('idx_audit_logs_created_at', 'audit_logs', 
 
 SELECT create_index_if_column_exists('idx_api_logs_user_id', 'api_logs', 'user_id');
 SELECT create_index_if_column_exists('idx_api_logs_method', 'api_logs', 'method');
-SELECT create_index_if_column_exists('idx_api_logs_path', 'api_logs', 'path');
+SELECT create_index_if_column_exists('idx_api_logs_endpoint', 'api_logs', 'endpoint');
 SELECT create_index_if_column_exists('idx_api_logs_created_at', 'api_logs', 'created_at');
 
-SELECT create_index_if_column_exists('idx_report_exports_user_id', 'report_exports', 'user_id');
+SELECT create_index_if_column_exists('idx_report_exports_generated_by', 'report_exports', 'generated_by');
 SELECT create_index_if_column_exists('idx_report_exports_report_type', 'report_exports', 'report_type');
 SELECT create_index_if_column_exists('idx_report_exports_created_at', 'report_exports', 'created_at');
 
