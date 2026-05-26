@@ -96,6 +96,45 @@
   margin-bottom: 14px;
 }
 
+.permissions-subheader {
+  margin-top: 16px;
+  margin-bottom: 10px;
+}
+
+.portal-access-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.portal-option {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.portal-option.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.portal-option input {
+  width: 16px;
+  height: 16px;
+}
+
+.employee-branch-select {
+  margin-top: 14px;
+}
+
 .permissions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -133,11 +172,12 @@
 }
 
 @media (max-width: 750px) {
-  .employees-toolbar,
-  .employee-form-grid,
-  .permissions-grid {
-    grid-template-columns: 1fr;
-  }
+.employees-toolbar,
+.employee-form-grid,
+.permissions-grid,
+.portal-access-grid {
+  grid-template-columns: 1fr;
+}
 }
 
 .employee-detail-grid {

@@ -27,6 +27,113 @@ const getPermissionIds = async (permissions) => {
   return result.rows;
 };
 
+const TAB_PERMISSION_MAP = {
+  vocational: {
+    dashboard: ["dashboard.view"],
+    students: [
+      "students.view",
+      "students.create",
+      "students.update",
+      "students.delete",
+      "students.export",
+      "students.view_paid",
+      "students.view_pending",
+      "students.view_non_active",
+    ],
+    nonActiveStudents: ["students.view_non_active", "students.view"],
+    employees: [
+      "employees.view",
+      "employees.create",
+      "employees.update",
+      "employees.delete",
+      "employees.create_account",
+    ],
+    expenses: [
+      "expenses.view",
+      "expenses.create",
+      "expenses.update",
+      "expenses.delete",
+    ],
+    courses: [
+      "courses.view",
+      "courses.create",
+      "courses.update",
+      "courses.delete",
+      "shifts.view",
+      "shifts.create",
+      "shifts.update",
+      "shifts.delete",
+    ],
+    certificates: [
+      "certificates.view",
+      "certificates.generate",
+      "certificates.download",
+    ],
+    reports: [
+      "reports.view",
+      "reports.students.view",
+      "reports.financial.view",
+      "reports.export_pdf",
+      "reports.export_excel",
+    ],
+  },
+
+  welfare: {
+    dashboard: ["welfare.view", "welfare.dashboard.view"],
+    donors: [
+      "welfare.donor.view",
+      "welfare.donor.create",
+      "welfare.donor.update",
+      "welfare.donor.delete",
+    ],
+    donations: [
+      "welfare.donation.view",
+      "welfare.donation.create",
+      "welfare.donation.delete",
+      "donation_methods.view",
+      "donation_methods.create",
+    ],
+    applications: [
+      "welfare.application.view",
+      "welfare.application.create",
+      "welfare.application.update",
+      "welfare.application.delete",
+      "welfare.application.approve",
+    ],
+    beneficiaries: [
+      "welfare.charity.view",
+      "welfare.charity.create",
+      "welfare.charity.update",
+      "welfare.charity.delete",
+    ],
+    expenses: [
+      "welfare.expense.view",
+      "welfare.expense.create",
+      "expenses.view",
+      "expenses.create",
+      "expenses.update",
+      "expenses.delete",
+    ],
+    reports: [
+      "reports.view",
+      "reports.welfare.view",
+      "reports.export_pdf",
+      "reports.export_excel",
+      "amounts.view",
+    ],
+  },
+};
+
+const getPermissionsFromTabs = (portalAccess, selectedTabs = []) => {
+  const portalMap = TAB_PERMISSION_MAP[portalAccess] || {};
+
+  return [
+    ...new Set(
+      selectedTabs.flatMap((tab) => portalMap[tab] || [])
+    ),
+  ];
+};
+
 const createEmployee = async (data, currentUser) => {
   const {
     branchId,
@@ -39,15 +146,28 @@ const createEmployee = async (data, currentUser) => {
     hasLoginAccount,
     password,
     permissions,
+    selectedTabs,
+    portalAccess,
     genderVisibility,
   } = data;
 
-  if (!canManageBranch(currentUser, branchId)) {
+  const finalPortalAccess = hasLoginAccount ? portalAccess : null;
+  const finalBranchId = finalPortalAccess === "welfare" ? null : branchId;
+
+  if (finalPortalAccess === "vocational" && !finalBranchId) {
+    throw new ApiError(400, "Branch is required for vocational account");
+  }
+
+  if (finalBranchId && !canManageBranch(currentUser, finalBranchId)) {
     throw new ApiError(403, "You cannot create employee for this branch");
   }
 
-  if (!fullName || !branchId) {
-    throw new ApiError(400, "Full name and branch are required");
+  if (!fullName) {
+    throw new ApiError(400, "Full name is required");
+  }
+
+  if (hasLoginAccount && !["vocational", "welfare"].includes(finalPortalAccess)) {
+    throw new ApiError(400, "Portal access is required for login account");
   }
 
   if (hasLoginAccount && (!email || !password)) {
@@ -69,7 +189,7 @@ const createEmployee = async (data, currentUser) => {
       RETURNING *
       `,
       [
-        branchId,
+        finalBranchId,
         fullName,
         designation || null,
         phone || null,
@@ -94,18 +214,19 @@ const createEmployee = async (data, currentUser) => {
 
       const userResult = await client.query(
         `
-        INSERT INTO users
-        (full_name, email, password_hash, role_id, branch_id, employee_id, is_active)
-        VALUES ($1,$2,$3,$4,$5,$6,TRUE)
-        RETURNING id
+INSERT INTO users
+(full_name, email, password_hash, role_id, branch_id, employee_id, portal_access, is_active)
+VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)
+RETURNING id
         `,
         [
           fullName,
           email,
           passwordHash,
           employeeRoleId,
-          branchId,
+          finalBranchId,
           employee.id,
+          finalPortalAccess,
         ]
       );
 
@@ -120,16 +241,21 @@ const createEmployee = async (data, currentUser) => {
         [userId, employee.id]
       );
 
-      await client.query(
-        `
-        INSERT INTO user_branches (user_id, branch_id)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id, branch_id) DO NOTHING
-        `,
-        [userId, branchId]
-      );
+      if (finalPortalAccess === "vocational" && finalBranchId) {
+        await client.query(
+          `
+    INSERT INTO user_branches (user_id, branch_id)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id, branch_id) DO NOTHING
+    `,
+          [userId, finalBranchId]
+        );
+      }
+      const finalPermissions = Array.isArray(selectedTabs)
+        ? getPermissionsFromTabs(finalPortalAccess, selectedTabs)
+        : permissions || [];
 
-      const permissionRows = await getPermissionIds(permissions || []);
+      const permissionRows = await getPermissionIds(finalPermissions);
 
       for (const permission of permissionRows) {
         if (
@@ -206,15 +332,24 @@ const getEmployees = async (query, currentUser) => {
       e.email,
       e.salary,
       e.gender,
-      e.has_login_account,
-      e.gender_visibility,
-      e.is_active,
-      e.created_at,
-      b.name AS branch_name
+e.has_login_account,
+e.gender_visibility,
+e.is_active,
+e.created_at,
+u.portal_access,
+b.name AS branch_name,
+COALESCE(
+  JSON_AGG(DISTINCT p.name) FILTER (WHERE p.id IS NOT NULL),
+  '[]'
+) AS permissions
     FROM employees e
-    LEFT JOIN branches b ON b.id = e.branch_id
-    WHERE ($1::INT IS NULL OR e.branch_id = $1)
-    ORDER BY e.id DESC
+LEFT JOIN branches b ON b.id = e.branch_id
+LEFT JOIN users u ON u.employee_id = e.id
+LEFT JOIN user_permissions up ON up.user_id = u.id
+LEFT JOIN permissions p ON p.id = up.permission_id
+WHERE ($1::INT IS NULL OR e.branch_id = $1 OR e.branch_id IS NULL)
+GROUP BY e.id, b.name, u.portal_access
+ORDER BY e.id DESC
     LIMIT $2 OFFSET $3
     `,
     [branchId || null, limit, offset]

@@ -10,7 +10,6 @@ import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
-import Select from "../components/common/Select";
 import Table from "../components/common/Table";
 import Badge from "../components/common/Badge";
 import Modal from "../components/common/Modal";
@@ -24,6 +23,10 @@ import {
 
 import "./certificates.css";
 
+const getTodayDate = () => {
+  return new Date().toISOString().split("T")[0];
+};
+
 const Certificates = () => {
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -35,6 +38,7 @@ const Certificates = () => {
   const [saving, setSaving] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [certificateEditMode, setCertificateEditMode] = useState(false);
   const [error, setError] = useState("");
 
   const [filters, setFilters] = useState({
@@ -43,7 +47,7 @@ const Certificates = () => {
 
   const [form, setForm] = useState({
     studentId: "",
-    issueDate: "",
+    issueDate: getTodayDate(),
     certificateTitle: "Certificate of Achievement",
     associationName: "KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION",
     registrationText: "(Regd)",
@@ -129,11 +133,13 @@ const Certificates = () => {
     }));
   };
 
-  const handleStudentSelect = (event) => {
-    const studentId = event.target.value;
+  const handleStudentNameChange = (event) => {
+    const studentName = event.target.value;
 
     const selectedStudent = students.find(
-      (student) => Number(student.id) === Number(studentId)
+      (student) =>
+        student.full_name?.toLowerCase().trim() ===
+        studentName.toLowerCase().trim()
     );
 
     let courseName = "";
@@ -156,17 +162,17 @@ const Certificates = () => {
 
     setForm((prev) => ({
       ...prev,
-      studentId,
-      studentName: selectedStudent?.full_name || "",
-      courseName: courseName || prev.courseName,
-      courseDuration: courseDuration || prev.courseDuration,
+      studentName,
+      studentId: selectedStudent?.id || "",
+      courseName: selectedStudent ? courseName : prev.courseName,
+      courseDuration: selectedStudent ? courseDuration : prev.courseDuration,
     }));
   };
 
   const resetForm = () => {
     setForm({
       studentId: "",
-      issueDate: "",
+      issueDate: getTodayDate(),
       certificateTitle: "Certificate of Achievement",
       associationName: "KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION",
       registrationText: "(Regd)",
@@ -183,14 +189,23 @@ const Certificates = () => {
 
   const openGenerateModal = () => {
     resetForm();
+    setCertificateEditMode(false);
     setModalOpen(true);
   };
 
   const generateCertificate = async (event) => {
     event.preventDefault();
 
-    if (!form.studentId) {
-      alert("Please select a student.");
+    const matchedStudent = students.find(
+      (student) =>
+        student.full_name?.toLowerCase().trim() ===
+        form.studentName.toLowerCase().trim()
+    );
+
+    const finalStudentId = form.studentId || matchedStudent?.id;
+
+    if (!finalStudentId) {
+      alert("Please enter an existing student name.");
       return;
     }
 
@@ -208,7 +223,7 @@ const Certificates = () => {
       setSaving(true);
 
       await axiosInstance.post("/certificates/generate", {
-        studentId: Number(form.studentId),
+        studentId: Number(finalStudentId),
         issueDate: form.issueDate || null,
         certificateTitle: form.certificateTitle,
         associationName: form.associationName,
@@ -377,6 +392,7 @@ const Certificates = () => {
         title="Generate Certificate"
         onClose={() => {
           setModalOpen(false);
+          setCertificateEditMode(false);
           resetForm();
         }}
         size="lg"
@@ -386,17 +402,12 @@ const Certificates = () => {
             <h4>Student Information</h4>
 
             <div className="certificate-form-grid">
-              <Select
-                label="Student"
-                name="studentId"
-                value={form.studentId}
-                onChange={handleStudentSelect}
-                placeholder="Select student"
+              <Input
+                label="Student Name"
+                name="studentName"
+                value={form.studentName}
+                onChange={handleStudentNameChange}
                 required
-                options={students.map((student) => ({
-                  label: `${student.full_name} (${student.phone || "No phone"})`,
-                  value: student.id,
-                }))}
               />
 
               <Input
@@ -405,14 +416,7 @@ const Certificates = () => {
                 type="date"
                 value={form.issueDate}
                 onChange={handleChange}
-              />
-
-              <Input
-                label="Student Name"
-                name="studentName"
-                value={form.studentName}
-                onChange={handleChange}
-                required
+                disabled={!certificateEditMode}
               />
 
               <Input
@@ -420,6 +424,7 @@ const Certificates = () => {
                 name="courseName"
                 value={form.courseName}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
                 required
               />
 
@@ -429,6 +434,7 @@ const Certificates = () => {
                 value={form.courseDuration}
                 onChange={handleChange}
                 placeholder="e.g. 6 months"
+                disabled={!certificateEditMode}
               />
 
               <Input
@@ -436,6 +442,7 @@ const Certificates = () => {
                 name="certificateTitle"
                 value={form.certificateTitle}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
             </div>
           </div>
@@ -449,6 +456,7 @@ const Certificates = () => {
                 name="associationName"
                 value={form.associationName}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
 
               <Input
@@ -456,6 +464,7 @@ const Certificates = () => {
                 name="registrationText"
                 value={form.registrationText}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
 
               <Input
@@ -463,6 +472,7 @@ const Certificates = () => {
                 name="instituteName"
                 value={form.instituteName}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
             </div>
           </div>
@@ -477,6 +487,7 @@ const Certificates = () => {
                 value={form.achievementText}
                 onChange={handleChange}
                 rows="4"
+                disabled={!certificateEditMode}
               />
             </div>
           </div>
@@ -490,6 +501,7 @@ const Certificates = () => {
                 name="secretaryName"
                 value={form.secretaryName}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
 
               <Input
@@ -497,6 +509,7 @@ const Certificates = () => {
                 name="presidentName"
                 value={form.presidentName}
                 onChange={handleChange}
+                disabled={!certificateEditMode}
               />
             </div>
           </div>
@@ -509,21 +522,32 @@ const Certificates = () => {
             </span>
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actions certificate-modal-actions">
             <Button
               type="button"
               variant="secondary"
-              onClick={() => {
-                setModalOpen(false);
-                resetForm();
-              }}
+              onClick={() => setCertificateEditMode((prev) => !prev)}
             >
-              Cancel
+              {certificateEditMode ? "Lock Fields" : "Edit Fields"}
             </Button>
 
-            <Button type="submit" loading={saving}>
-              Generate Certificate
-            </Button>
+            <div className="certificate-action-right">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setModalOpen(false);
+                  setCertificateEditMode(false);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button type="submit" loading={saving}>
+                Generate Certificate
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>

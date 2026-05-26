@@ -37,27 +37,67 @@ const drawWaveBackground = (doc, pageWidth, pageHeight) => {
   doc.restore();
 };
 
+const drawTopRibbon = (doc, pageWidth) => {
+  const centerX = pageWidth / 2;
+
+  doc.save();
+
+  // Main red ribbon behind logo
+  doc.fillColor("#c81010");
+  doc
+    .moveTo(centerX - 142, 92)
+    .bezierCurveTo(centerX - 95, 68, centerX - 44, 76, centerX, 103)
+    .bezierCurveTo(centerX + 44, 76, centerX + 95, 68, centerX + 142, 92)
+    .lineTo(centerX + 104, 128)
+    .bezierCurveTo(centerX + 62, 108, centerX + 28, 111, centerX, 134)
+    .bezierCurveTo(centerX - 28, 111, centerX - 62, 108, centerX - 104, 128)
+    .closePath()
+    .fill();
+
+  // Ribbon side folds
+  doc.fillColor("#8f0707");
+
+  doc
+    .moveTo(centerX - 142, 92)
+    .lineTo(centerX - 190, 106)
+    .lineTo(centerX - 118, 126)
+    .closePath()
+    .fill();
+
+  doc
+    .moveTo(centerX + 142, 92)
+    .lineTo(centerX + 190, 106)
+    .lineTo(centerX + 118, 126)
+    .closePath()
+    .fill();
+
+  doc.restore();
+};
+
 const drawRibbon = (doc, pageHeight) => {
   doc.save();
 
-  doc.fillColor("#b80000");
+  // Bottom-left diagonal red ribbon
+  doc.fillColor("#aa0000");
   doc
-    .moveTo(-20, pageHeight - 250)
-    .lineTo(25, pageHeight - 285)
-    .lineTo(345, pageHeight + 15)
-    .lineTo(285, pageHeight + 35)
-    .lineTo(-20, pageHeight - 190)
+    .moveTo(-28, pageHeight - 235)
+    .lineTo(32, pageHeight - 275)
+    .lineTo(315, pageHeight + 8)
+    .lineTo(250, pageHeight + 38)
+    .lineTo(-28, pageHeight - 165)
+    .closePath()
     .fill();
 
-  doc.strokeColor("#7f0000");
-  doc.lineWidth(1.1);
+  // Fine diagonal stripes
+  doc.strokeColor("#6d0000");
+  doc.lineWidth(1);
 
-  for (let i = 0; i < 18; i++) {
-    const offset = i * 8;
+  for (let i = 0; i < 24; i++) {
+    const offset = i * 6;
 
     doc
-      .moveTo(-10 + offset, pageHeight - 270 + offset)
-      .lineTo(310 + offset, pageHeight + 15 + offset)
+      .moveTo(-15 + offset, pageHeight - 245 + offset)
+      .lineTo(280 + offset, pageHeight + 18 + offset)
       .stroke();
   }
 
@@ -65,31 +105,41 @@ const drawRibbon = (doc, pageHeight) => {
 };
 
 const drawBorders = (doc, pageWidth, pageHeight) => {
+  doc.save();
+
+  // Outer gold border
   doc
     .lineWidth(2.2)
-    .strokeColor("#b59a3b")
-    .rect(18, 18, pageWidth - 36, pageHeight - 36)
+    .strokeColor("#aa9638")
+    .rect(15, 15, pageWidth - 30, pageHeight - 30)
+    .stroke();
+
+  // Inner thin border
+  doc
+    .lineWidth(1)
+    .strokeColor("#c9b45b")
+    .rect(29, 29, pageWidth - 58, pageHeight - 58)
+    .stroke();
+
+  // Decorative corner curves
+  doc.strokeColor("#aa9638");
+  doc.lineWidth(1.4);
+
+  doc.moveTo(15, 62).quadraticCurveTo(62, 62, 62, 15).stroke();
+  doc
+    .moveTo(pageWidth - 15, 62)
+    .quadraticCurveTo(pageWidth - 62, 62, pageWidth - 62, 15)
     .stroke();
 
   doc
-    .lineWidth(1)
-    .strokeColor("#c8b45a")
-    .rect(31, 31, pageWidth - 62, pageHeight - 62)
+    .moveTo(15, pageHeight - 62)
+    .quadraticCurveTo(62, pageHeight - 62, 62, pageHeight - 15)
     .stroke();
 
-  // Small decorative corner curves similar to the reference
-  doc.save();
-  doc.strokeColor("#b59a3b");
-  doc.lineWidth(1.2);
-
-  // top-left
-  doc.moveTo(18, 58).quadraticCurveTo(58, 58, 58, 18).stroke();
-  // top-right
-  doc.moveTo(pageWidth - 18, 58).quadraticCurveTo(pageWidth - 58, 58, pageWidth - 58, 18).stroke();
-  // bottom-left
-  doc.moveTo(18, pageHeight - 58).quadraticCurveTo(58, pageHeight - 58, 58, pageHeight - 18).stroke();
-  // bottom-right
-  doc.moveTo(pageWidth - 18, pageHeight - 58).quadraticCurveTo(pageWidth - 58, pageHeight - 58, pageWidth - 58, pageHeight - 18).stroke();
+  doc
+    .moveTo(pageWidth - 15, pageHeight - 62)
+    .quadraticCurveTo(pageWidth - 62, pageHeight - 62, pageWidth - 62, pageHeight - 15)
+    .stroke();
 
   doc.restore();
 };
@@ -120,81 +170,55 @@ const generateCertificatePdf = (certificate, res) => {
   drawWaveBackground(doc, pageWidth, pageHeight);
   drawRibbon(doc, pageHeight);
   drawBorders(doc, pageWidth, pageHeight);
-
-  // Red ribbon behind logo
-  doc.save();
-  doc.fillColor("#c40000");
-  doc
-    .moveTo(pageWidth / 2 - 115, 92)
-    .bezierCurveTo(pageWidth / 2 - 70, 72, pageWidth / 2 - 35, 80, pageWidth / 2, 98)
-    .bezierCurveTo(pageWidth / 2 + 35, 80, pageWidth / 2 + 70, 72, pageWidth / 2 + 115, 92)
-    .lineTo(pageWidth / 2 + 80, 120)
-    .bezierCurveTo(pageWidth / 2 + 40, 105, pageWidth / 2 + 25, 108, pageWidth / 2, 124)
-    .bezierCurveTo(pageWidth / 2 - 25, 108, pageWidth / 2 - 40, 105, pageWidth / 2 - 80, 120)
-    .closePath()
-    .fill();
-
-  doc.fillColor("#8b0000");
-  doc
-    .moveTo(pageWidth / 2 - 115, 92)
-    .lineTo(pageWidth / 2 - 150, 105)
-    .lineTo(pageWidth / 2 - 90, 118)
-    .fill();
-
-  doc
-    .moveTo(pageWidth / 2 + 115, 92)
-    .lineTo(pageWidth / 2 + 150, 105)
-    .lineTo(pageWidth / 2 + 90, 118)
-    .fill();
-
-  doc.restore();
+  drawTopRibbon(doc, pageWidth);
 
   // Logo
   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, pageWidth / 2 - 48, 26, {
-      width: 96,
-      height: 96,
+    doc.image(logoPath, pageWidth / 2 - 52, 22, {
+      width: 104,
+      height: 104,
     });
   }
 
-  // Header title
+  // Association name
   doc
     .fillColor("#222222")
     .font("Times-Bold")
-    .fontSize(24)
+    .fontSize(26)
     .text(
       certificate.association_name ||
         "KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION",
-      42,
-      140,
+      40,
+      145,
       {
-        width: pageWidth - 84,
+        width: pageWidth - 80,
         align: "center",
-        lineGap: 2,
+        lineGap: 3,
       }
     );
 
+  // Regd text
   doc
     .fillColor("#b30000")
     .font("Helvetica-Bold")
-    .fontSize(10)
-    .text(certificate.registration_text || "(Regd)", pageWidth - 160, 174, {
+    .fontSize(11)
+    .text(certificate.registration_text || "(Regd)", pageWidth - 165, 190, {
       width: 80,
       align: "left",
       lineBreak: false,
     });
 
-  // Institute
+  // Institute name
   doc
     .fillColor("#222222")
     .font("Times-Bold")
-    .fontSize(22)
+    .fontSize(25)
     .text(
       certificate.institute_name || "Khidmat-e-Khalq Vocational IT Center",
-      42,
-      212,
+      40,
+      227,
       {
-        width: pageWidth - 84,
+        width: pageWidth - 80,
         align: "center",
         lineBreak: false,
       }
@@ -203,88 +227,89 @@ const generateCertificatePdf = (certificate, res) => {
   // Certificate title
   doc
     .font("Times-BoldItalic")
-    .fontSize(28)
+    .fontSize(30)
     .text(
       certificate.certificate_title || "Certificate of Achievement",
-      42,
-      260,
+      40,
+      275,
       {
-        width: pageWidth - 84,
+        width: pageWidth - 80,
         align: "center",
         lineBreak: false,
       }
     );
 
   doc
-    .moveTo(150, 294)
-    .lineTo(pageWidth - 150, 294)
     .strokeColor("#111111")
     .lineWidth(1)
+    .moveTo(155, 313)
+    .lineTo(pageWidth - 155, 313)
     .stroke();
 
   // Date
   doc
     .fillColor("#111111")
     .font("Helvetica")
-    .fontSize(12)
-    .text("Date:", pageWidth - 190, 335, {
-      width: 42,
+    .fontSize(13)
+    .text("Date:", pageWidth - 195, 357, {
+      width: 45,
       lineBreak: false,
     });
 
   doc
     .font("Times-BoldItalic")
-    .fontSize(18)
-    .text(formatDate(certificate.issue_date), pageWidth - 145, 328, {
-      width: 115,
+    .fontSize(19)
+    .text(formatDate(certificate.issue_date), pageWidth - 150, 349, {
+      width: 118,
       align: "center",
       lineBreak: false,
     });
 
   doc
-    .moveTo(pageWidth - 135, 352)
-    .lineTo(pageWidth - 35, 352)
     .strokeColor("#111111")
     .lineWidth(1)
+    .moveTo(pageWidth - 142, 374)
+    .lineTo(pageWidth - 35, 374)
     .stroke();
 
   // Main body
-  const bodyY = 404;
+  const bodyY = 425;
 
   doc
     .fillColor("#111111")
     .font("Helvetica")
-    .fontSize(15)
+    .fontSize(15.5)
     .text("This is to certify that", 40, bodyY, {
-      width: 160,
+      width: 165,
       lineBreak: false,
     });
 
   doc
     .font("Times-BoldItalic")
-    .fontSize(21)
-    .text(certificate.student_name || "", 230, bodyY - 9, {
-      width: 295,
+    .fontSize(22)
+    .text(certificate.student_name || "", 220, bodyY - 10, {
+      width: 310,
       align: "center",
       lineBreak: false,
     });
 
   doc
-    .moveTo(175, bodyY + 17)
-    .lineTo(pageWidth - 45, bodyY + 17)
     .strokeColor("#111111")
     .lineWidth(1)
+    .moveTo(178, bodyY + 18)
+    .lineTo(pageWidth - 45, bodyY + 18)
     .stroke();
 
   doc
+    .fillColor("#111111")
     .font("Helvetica")
-    .fontSize(15)
+    .fontSize(15.5)
     .text(
       `has Successfully completed a ${certificate.course_duration || ""} ${
         certificate.course_name || ""
       } course at the`,
       40,
-      bodyY + 48,
+      bodyY + 50,
       {
         width: pageWidth - 80,
         align: "left",
@@ -294,11 +319,11 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(15)
+    .fontSize(15.5)
     .text(
       certificate.institute_name || "Khidmat-e-Khalq Vocational IT Center",
       40,
-      bodyY + 84,
+      bodyY + 88,
       {
         width: pageWidth - 80,
         align: "left",
@@ -312,43 +337,19 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica")
-    .fontSize(15)
-    .text(achievementText, 40, bodyY + 126, {
+    .fontSize(15.5)
+    .text(achievementText, 40, bodyY + 132, {
       width: pageWidth - 80,
       align: "left",
       lineGap: 8,
-      height: 118,
+      height: 132,
       ellipsis: false,
     });
 
-  // Signature area
-  const sigY = 720;
+  // Signatures
+  const sigY = 735;
 
-  // Optional signature image support, if added later
-  const secretarySignaturePath = path.join(
-    __dirname,
-    "../../assets/secretary-signature.png"
-  );
-
-  const presidentSignaturePath = path.join(
-    __dirname,
-    "../../assets/president-signature.png"
-  );
-
-  if (fs.existsSync(secretarySignaturePath)) {
-    doc.image(secretarySignaturePath, 218, sigY - 48, {
-      width: 95,
-      height: 45,
-    });
-  }
-
-  if (fs.existsSync(presidentSignaturePath)) {
-    doc.image(presidentSignaturePath, pageWidth - 218, sigY - 52, {
-      width: 100,
-      height: 48,
-    });
-  }
-
+  // Secretary signature line
   doc
     .strokeColor("#111111")
     .lineWidth(1)
@@ -358,9 +359,9 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(12)
+    .fontSize(12.5)
     .fillColor("#111111")
-    .text(certificate.secretary_name || "Aftab Ahmed", 190, sigY + 10, {
+    .text(certificate.secretary_name || "Aftab Ahmed", 190, sigY + 12, {
       width: 160,
       align: "center",
       lineBreak: false,
@@ -368,13 +369,14 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica")
-    .fontSize(11)
-    .text("( General Secretary )", 190, sigY + 29, {
+    .fontSize(11.5)
+    .text("( General Secretary )", 190, sigY + 31, {
       width: 160,
       align: "center",
       lineBreak: false,
     });
 
+  // President signature line
   doc
     .strokeColor("#111111")
     .lineWidth(1)
@@ -384,11 +386,12 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(12)
+    .fontSize(12.5)
+    .fillColor("#111111")
     .text(
       certificate.president_name || "Muhammad Rafiq Mara",
       pageWidth - 275,
-      sigY + 10,
+      sigY + 12,
       {
         width: 200,
         align: "center",
@@ -398,19 +401,19 @@ const generateCertificatePdf = (certificate, res) => {
 
   doc
     .font("Helvetica")
-    .fontSize(11)
-    .text("( President )", pageWidth - 275, sigY + 29, {
+    .fontSize(11.5)
+    .text("( President )", pageWidth - 275, sigY + 31, {
       width: 200,
       align: "center",
       lineBreak: false,
     });
 
-  // Certificate number - kept inside page to avoid second page issue
+  // Keep certificate number tiny and hidden near bottom
   doc
     .font("Helvetica")
-    .fontSize(7)
-    .fillColor("#777777")
-    .text(`Certificate No: ${certificate.certificate_no}`, 38, pageHeight - 45, {
+    .fontSize(6.5)
+    .fillColor("#888888")
+    .text(`Certificate No: ${certificate.certificate_no}`, 38, pageHeight - 42, {
       width: 240,
       lineBreak: false,
     });

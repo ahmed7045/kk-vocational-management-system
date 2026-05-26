@@ -1663,6 +1663,44 @@ const getWelfareDashboard = async () => {
     `
   );
 
+  const monthlyDonationsResult = await pool.query(
+    `
+  SELECT
+    TO_CHAR(months.month, 'Mon YYYY') AS month,
+    COALESCE(SUM(d.amount), 0) AS amount
+  FROM (
+    SELECT generate_series(
+      DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
+      DATE_TRUNC('month', CURRENT_DATE),
+      INTERVAL '1 month'
+    ) AS month
+  ) months
+  LEFT JOIN donations d
+    ON DATE_TRUNC('month', d.donation_date) = months.month
+  GROUP BY months.month
+  ORDER BY months.month ASC
+  `
+  );
+
+  const monthlyCharityResult = await pool.query(
+    `
+  SELECT
+    TO_CHAR(months.month, 'Mon YYYY') AS month,
+    COALESCE(SUM(cr.amount), 0) AS amount
+  FROM (
+    SELECT generate_series(
+      DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
+      DATE_TRUNC('month', CURRENT_DATE),
+      INTERVAL '1 month'
+    ) AS month
+  ) months
+  LEFT JOIN charity_records cr
+    ON DATE_TRUNC('month', cr.charity_date) = months.month
+  GROUP BY months.month
+  ORDER BY months.month ASC
+  `
+  );
+
   const data = result.rows[0];
   const impact = impactResult.rows[0];
 
@@ -1682,6 +1720,16 @@ const getWelfareDashboard = async () => {
     ruralReach: Number(impact.rural_reach) || 0,
     activeGrants: Number(impact.active_grants) || 0,
     recentActivities: recentActivities.rows,
+
+    monthlyDonations: monthlyDonationsResult.rows.map((row) => ({
+      month: row.month,
+      amount: Number(row.amount) || 0,
+    })),
+
+    monthlyCharity: monthlyCharityResult.rows.map((row) => ({
+      month: row.month,
+      amount: Number(row.amount) || 0,
+    })),
   };
 };
 

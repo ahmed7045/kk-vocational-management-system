@@ -150,6 +150,25 @@ const Login = () => {
     }));
   };
 
+  const redirectAfterLogin = (loggedInUser) => {
+    if (loggedInUser?.role === "super_admin") {
+      navigate("/portal-selection");
+      return;
+    }
+
+    if (loggedInUser?.portalAccess === "welfare") {
+      navigate("/app/welfare");
+      return;
+    }
+
+    if (loggedInUser?.portalAccess === "vocational") {
+      navigate("/app/dashboard");
+      return;
+    }
+
+    navigate("/login");
+  };
+
   const setDemoLoginData = () => {
     localStorage.setItem("accessToken", "demo-access-token");
     localStorage.setItem("refreshToken", "demo-refresh-token");
@@ -184,12 +203,33 @@ const Login = () => {
         navigate("/portal-selection");
         return;
       }
-
-      await login({
+      const result = await login({
         email: form.email,
         password: form.password,
         rememberDevice: form.rememberDevice,
       });
+
+      const loggedInUser =
+        result?.data?.user ||
+        result?.user ||
+        JSON.parse(localStorage.getItem("user") || "null");
+
+      if (loggedInUser?.role === "super_admin") {
+        navigate("/portal-selection");
+        return;
+      }
+
+      if (loggedInUser?.portalAccess === "vocational") {
+        navigate("/app/dashboard");
+        return;
+      }
+
+      if (loggedInUser?.portalAccess === "welfare") {
+        navigate("/app/welfare");
+        return;
+      }
+
+      navigate("/login");
 
       navigate("/portal-selection");
     } catch (error) {

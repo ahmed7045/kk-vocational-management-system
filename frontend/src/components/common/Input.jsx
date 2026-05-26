@@ -9,6 +9,7 @@ const Input = ({
   placeholder,
   error,
   required = false,
+  ...props
 }) => {
   return (
     <div className="form-group">
@@ -26,6 +27,8 @@ const Input = ({
         onChange={onChange}
         placeholder={placeholder}
         className={error ? "input-error" : ""}
+        required={required}
+        {...props}
       />
 
       {error && <small className="error-text">{error}</small>}

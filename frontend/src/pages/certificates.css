@@ -141,6 +141,23 @@
   gap: 12px;
   margin-top: 18px;
 }
+.certificate-modal-actions {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.certificate-action-right {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.certificate-form-section input:disabled,
+.certificate-form-section textarea:disabled {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
 
 @media (max-width: 750px) {
   .certificates-summary-grid,

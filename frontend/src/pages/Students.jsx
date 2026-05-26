@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
-
+import { Eye, EyeOff, Plus, Search, Wallet } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
@@ -55,7 +54,7 @@ const Students = ({
     search: "",
     feeStatus: searchParams.get("feeStatus") || "",
   });
-
+  const [showSummaryAmount, setShowSummaryAmount] = useState(true);
   const [form, setForm] = useState({
     fullName: "",
     fatherName: "",
@@ -416,7 +415,77 @@ const Students = ({
           ? `View non-active students for ${branchName || "selected branch"}.`
           : `Manage student admissions for ${branchName || "selected branch"}.`;
 
-  const columns = [
+  const getCourseNames = (row) => {
+    return row.courses?.length
+      ? row.courses.map((course) => course.courseName).join(", ")
+      : "-";
+  };
+
+  const getFeeExpiryDate = (row) => {
+    if (!row.admission_date) return "-";
+
+    const date = new Date(row.admission_date);
+    date.setMonth(date.getMonth() + 1);
+
+    return formatDate(date);
+  };
+
+  const totalCollected = students.reduce(
+    (sum, student) => sum + Number(student.paid_fee || 0),
+    0
+  );
+
+  const totalBalance = students.reduce(
+    (sum, student) => sum + Number(student.remaining_fee || 0),
+    0
+  );
+
+  const shouldShowSummaryCard = defaultStudentStatus !== "non_active";
+
+  const summaryTitle =
+    filters.feeStatus === "pending"
+      ? "TOTAL PENDING"
+      : filters.feeStatus === "paid"
+        ? "TOTAL COLLECTED"
+        : "TOTAL STUDENTS FEES";
+  const compactColumns = [
+    {
+      key: "full_name",
+      title: "Name",
+      render: (row) => <strong>{row.full_name}</strong>,
+    },
+    {
+      key: "courses",
+      title: "Course Name",
+      render: (row) => getCourseNames(row),
+    },
+    {
+      key: "total_fee",
+      title: "Fees",
+      render: (row) => formatCurrency(row.total_fee || row.paid_fee || 0),
+    },
+    {
+      key: "fee_expiry",
+      title: "Expire Fees",
+      render: (row) => getFeeExpiryDate(row),
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <ActionButtons
+          onView={() => handleView(row)}
+          onEdit={() => handleEdit(row)}
+          onDelete={() => handleDeleteClick(row)}
+          canView={hasPermission("students.view")}
+          canEdit={hasPermission("students.update")}
+          canDelete={hasPermission("students.delete")}
+        />
+      ),
+    },
+  ];
+
+  const fullColumns = [
     {
       key: "full_name",
       title: "Name",
@@ -435,10 +504,7 @@ const Students = ({
     {
       key: "courses",
       title: "Course",
-      render: (row) =>
-        row.courses?.length
-          ? row.courses.map((course) => course.courseName).join(", ")
-          : "-",
+      render: (row) => getCourseNames(row),
     },
     {
       key: "admission_date",
@@ -475,6 +541,7 @@ const Students = ({
     },
   ];
 
+  const columns = filters.feeStatus ? compactColumns : fullColumns;
   if (loading) {
     return (
       <div className="page">
@@ -498,6 +565,40 @@ const Students = ({
             </Button>
           )}
       </div>
+
+      {shouldShowSummaryCard && (
+        <div className="student-summary-card">
+          <div className="student-summary-icon">
+            <Wallet size={22} />
+          </div>
+
+          <div className="student-summary-content">
+            <p>{summaryTitle}</p>
+
+            <div className="student-summary-amount">
+              <h2>
+                {showSummaryAmount
+                  ? formatCurrency(totalCollected)
+                  : "••••••"}
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setShowSummaryAmount((prev) => !prev)}
+              >
+                {showSummaryAmount ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            <span>
+              Bal.{" "}
+              {showSummaryAmount
+                ? formatCurrency(totalBalance)
+                : "••••••"}
+            </span>
+          </div>
+        </div>
+      )}
 
       <Card className="student-card">
         <div className="students-toolbar">

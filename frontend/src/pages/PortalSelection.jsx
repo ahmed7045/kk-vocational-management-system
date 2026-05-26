@@ -11,7 +11,21 @@ import "./portalSelection.css";
 const PortalSelection = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  useEffect(() => {
+    if (!user) return;
 
+    if (user.role !== "super_admin") {
+      if (user.portalAccess === "vocational") {
+        navigate("/app/dashboard", { replace: true });
+        return;
+      }
+
+      if (user.portalAccess === "welfare") {
+        navigate("/app/welfare", { replace: true });
+        return;
+      }
+    }
+  }, [user, navigate]);
   const [portals, setPortals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

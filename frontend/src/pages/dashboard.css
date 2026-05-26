@@ -94,7 +94,7 @@
 .course-row {
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px;
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -102,12 +102,17 @@
 
 .course-row strong {
   display: block;
-  margin-bottom: 5px;
+  margin: 0;
 }
 
-.course-row span {
-  color: var(--text-muted);
+.course-students-pill {
+  background: var(--primary-light);
+  color: var(--primary-dark);
   font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .empty-text {

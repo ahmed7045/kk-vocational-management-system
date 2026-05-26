@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import {
+  Eye,
+  EyeOff,
   Plus,
   Search,
+  Wallet,
 } from "lucide-react";
-
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -69,7 +71,7 @@ const Expenses = () => {
     fromDate: "",
     toDate: "",
   });
-
+  const [showCollectiveAmount, setShowCollectiveAmount] = useState(true);
   const [form, setForm] = useState({
     name: "",
     amount: "",
@@ -322,6 +324,11 @@ const Expenses = () => {
     }
   };
 
+  const collectiveAmount = expenses.reduce(
+    (sum, expense) => sum + Number(expense.amount || 0),
+    0
+  );
+
   const currentMonthExpenses = expenses
     .filter((expense) => {
       const expenseDate = expense.date || expense.expense_date;
@@ -404,41 +411,64 @@ const Expenses = () => {
         </Button>
       </div>
 
-      
+      <div className="expense-collective-card">
+        <div className="expense-collective-icon">
+          <Wallet size={22} />
+        </div>
 
-<Card className="expenses-list-card">
-  <div className="expenses-toolbar donation-like">
-    <div className="expenses-search donation-like-search">
-      <Search size={17} />
-      <input
-        name="search"
-        value={filters.search}
-        onChange={handleFilterChange}
-        placeholder="Search expense name or note..."
-      />
-    </div>
+        <div className="expense-collective-content">
+          <p>COLLECTIVE AMOUNT</p>
 
-    <DateRangePicker
-      fromDate={filters.fromDate}
-      toDate={filters.toDate}
-      onChange={({ fromDate, toDate }) => {
-        setFilters((prev) => ({
-          ...prev,
-          fromDate,
-          toDate,
-        }));
-      }}
-    />
-  </div>
+          <div className="expense-collective-amount">
+            <h2>
+              {showCollectiveAmount
+                ? formatCurrency(collectiveAmount)
+                : "••••••"}
+            </h2>
 
-  {error && <div className="expenses-error">{error}</div>}
+            <button
+              type="button"
+              onClick={() => setShowCollectiveAmount((prev) => !prev)}
+            >
+              {showCollectiveAmount ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
+      </div>
 
-  <Table
-    columns={columns}
-    data={expenses}
-    emptyText="No expenses found"
-  />
-</Card>
+      <Card className="expenses-list-card">
+        <div className="expenses-toolbar donation-like">
+          <div className="expenses-search donation-like-search">
+            <Search size={17} />
+            <input
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Search expense name or note..."
+            />
+          </div>
+
+          <DateRangePicker
+            fromDate={filters.fromDate}
+            toDate={filters.toDate}
+            onChange={({ fromDate, toDate }) => {
+              setFilters((prev) => ({
+                ...prev,
+                fromDate,
+                toDate,
+              }));
+            }}
+          />
+        </div>
+
+        {error && <div className="expenses-error">{error}</div>}
+
+        <Table
+          columns={columns}
+          data={expenses}
+          emptyText="No expenses found"
+        />
+      </Card>
 
       <Modal
         open={modalOpen}

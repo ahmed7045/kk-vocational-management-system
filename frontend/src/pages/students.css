@@ -6,6 +6,68 @@
 .student-card{
   padding : 40px  20px;
 }
+
+.student-summary-card {
+  width: 280px;
+  min-height: 110px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.student-summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+}
+
+.student-summary-content p {
+  margin: 0 0 6px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.student-summary-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-summary-amount h2 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-main);
+}
+
+.student-summary-amount button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.student-summary-content span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .students-toolbar {
   display: flex;
   align-items: center;
@@ -110,4 +172,7 @@
   .student-detail-grid {
     grid-template-columns: 1fr;
   }
+  .student-summary-card {
+  width: 100%;
+}
 }

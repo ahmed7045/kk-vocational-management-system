@@ -1414,48 +1414,51 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     },
   ];
 
-  const donationByDate = donations.reduce((acc, donation) => {
-    const date = donation.donation_date
-      ? new Date(donation.donation_date).toLocaleDateString("en-GB")
-      : "Unknown";
+  // const donationByDate = donations.reduce((acc, donation) => {
+  //   const date = donation.donation_date
+  //     ? new Date(donation.donation_date).toLocaleDateString("en-GB")
+  //     : "Unknown";
 
-    const existing = acc.find((item) => item.date === date);
+  //   const existing = acc.find((item) => item.date === date);
 
-    if (existing) {
-      existing.amount += Number(donation.amount || 0);
-    } else {
-      acc.push({
-        date,
-        amount: Number(donation.amount || 0),
-      });
-    }
+  //   if (existing) {
+  //     existing.amount += Number(donation.amount || 0);
+  //   } else {
+  //     acc.push({
+  //       date,
+  //       amount: Number(donation.amount || 0),
+  //     });
+  //   }
 
-    return acc;
-  }, []);
+  //   return acc;
+  // }, []);
 
-  const monthlyDonations = donations.reduce((acc, donation) => {
-    if (!donation.donation_date) return acc;
+  // const monthlyDonations = donations.reduce((acc, donation) => {
+  //   if (!donation.donation_date) return acc;
 
-    const donationDate = new Date(donation.donation_date);
+  //   const donationDate = new Date(donation.donation_date);
 
-    const month = donationDate.toLocaleString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
+  //   const month = donationDate.toLocaleString("en-US", {
+  //     month: "short",
+  //     year: "numeric",
+  //   });
 
-    const existing = acc.find((item) => item.month === month);
+  //   const existing = acc.find((item) => item.month === month);
 
-    if (existing) {
-      existing.amount += Number(donation.amount || 0);
-    } else {
-      acc.push({
-        month,
-        amount: Number(donation.amount || 0),
-      });
-    }
+  //   if (existing) {
+  //     existing.amount += Number(donation.amount || 0);
+  //   } else {
+  //     acc.push({
+  //       month,
+  //       amount: Number(donation.amount || 0),
+  //     });
+  //   }
 
-    return acc;
-  }, []);
+  //   return acc;
+  // }, []);
+
+  const monthlyDonations = dashboard?.monthlyDonations || [];
+  const monthlyCharity = dashboard?.monthlyCharity || [];
 
   if (loading) {
     return (
@@ -1681,29 +1684,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             </Card>
           </div>
           <div className="welfare-graphs-grid">
-            <Card title="Donation by Date" subtitle="Daily donation collection">
-              <div className="welfare-chart-box">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={donationByDate}
-                    margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Line
-                      type="monotone"
-                      dataKey="amount"
-                      strokeWidth={3}
-                      dot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            <Card title="Monthly Donations" subtitle="Donation collection by month">
+            <Card title="Monthly Donations" subtitle="Last 12 months donations">
               <div className="welfare-chart-box">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -1719,25 +1700,47 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                 </ResponsiveContainer>
               </div>
             </Card>
+
+            <Card title="Monthly Charity" subtitle="Last 12 months charity support">
+              <div className="welfare-chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={monthlyCharity}
+                    margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
           </div>
         </>
       )}
 
-{activeTab === "donors" && (
-  <Card className="donors-card">
-    <div className="filter-bar">
-      <Input
-        className="donor-search-input"
-        name="donorSearch"
-        value={filters.donorSearch}
-        onChange={handleFilterChange}
-        placeholder="Search donor name, phone, email"
-      />
-    </div>
+      {activeTab === "donors" && (
+        <Card className="donors-card">
+          <div className="filter-bar">
+            <Input
+              className="donor-search-input"
+              name="donorSearch"
+              value={filters.donorSearch}
+              onChange={handleFilterChange}
+              placeholder="Search donor name, phone, email"
+            />
+          </div>
 
-    <Table columns={donorColumns} data={donors} emptyText="No donors found" />
-  </Card>
-)}
+          <Table columns={donorColumns} data={donors} emptyText="No donors found" />
+        </Card>
+      )}
 
       {activeTab === "charities" && (
         <Card className="charities-card">

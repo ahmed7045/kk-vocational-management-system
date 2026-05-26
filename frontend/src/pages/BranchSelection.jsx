@@ -40,23 +40,42 @@ const BranchSelection = () => {
   const canCreateBranch =
     user?.role === "super_admin" || hasPermission?.("branches.create");
 
-  const fetchBranches = async () => {
-    try {
-      setLoading(true);
-      setError("");
+const fetchBranches = async () => {
+  if (user?.role !== "super_admin") {
+    setLoading(false);
+    return;
+  }
 
-      const response = await axiosInstance.get("/portal/branches");
-      setBranches(response.data.data || []);
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to fetch branches");
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    setError("");
+
+    const response = await axiosInstance.get("/branches");
+    setBranches(response.data.data || []);
+  } catch (error) {
+    setError(error.response?.data?.message || "Failed to fetch branches");
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (!user) return;
+
+  if (user.role !== "super_admin") {
+    if (user.portalAccess === "welfare") {
+      navigate("/app/welfare", { replace: true });
+      return;
     }
-  };
 
-  useEffect(() => {
-    fetchBranches();
-  }, []);
+    if (user.portalAccess === "vocational") {
+      navigate("/app/dashboard", { replace: true });
+      return;
+    }
+  }
+
+  fetchBranches();
+}, [user]);
 
   const handleBranchFormChange = (event) => {
     const { name, value } = event.target;

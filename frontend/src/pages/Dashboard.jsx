@@ -24,7 +24,7 @@ import {
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Loader from "../components/common/Loader";
-import Badge from "../components/common/Badge";
+// import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import {
   // formatCurrency,
@@ -184,7 +184,7 @@ const Dashboard = () => {
       </div>
 
       <div className="dashboard-grid-2">
-        <Card title="Revenue Analytics" subtitle="Last 6 months revenue">
+        <Card title="Revenue Analytics" subtitle="Last 12 months revenue">
           <div className="chart-box">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={revenueAnalytics}>
@@ -197,7 +197,7 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card title="Expense Analytics" subtitle="Last 6 months expenses">
+        <Card title="Expense Analytics" subtitle="Last 12 months expenses">
           <div className="chart-box">
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={expenseAnalytics}>
@@ -227,14 +227,13 @@ const Dashboard = () => {
                 <div
                   className="course-row dashboard-click-row"
                   key={course.id}
-                  onClick={() => navigate("/app/courses")}
+                  onClick={() => navigate(`/app/students?courseId=${course.id}`)}
                 >
-                  <div>
-                    <strong>{course.courseName}</strong>
-                    <span>{course.totalStudents} students</span>
-                  </div>
+                  <strong>{course.courseName}</strong>
 
-                  <Badge type="info">{course.totalStudents}</Badge>
+                  <span className="course-students-pill">
+                    {course.totalStudents} students
+                  </span>
                 </div>
               ))
             )}

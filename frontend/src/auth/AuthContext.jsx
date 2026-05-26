@@ -107,7 +107,26 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("refreshToken", refreshToken);
     }
     localStorage.setItem("user", JSON.stringify(loggedInUser));
+    if (loggedInUser.role !== "super_admin") {
+      if (loggedInUser.portalAccess === "welfare") {
+        localStorage.setItem("selectedPortal", "welfare");
+        localStorage.removeItem("selectedBranchId");
+        localStorage.removeItem("selectedBranchName");
+        localStorage.removeItem("selectedBranchStatus");
+      }
 
+      if (loggedInUser.portalAccess === "vocational") {
+        localStorage.setItem("selectedPortal", "vocational");
+
+        if (loggedInUser.branchId) {
+          localStorage.setItem("selectedBranchId", loggedInUser.branchId);
+        }
+
+        if (loggedInUser.branchName) {
+          localStorage.setItem("selectedBranchName", loggedInUser.branchName);
+        }
+      }
+    }
     setUser(loggedInUser);
 
     return response.data;

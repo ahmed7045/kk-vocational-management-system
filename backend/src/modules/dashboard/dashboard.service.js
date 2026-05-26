@@ -146,7 +146,7 @@ const getRevenueAnalytics = async (query, currentUser) => {
       COALESCE(SUM(p.amount), 0) AS revenue
     FROM (
       SELECT generate_series(
-        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months',
+        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
         DATE_TRUNC('month', CURRENT_DATE),
         INTERVAL '1 month'
       ) AS month
@@ -180,7 +180,7 @@ const getExpenseAnalytics = async (query, currentUser) => {
       COALESCE(SUM(e.amount), 0) AS expenses
     FROM (
       SELECT generate_series(
-        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months',
+        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
         DATE_TRUNC('month', CURRENT_DATE),
         INTERVAL '1 month'
       ) AS month

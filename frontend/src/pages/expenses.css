@@ -175,7 +175,60 @@
 .expenses-list-card {
   padding: 30px 20px;
 }
+.expense-collective-card {
+  width: 280px;
+  min-height: 110px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
 
+.expense-collective-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+}
+
+.expense-collective-content p {
+  margin: 0 0 6px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.expense-collective-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expense-collective-amount h2 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-main);
+}
+
+.expense-collective-amount button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
 .expenses-toolbar.donation-like {
   display: flex;
   align-items: center;
@@ -215,4 +268,7 @@
   .expense-form-grid {
     grid-template-columns: 1fr;
   }
+  .expense-collective-card {
+  width: 100%;
+}
 }

@@ -28,8 +28,7 @@ const Employees = () => {
 
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
-  const [permissions, setPermissions] = useState([]);
-
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -47,7 +46,26 @@ const Employees = () => {
   });
 
   const [accountMode, setAccountMode] = useState("info_only");
+  const vocationalTabs = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "students", label: "Students" },
+    { key: "nonActiveStudents", label: "Non-Active Students" },
+    { key: "employees", label: "Employees" },
+    { key: "expenses", label: "Expenses" },
+    { key: "courses", label: "Courses & Shifts" },
+    { key: "certificates", label: "Certificates" },
+    { key: "reports", label: "Reports" },
+  ];
 
+  const welfareTabs = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "donors", label: "Donors" },
+    { key: "donations", label: "Donations" },
+    { key: "applications", label: "Applications" },
+    { key: "beneficiaries", label: "Beneficiaries" },
+    { key: "expenses", label: "Expenses" },
+    { key: "reports", label: "Welfare Reports" },
+  ];
   const [form, setForm] = useState({
     fullName: "",
     designation: "",
@@ -55,7 +73,9 @@ const Employees = () => {
     salary: "",
     email: "",
     password: "",
-    permissions: [],
+    portalAccess: "",
+    branchId: branchId || "",
+    selectedTabs: [],
   });
 
   const applyFilters = (records, currentFilters = filters) => {
@@ -108,17 +128,17 @@ const Employees = () => {
     }
   };
 
-  const fetchPermissions = async () => {
-    try {
-      const response = await axiosInstance.get("/employees/permissions");
-      setPermissions(response.data.data || []);
-    } catch (error) {
-      console.error("Permission fetch error:", error.response?.data?.message);
-    }
-  };
+const fetchBranches = async () => {
+  try {
+    const response = await axiosInstance.get("/branches");
+    setBranches(response.data.data || []);
+  } catch (error) {
+    console.error("Branch fetch error:", error.response?.data?.message);
+  }
+};
 
   useEffect(() => {
-    fetchPermissions();
+    fetchBranches();
   }, []);
 
   useEffect(() => {
@@ -154,17 +174,26 @@ const Employees = () => {
     }));
   };
 
-  const togglePermission = (permissionName) => {
+  const toggleSelectedTab = (tabKey) => {
     setForm((prev) => {
-      const exists = prev.permissions.includes(permissionName);
+      const exists = prev.selectedTabs.includes(tabKey);
 
       return {
         ...prev,
-        permissions: exists
-          ? prev.permissions.filter((name) => name !== permissionName)
-          : [...prev.permissions, permissionName],
+        selectedTabs: exists
+          ? prev.selectedTabs.filter((key) => key !== tabKey)
+          : [...prev.selectedTabs, tabKey],
       };
     });
+  };
+
+  const handlePortalSelect = (portalAccess) => {
+    setForm((prev) => ({
+      ...prev,
+      portalAccess,
+      branchId: portalAccess === "vocational" ? prev.branchId || branchId || "" : "",
+      selectedTabs: [],
+    }));
   };
 
   const resetForm = () => {
@@ -177,7 +206,9 @@ const Employees = () => {
       salary: "",
       email: "",
       password: "",
-      permissions: [],
+      portalAccess: "",
+      branchId: branchId || "",
+      selectedTabs: [],
     });
   };
 
@@ -190,7 +221,24 @@ const Employees = () => {
   const handleSaveEmployee = async (event) => {
     event.preventDefault();
 
-    if (!branchId) {
+    if (accountMode === "with_account") {
+      if (!form.portalAccess) {
+        alert("Please select Welfare or Vocational access.");
+        return;
+      }
+
+      if (form.portalAccess === "vocational" && !form.branchId) {
+        alert("Please select a branch for vocational account.");
+        return;
+      }
+
+      if (form.selectedTabs.length === 0) {
+        alert("Please select at least one permission tab.");
+        return;
+      }
+    }
+
+    if (accountMode === "info_only" && !branchId) {
       alert("Please select a branch first.");
       return;
     }
@@ -199,7 +247,12 @@ const Employees = () => {
       setSaving(true);
 
       const payload = {
-        branchId: Number(branchId),
+        branchId:
+          accountMode === "with_account" && form.portalAccess === "vocational"
+            ? Number(form.branchId)
+            : branchId
+              ? Number(branchId)
+              : null,
         fullName: form.fullName,
         designation: form.designation,
         phone: form.phone,
@@ -210,7 +263,8 @@ const Employees = () => {
       if (accountMode === "with_account") {
         payload.email = form.email;
         payload.password = form.password;
-        payload.permissions = form.permissions;
+        payload.portalAccess = form.portalAccess;
+        payload.selectedTabs = form.selectedTabs;
       }
 
       if (selectedRecord?.id) {
@@ -221,15 +275,15 @@ const Employees = () => {
           const updatedEmployees = allEmployees.map((employee) =>
             employee.id === selectedRecord.id
               ? {
-                  ...employee,
-                  full_name: payload.fullName,
-                  designation: payload.designation,
-                  phone: payload.phone,
-                  salary: payload.salary,
-                  has_login_account: payload.hasLoginAccount,
-                  email: payload.email || employee.email,
-                  permissions: payload.permissions || employee.permissions || [],
-                }
+                ...employee,
+                full_name: payload.fullName,
+                designation: payload.designation,
+                phone: payload.phone,
+                salary: payload.salary,
+                has_login_account: payload.hasLoginAccount,
+                email: payload.email || employee.email,
+                permissions: payload.permissions || employee.permissions || [],
+              }
               : employee
           );
 
@@ -286,7 +340,9 @@ const Employees = () => {
       salary: row.salary || "",
       email: row.email || "",
       password: "",
-      permissions: row.permissions || [],
+      portalAccess: row.portal_access || "",
+      branchId: row.branch_id || branchId || "",
+      selectedTabs: [],
     });
 
     setModalOpen(true);
@@ -537,24 +593,75 @@ const Employees = () => {
               <div className="permissions-box">
                 <div className="permissions-header">
                   <UserCog size={18} />
-                  <strong>Permissions</strong>
+                  <strong>Access & Permissions</strong>
                 </div>
 
-                {permissions.length === 0 ? (
-                  <p className="permissions-empty">No permissions found.</p>
-                ) : (
-                  <div className="permissions-grid">
-                    {permissions.map((permission) => (
-                      <label key={permission.id} className="permission-item">
-                        <input
-                          type="checkbox"
-                          checked={form.permissions.includes(permission.name)}
-                          onChange={() => togglePermission(permission.name)}
-                        />
-                        <span>{permission.name}</span>
-                      </label>
-                    ))}
+                <div className="portal-access-grid">
+                  <label className={`portal-option ${form.portalAccess === "welfare" ? "active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="portalAccess"
+                      checked={form.portalAccess === "welfare"}
+                      onChange={() => handlePortalSelect("welfare")}
+                    />
+                    <span>Welfare</span>
+                  </label>
+
+                  <label className={`portal-option ${form.portalAccess === "vocational" ? "active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="portalAccess"
+                      checked={form.portalAccess === "vocational"}
+                      onChange={() => handlePortalSelect("vocational")}
+                    />
+                    <span>Vocational</span>
+                  </label>
+                </div>
+
+                {form.portalAccess === "vocational" && (
+                  <div className="employee-branch-select">
+                    <Select
+                      label="Branch"
+                      name="branchId"
+                      value={form.branchId}
+                      onChange={handleChange}
+                      placeholder="Select Branch"
+                      options={branches.map((branch) => ({
+                        label: branch.name,
+                        value: branch.id,
+                      }))}
+                      required
+                    />
                   </div>
+                )}
+
+                {form.portalAccess && (
+                  <>
+                    <div className="permissions-header permissions-subheader">
+                      <strong>
+                        {form.portalAccess === "welfare"
+                          ? "Welfare Permission Tabs"
+                          : "Vocational Permission Tabs"}
+                      </strong>
+                    </div>
+
+                    <div className="permissions-grid">
+                      {(form.portalAccess === "welfare" ? welfareTabs : vocationalTabs).map((tab) => (
+                        <label key={tab.key} className="permission-item">
+                          <input
+                            type="checkbox"
+                            checked={form.selectedTabs.includes(tab.key)}
+                            onChange={() => toggleSelectedTab(tab.key)}
+                          />
+                          <span>{tab.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {!form.portalAccess && (
+                  <p className="permissions-empty">Select Welfare or Vocational to show permission tabs.</p>
                 )}
               </div>
             </>
@@ -638,9 +745,8 @@ const Employees = () => {
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title="Delete Employee"
-        message={`Are you sure you want to delete ${
-          selectedRecord?.full_name || "this employee"
-        }?`}
+        message={`Are you sure you want to delete ${selectedRecord?.full_name || "this employee"
+          }?`}
         loading={deleting}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}

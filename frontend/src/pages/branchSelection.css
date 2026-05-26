@@ -11,7 +11,7 @@
   align-items: center;
 }
 .branch-header {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto 42px;
   display: flex;
   justify-content: space-between;
@@ -93,6 +93,9 @@
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
 }
 
 .branch-card::after {
@@ -153,6 +156,7 @@
   margin-top: 24px;
   position: relative;
   z-index: 1;
+  min-height: 86px;
 }
 
 .branch-card-content h2 {
@@ -167,11 +171,12 @@
 }
 
 .branch-stats {
-  margin-top: 24px;
+  margin-top: 18px;
   display: grid;
   gap: 10px;
   position: relative;
   z-index: 1;
+  min-height: 52px;
 }
 
 .branch-stats div {
@@ -183,7 +188,7 @@
 }
 
 .branch-open-btn {
-  margin-top: 26px;
+  margin-top: 22px;
   border: none;
   background: var(--primary);
   color: white;
@@ -196,6 +201,7 @@
   gap: 8px;
   position: relative;
   z-index: 1;
+  width: fit-content;
 }
 
 .branch-error {

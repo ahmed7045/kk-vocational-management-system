@@ -37,12 +37,15 @@ const loginUser = async ({ email, password, deviceInfo, ipAddress }) => {
       u.email,
       u.password_hash,
       u.role_id,
-      u.branch_id,
-      u.is_active,
-      r.name AS role_name
-    FROM users u
-    JOIN roles r ON r.id = u.role_id
-    WHERE u.email = $1
+u.branch_id,
+u.portal_access,
+b.name AS branch_name,
+u.is_active,
+r.name AS role_name
+FROM users u
+JOIN roles r ON r.id = u.role_id
+LEFT JOIN branches b ON b.id = u.branch_id
+WHERE u.email = $1
     `,
     [email]
   );
@@ -71,6 +74,8 @@ const loginUser = async ({ email, password, deviceInfo, ipAddress }) => {
     role: user.role_name,
     roleId: user.role_id,
     branchId: user.branch_id,
+    branchName: user.branch_name,
+    portalAccess: user.portal_access,
     permissions,
   };
 
@@ -91,18 +96,20 @@ const loginUser = async ({ email, password, deviceInfo, ipAddress }) => {
     [user.id, refreshTokenHash, deviceInfo || null, ipAddress || null]
   );
 
-  return {
-    user: {
-      id: user.id,
-      fullName: user.full_name,
-      email: user.email,
-      role: user.role_name,
-      branchId: user.branch_id,
-      permissions,
-    },
-    accessToken,
-    refreshToken,
-  };
+return {
+  user: {
+    id: user.id,
+    fullName: user.full_name,
+    email: user.email,
+    role: user.role_name,
+    branchId: user.branch_id,
+    branchName: user.branch_name,
+    portalAccess: user.portal_access,
+    permissions,
+  },
+  accessToken,
+  refreshToken,
+};
 };
 
 const refreshAccessToken = async (refreshToken) => {
