@@ -347,20 +347,20 @@ const {
     conditions.push(`s.student_status = $${values.length}`);
   }
 
-const feeDateExpression = `(s.admission_date::DATE + INTERVAL '1 month')::DATE`;
+const listDateExpression = `s.admission_date::DATE`;
 
 if (fromDate && toDate) {
   values.push(fromDate);
-  conditions.push(`${feeDateExpression} >= $${values.length}`);
+  conditions.push(`${listDateExpression} >= $${values.length}`);
 
   values.push(toDate);
-  conditions.push(`${feeDateExpression} <= $${values.length}`);
+  conditions.push(`${listDateExpression} <= $${values.length}`);
 } else if (month && year) {
   values.push(Number(month));
-  conditions.push(`EXTRACT(MONTH FROM ${feeDateExpression}) = $${values.length}`);
+  conditions.push(`EXTRACT(MONTH FROM ${listDateExpression}) = $${values.length}`);
 
   values.push(Number(year));
-  conditions.push(`EXTRACT(YEAR FROM ${feeDateExpression}) = $${values.length}`);
+  conditions.push(`EXTRACT(YEAR FROM ${listDateExpression}) = $${values.length}`);
 }
   const whereClause = conditions.length
     ? `WHERE ${conditions.join(" AND ")}`
