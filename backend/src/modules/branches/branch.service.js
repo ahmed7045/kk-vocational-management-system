@@ -72,35 +72,17 @@ const getBranches = async () => {
         AND e.expense_type IN ('vocational', 'branch')
       ), 0) AS total_expenses,
 
-      (
-        COALESCE((
-          SELECT SUM(p2.amount)
-          FROM payments p2
-          WHERE p2.branch_id = b.id
-        ), 0)
-        -
-        COALESCE((
-          SELECT SUM(e2.amount)
-          FROM expenses e2
-          WHERE e2.branch_id = b.id
-          AND e2.expense_type IN ('vocational', 'branch')
-        ), 0)
-      ) AS balance,
+      COALESCE((
+  SELECT SUM(p2.amount)
+  FROM payments p2
+  WHERE p2.branch_id = b.id
+), 0) AS balance,
 
-      (
-        COALESCE((
-          SELECT SUM(p3.amount)
-          FROM payments p3
-          WHERE p3.branch_id = b.id
-        ), 0)
-        -
-        COALESCE((
-          SELECT SUM(e3.amount)
-          FROM expenses e3
-          WHERE e3.branch_id = b.id
-          AND e3.expense_type IN ('vocational', 'branch')
-        ), 0)
-      ) AS monthly_revenue
+COALESCE((
+  SELECT SUM(p3.amount)
+  FROM payments p3
+  WHERE p3.branch_id = b.id
+), 0) AS monthly_revenue
 
     FROM branches b
     ORDER BY b.id ASC

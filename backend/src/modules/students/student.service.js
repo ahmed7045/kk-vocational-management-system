@@ -19,6 +19,19 @@ const canAccessBranch = (user, branchId) => {
 //   return "paid";
 // };
 
+const generateStudentCode = (studentId) => {
+  return String(studentId).padStart(5, "0");
+};
+
+const getInitialFeeDate = (admissionDate) => {
+  if (!admissionDate) return null;
+
+  const date = new Date(admissionDate);
+  date.setMonth(date.getMonth() + 1);
+
+  return date.toISOString().split("T")[0];
+};
+
 const updateCompletedStudentsStatus = async (branchId = null) => {
   const values = [];
   let branchCondition = "";
@@ -68,24 +81,25 @@ const updateCompletedStudentsStatus = async (branchId = null) => {
   );
 };
 const createStudent = async (data, currentUser) => {
-const {
-  branchId,
-  fullName,
-  fatherName,
-  phone,
-  city,
-  address,
-  photoUrl,
-  courseIds,
-  assignedTeacherId,
-  shiftId,
-  admissionDate,
-  admissionStatus,
-  totalFee,
-  paidFee,
-  remainingFee,
-  feeStatus,
-} = data;
+  const {
+    branchId,
+    studentCode,
+    fullName,
+    fatherName,
+    phone,
+    city,
+    address,
+    photoUrl,
+    courseIds,
+    assignedTeacherId,
+    shiftId,
+    admissionDate,
+    admissionStatus,
+    totalFee,
+    paidFee,
+    remainingFee,
+    feeStatus,
+  } = data;
 
   if (!branchId || !fullName) {
     throw new ApiError(400, "Branch and student name are required");
@@ -95,14 +109,14 @@ const {
     throw new ApiError(403, "You cannot create student for this branch");
   }
 
-const total = Number(totalFee) || Number(paidFee) || 0;
-const paid = Number(paidFee) || 0;
-const remaining =
-  remainingFee !== undefined
-    ? Number(remainingFee)
-    : Math.max(total - paid, 0);
+  const total = Number(totalFee) || Number(paidFee) || 0;
+  const paid = Number(paidFee) || 0;
+  const remaining =
+    remainingFee !== undefined
+      ? Number(remainingFee)
+      : Math.max(total - paid, 0);
 
-const finalFeeStatus = feeStatus || (paid >= total ? "paid" : "pending");
+  const finalFeeStatus = feeStatus || (paid >= total ? "paid" : "pending");
 
   const client = await pool.connect();
 
@@ -111,32 +125,34 @@ const finalFeeStatus = feeStatus || (paid >= total ? "paid" : "pending");
 
     const studentResult = await client.query(
       `
-      INSERT INTO students
-      (
-        branch_id,
-        full_name,
-        father_name,
-        phone,
-        city,
-        address,
-        photo_url,
-        assigned_teacher_id,
-        shift_id,
-        admission_date,
-        admission_status,
-        student_status,
-        fee_status,
-        total_fee,
-        paid_fee,
-        remaining_fee,
-        created_by
-      )
-      VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'active',$12,$13,$14,$15,$16)
-      RETURNING *
-      `,
+  INSERT INTO students
+  (
+    branch_id,
+    student_code,
+    full_name,
+    father_name,
+    phone,
+    city,
+    address,
+    photo_url,
+    assigned_teacher_id,
+    shift_id,
+    admission_date,
+    admission_status,
+    student_status,
+    fee_status,
+    total_fee,
+    paid_fee,
+    remaining_fee,
+    created_by
+  )
+  VALUES
+  ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',$13,$14,$15,$16,$17)
+  RETURNING *
+  `,
       [
         branchId,
+        studentCode?.trim() || null,
         fullName,
         fatherName || null,
         phone || null,
@@ -155,24 +171,66 @@ const finalFeeStatus = feeStatus || (paid >= total ? "paid" : "pending");
       ]
     );
 
-    const student = studentResult.rows[0];
+    let student = studentResult.rows[0];
 
+    if (!student.student_code) {
+      const codeResult = await client.query(
+        `
+    UPDATE students
+    SET student_code = $1
+    WHERE id = $2
+    RETURNING *
+    `,
+        [generateStudentCode(student.id), student.id]
+      );
+
+      student = codeResult.rows[0];
+    }
     if (courseIds && courseIds.length > 0) {
       for (const courseId of courseIds) {
         await client.query(
           `
-          INSERT INTO student_courses (student_id, course_id)
-          VALUES ($1, $2)
-          ON CONFLICT (student_id, course_id) DO NOTHING
-          `,
+      INSERT INTO student_courses (student_id, course_id)
+      VALUES ($1, $2)
+      ON CONFLICT (student_id, course_id) DO NOTHING
+      `,
           [student.id, courseId]
         );
       }
     }
 
+    if (finalFeeStatus === "paid" && paid > 0) {
+      await client.query(
+        `
+    INSERT INTO payments
+    (
+      branch_id,
+      student_id,
+      amount,
+      payment_method_id,
+      payment_date,
+      fee_date,
+      reference_no,
+      note,
+      created_by
+    )
+    VALUES ($1,$2,$3,NULL,CURRENT_DATE,$4,$5,$6,$7)
+    `,
+        [
+          branchId,
+          student.id,
+          paid,
+          getInitialFeeDate(admissionDate),
+          `AUTO-STUDENT-${student.id}`,
+          "Auto payment created from student admission",
+          currentUser.id,
+        ]
+      );
+    }
+
     await client.query(
       `
-      INSERT INTO audit_logs (user_id, action, module_name, description)
+  INSERT INTO audit_logs (user_id, action, module_name, description)
       VALUES ($1, $2, $3, $4)
       `,
       [
@@ -304,18 +362,18 @@ const upsertStudentPaymentDate = async (data, currentUser) => {
 };
 
 const getStudents = async (filters = {}) => {
-const {
-  branchId,
-  search,
-  feeStatus,
-  studentStatus,
-  fromDate,
-  toDate,
-  month,
-  year,
-  page = 1,
-  limit = 50,
-} = filters;
+  const {
+    branchId,
+    search,
+    feeStatus,
+    studentStatus,
+    fromDate,
+    toDate,
+    month,
+    year,
+    page = 1,
+    limit = 50,
+  } = filters;
   await updateCompletedStudentsStatus(branchId);
 
   const values = [];
@@ -347,21 +405,21 @@ const {
     conditions.push(`s.student_status = $${values.length}`);
   }
 
-const listDateExpression = `s.admission_date::DATE`;
+  const listDateExpression = `s.admission_date::DATE`;
 
-if (fromDate && toDate) {
-  values.push(fromDate);
-  conditions.push(`${listDateExpression} >= $${values.length}`);
+  if (fromDate && toDate) {
+    values.push(fromDate);
+    conditions.push(`${listDateExpression} >= $${values.length}`);
 
-  values.push(toDate);
-  conditions.push(`${listDateExpression} <= $${values.length}`);
-} else if (month && year) {
-  values.push(Number(month));
-  conditions.push(`EXTRACT(MONTH FROM ${listDateExpression}) = $${values.length}`);
+    values.push(toDate);
+    conditions.push(`${listDateExpression} <= $${values.length}`);
+  } else if (month && year) {
+    values.push(Number(month));
+    conditions.push(`EXTRACT(MONTH FROM ${listDateExpression}) = $${values.length}`);
 
-  values.push(Number(year));
-  conditions.push(`EXTRACT(YEAR FROM ${listDateExpression}) = $${values.length}`);
-}
+    values.push(Number(year));
+    conditions.push(`EXTRACT(YEAR FROM ${listDateExpression}) = $${values.length}`);
+  }
   const whereClause = conditions.length
     ? `WHERE ${conditions.join(" AND ")}`
     : "";
@@ -374,8 +432,8 @@ if (fromDate && toDate) {
   values.push(offset);
   const offsetIndex = values.length;
 
-const result = await pool.query(
-  `
+  const result = await pool.query(
+    `
   SELECT 
     s.*,
     b.name AS branch_name,
@@ -404,10 +462,10 @@ const result = await pool.query(
   LIMIT $${limitIndex}
   OFFSET $${offsetIndex}
   `,
-  values
-);
+    values
+  );
 
-return result.rows;
+  return result.rows;
 };
 
 const getStudentById = async (id, currentUser) => {
@@ -469,38 +527,39 @@ const updateStudent = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this student");
   }
 
-const {
-  fullName,
-  fatherName,
-  phone,
-  city,
-  address,
-  photoUrl,
-  assignedTeacherId,
-  shiftId,
-  admissionDate,
-  admissionStatus,
-  studentStatus,
-  totalFee,
-  paidFee,
-  remainingFee,
-  feeStatus,
-  courseIds,
-} = data;
+  const {
+    studentCode,
+    fullName,
+    fatherName,
+    phone,
+    city,
+    address,
+    photoUrl,
+    assignedTeacherId,
+    shiftId,
+    admissionDate,
+    admissionStatus,
+    studentStatus,
+    totalFee,
+    paidFee,
+    remainingFee,
+    feeStatus,
+    courseIds,
+  } = data;
 
-const finalTotalFee =
-  totalFee !== undefined ? Number(totalFee) : Number(oldStudent.total_fee);
+  const finalTotalFee =
+    totalFee !== undefined ? Number(totalFee) : Number(oldStudent.total_fee);
 
-const finalPaidFee =
-  paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
+  const finalPaidFee =
+    paidFee !== undefined ? Number(paidFee) : Number(oldStudent.paid_fee);
 
-const finalRemainingFee =
-  remainingFee !== undefined
-    ? Number(remainingFee)
-    : Math.max(finalTotalFee - finalPaidFee, 0);
+  const finalRemainingFee =
+    remainingFee !== undefined
+      ? Number(remainingFee)
+      : Math.max(finalTotalFee - finalPaidFee, 0);
 
-const finalFeeStatus =
-  feeStatus || (finalPaidFee >= finalTotalFee ? "paid" : "pending");
+  const finalFeeStatus =
+    feeStatus || (finalPaidFee >= finalTotalFee ? "paid" : "pending");
 
   const client = await pool.connect();
 
@@ -509,28 +568,30 @@ const finalFeeStatus =
 
     const result = await client.query(
       `
-      UPDATE students
-      SET
-        full_name = COALESCE($1, full_name),
-        father_name = COALESCE($2, father_name),
-        phone = COALESCE($3, phone),
-        city = COALESCE($4, city),
-        address = COALESCE($5, address),
-        photo_url = COALESCE($6, photo_url),
-        assigned_teacher_id = COALESCE($7, assigned_teacher_id),
-        shift_id = COALESCE($8, shift_id),
-        admission_date = COALESCE($9, admission_date),
-        admission_status = COALESCE($10, admission_status),
-        student_status = COALESCE($11, student_status),
-        total_fee = $12,
-        paid_fee = $13,
-        remaining_fee = $14,
-        fee_status = $15,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $16
-      RETURNING *
-      `,
+  UPDATE students
+  SET
+    student_code = COALESCE($1, student_code),
+    full_name = COALESCE($2, full_name),
+    father_name = COALESCE($3, father_name),
+    phone = COALESCE($4, phone),
+    city = COALESCE($5, city),
+    address = COALESCE($6, address),
+    photo_url = COALESCE($7, photo_url),
+    assigned_teacher_id = COALESCE($8, assigned_teacher_id),
+    shift_id = COALESCE($9, shift_id),
+    admission_date = COALESCE($10, admission_date),
+    admission_status = COALESCE($11, admission_status),
+    student_status = COALESCE($12, student_status),
+    total_fee = $13,
+    paid_fee = $14,
+    remaining_fee = $15,
+    fee_status = $16,
+    updated_at = CURRENT_TIMESTAMP
+  WHERE id = $17
+  RETURNING *
+  `,
       [
+        studentCode?.trim() || null,
         fullName || null,
         fatherName || null,
         phone || null,
@@ -630,23 +691,23 @@ const updateStudentStatus = async (id, data, currentUser) => {
 const deleteStudent = async (studentId, currentUser) => {
   const student = await getStudentById(studentId, currentUser);
 
-  const paymentCheck = await pool.query(
-    `
-    SELECT COUNT(*) AS total_payments
-    FROM payments
-    WHERE student_id = $1
-    `,
-    [studentId]
-  );
+  // const paymentCheck = await pool.query(
+  //   `
+  //   SELECT COUNT(*) AS total_payments
+  //   FROM payments
+  //   WHERE student_id = $1
+  //   `,
+  //   [studentId]
+  // );
 
-  const totalPayments = Number(paymentCheck.rows[0].total_payments);
+  // const totalPayments = Number(paymentCheck.rows[0].total_payments);
 
-  if (totalPayments > 0) {
-    throw new ApiError(
-      400,
-      "This student has payment records. You cannot delete this student."
-    );
-  }
+  // if (totalPayments > 0) {
+  //   throw new ApiError(
+  //     400,
+  //     "This student has payment records. You cannot delete this student."
+  //   );
+  // }
 
   const client = await pool.connect();
 
@@ -655,18 +716,26 @@ const deleteStudent = async (studentId, currentUser) => {
 
     await client.query(
       `
-      DELETE FROM student_courses
-      WHERE student_id = $1
-      `,
+  DELETE FROM payments
+  WHERE student_id = $1
+  `,
+      [studentId]
+    );
+
+    await client.query(
+      `
+  DELETE FROM student_courses
+  WHERE student_id = $1
+  `,
       [studentId]
     );
 
     const result = await client.query(
       `
-      DELETE FROM students
-      WHERE id = $1
-      RETURNING id, full_name
-      `,
+  DELETE FROM students
+  WHERE id = $1
+  RETURNING id, full_name
+  `,
       [studentId]
     );
 

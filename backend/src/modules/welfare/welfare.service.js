@@ -49,6 +49,19 @@ const findOrCreateDonorForDonation = async (client, data) => {
       throw new ApiError(404, "Donor not found");
     }
 
+    if (donorName || donorContact) {
+      await client.query(
+        `
+        UPDATE donors
+        SET
+          full_name = COALESCE($1, full_name),
+          phone = COALESCE($2, phone)
+        WHERE id = $3
+        `,
+        [donorName || null, donorContact || null, donorId]
+      );
+    }
+
     return donorResult.rows[0].id;
   }
 
@@ -68,6 +81,15 @@ const findOrCreateDonorForDonation = async (client, data) => {
     );
 
     if (existingDonor.rows.length > 0) {
+      await client.query(
+        `
+        UPDATE donors
+        SET full_name = COALESCE($1, full_name)
+        WHERE id = $2
+        `,
+        [donorName || null, existingDonor.rows[0].id]
+      );
+
       return existingDonor.rows[0].id;
     }
   }
@@ -794,11 +816,13 @@ const getDonations = async (query) => {
 
   const result = await pool.query(
     `
-    SELECT
-      d.id,
-      d.amount,
-      d.donation_date,
-      d.created_at,
+SELECT
+  d.id,
+  d.donor_id,
+  d.donation_method_id,
+  d.amount,
+  d.donation_date,
+  d.created_at,
 
       dn.full_name AS donor_name,
       dn.full_name AS name,
@@ -915,6 +939,68 @@ const createDonationForDonor = async (donorId, data, currentUser) => {
     },
     currentUser
   );
+};
+
+const updateDonation = async (id, data, currentUser) => {
+  await getDonationById(id);
+
+  const finalAmount = Number(data.amount);
+  const finalDate = data.date || data.donationDate || new Date();
+
+  if (!finalAmount || finalAmount <= 0) {
+    throw new ApiError(400, "Donation amount must be greater than zero");
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const donorId = await findOrCreateDonorForDonation(client, data);
+    const finalMethodId = await resolveDonationMethodId(client, data);
+
+    const result = await client.query(
+      `
+      UPDATE donations
+      SET
+        donor_id = $1,
+        donation_method_id = $2,
+        amount = $3,
+        donation_date = $4
+      WHERE id = $5
+      RETURNING *
+      `,
+      [
+        donorId,
+        finalMethodId,
+        finalAmount,
+        finalDate,
+        id,
+      ]
+    );
+
+    await client.query(
+      `
+      INSERT INTO audit_logs (user_id, action, module_name, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        currentUser.id,
+        "UPDATE_DONATION",
+        "welfare",
+        `Updated donation ID ${id}`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const deleteDonation = async (id, currentUser) => {
@@ -1666,7 +1752,7 @@ const getWelfareDashboard = async () => {
   const monthlyDonationsResult = await pool.query(
     `
   SELECT
-    TO_CHAR(months.month, 'Mon YYYY') AS month,
+    TO_CHAR(months.month, 'Mon') AS month,
     COALESCE(SUM(d.amount), 0) AS amount
   FROM (
     SELECT generate_series(
@@ -1685,7 +1771,7 @@ const getWelfareDashboard = async () => {
   const monthlyCharityResult = await pool.query(
     `
   SELECT
-    TO_CHAR(months.month, 'Mon YYYY') AS month,
+    TO_CHAR(months.month, 'Mon') AS month,
     COALESCE(SUM(cr.amount), 0) AS amount
   FROM (
     SELECT generate_series(
@@ -1754,6 +1840,7 @@ module.exports = {
   getDonationById,
   getDonorDonations,
   createDonationForDonor,
+  updateDonation,
   deleteDonation,
 
   createWelfareApplication,

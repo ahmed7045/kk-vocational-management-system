@@ -162,9 +162,192 @@ const updateCourse = async (id, data, currentUser) => {
 
   return result.rows[0];
 };
+const deleteCourse = async (id, currentUser) => {
+  const existing = await pool.query(
+    `SELECT * FROM courses WHERE id = $1`,
+    [id]
+  );
+
+  if (existing.rows.length === 0) {
+    throw new ApiError(404, "Course not found");
+  }
+
+  const course = existing.rows[0];
+
+  if (!canAccessBranch(currentUser, course.branch_id)) {
+    throw new ApiError(403, "You cannot delete this course");
+  }
+
+  await pool.query(
+    `
+    DELETE FROM courses
+    WHERE id = $1
+    `,
+    [id]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "DELETE_COURSE",
+      "courses",
+      `Deleted course ${course.course_name}`,
+    ]
+  );
+
+  return true;
+};
+const createCourseTeacher = async (data, currentUser) => {
+  const { branchId, teacherName, courseId, shiftId } = data;
+
+  if (!branchId || !teacherName || !courseId || !shiftId) {
+    throw new ApiError(400, "Teacher name, course and shift are required");
+  }
+
+  if (!canAccessBranch(currentUser, branchId)) {
+    throw new ApiError(403, "You cannot create teacher for this branch");
+  }
+
+  const result = await pool.query(
+    `
+    INSERT INTO course_teachers
+    (branch_id, course_id, shift_id, teacher_name, created_by)
+    VALUES ($1,$2,$3,$4,$5)
+    RETURNING *
+    `,
+    [branchId, courseId, shiftId, teacherName, currentUser.id]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "CREATE_COURSE_TEACHER",
+      "course_teachers",
+      `Created teacher ${teacherName}`,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const getCourseTeachers = async (query, currentUser) => {
+  const search = query.search || "";
+  let branchId = query.branchId;
+
+  if (currentUser.role !== "super_admin") {
+    branchId = currentUser.branchId;
+  }
+
+  const result = await pool.query(
+    `
+    SELECT
+      ct.id,
+      ct.branch_id,
+      ct.course_id,
+      ct.shift_id,
+      ct.teacher_name,
+      ct.is_active,
+      ct.created_at,
+      c.course_name,
+      s.shift_name,
+      s.start_time,
+      s.end_time
+    FROM course_teachers ct
+    LEFT JOIN courses c ON c.id = ct.course_id
+    LEFT JOIN shift_timings s ON s.id = ct.shift_id
+    WHERE
+      ($1::INT IS NULL OR ct.branch_id = $1)
+      AND (
+        ct.teacher_name ILIKE $2
+        OR c.course_name ILIKE $2
+        OR s.shift_name ILIKE $2
+      )
+    ORDER BY ct.id DESC
+    `,
+    [branchId || null, `%${search}%`]
+  );
+
+  return result.rows;
+};
+
+const updateCourseTeacher = async (id, data, currentUser) => {
+  const existing = await pool.query(
+    `SELECT * FROM course_teachers WHERE id = $1`,
+    [id]
+  );
+
+  if (existing.rows.length === 0) {
+    throw new ApiError(404, "Teacher not found");
+  }
+
+  const teacher = existing.rows[0];
+
+  if (!canAccessBranch(currentUser, teacher.branch_id)) {
+    throw new ApiError(403, "You cannot update this teacher");
+  }
+
+  const { teacherName, courseId, shiftId, isActive } = data;
+
+  const result = await pool.query(
+    `
+    UPDATE course_teachers
+    SET
+      teacher_name = COALESCE($1, teacher_name),
+      course_id = COALESCE($2, course_id),
+      shift_id = COALESCE($3, shift_id),
+      is_active = COALESCE($4, is_active),
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $5
+    RETURNING *
+    `,
+    [
+      teacherName || null,
+      courseId || null,
+      shiftId || null,
+      typeof isActive === "boolean" ? isActive : null,
+      id,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const deleteCourseTeacher = async (id, currentUser) => {
+  const existing = await pool.query(
+    `SELECT * FROM course_teachers WHERE id = $1`,
+    [id]
+  );
+
+  if (existing.rows.length === 0) {
+    throw new ApiError(404, "Teacher not found");
+  }
+
+  const teacher = existing.rows[0];
+
+  if (!canAccessBranch(currentUser, teacher.branch_id)) {
+    throw new ApiError(403, "You cannot delete this teacher");
+  }
+
+  await pool.query(`DELETE FROM course_teachers WHERE id = $1`, [id]);
+
+  return true;
+};
 
 module.exports = {
   createCourse,
   getCourses,
   updateCourse,
+  deleteCourse,
+  createCourseTeacher,
+  getCourseTeachers,
+  updateCourseTeacher,
+  deleteCourseTeacher,
 };

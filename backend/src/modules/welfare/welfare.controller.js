@@ -14,6 +14,7 @@ const {
 
   createDonation,
   getDonations,
+  updateDonation,
   deleteDonation,
   getDonorDonations,
   createDonationForDonor,
@@ -208,6 +209,20 @@ const getDonationsController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Donations fetched successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateDonationController = async (req, res, next) => {
+  try {
+    const data = await updateDonation(req.params.id, req.body, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Donation updated successfully",
       data,
     });
   } catch (error) {
@@ -419,6 +434,7 @@ module.exports = {
 
   createDonationController,
   getDonationsController,
+  updateDonationController,
   deleteDonationController,
 
   createApplicationController,

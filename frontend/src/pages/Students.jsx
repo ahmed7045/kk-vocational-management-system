@@ -70,6 +70,7 @@ const Students = ({
   });
   const [showSummaryAmount, setShowSummaryAmount] = useState(true);
   const [form, setForm] = useState({
+    studentCode: "",
     fullName: "",
     fatherName: "",
     phone: "",
@@ -82,6 +83,7 @@ const Students = ({
 
   const resetForm = () => {
     setForm({
+      studentCode: "",
       fullName: "",
       fatherName: "",
       phone: "",
@@ -267,6 +269,7 @@ const Students = ({
     const feeAmount = Number(form.paidFee || 0);
     const payload = {
       branchId: Number(branchId),
+      studentCode: form.studentCode || null,
       fullName: form.fullName,
       fatherName: form.fatherName,
       phone: form.phone,
@@ -400,6 +403,7 @@ const Students = ({
       setSelectedRecord(student);
 
       setForm({
+        studentCode: student.student_code || "",
         fullName: student.full_name || "",
         fatherName: student.father_name || "",
         phone: student.phone || "",
@@ -563,7 +567,12 @@ const Students = ({
     {
       key: "full_name",
       title: "Name",
-      render: (row) => <strong>{row.full_name}</strong>,
+      render: (row) => (
+        <div>
+          <strong>{row.full_name}</strong>
+          <span className="table-subtext">{row.student_code || row.id}</span>
+        </div>
+      ),
     },
     {
       key: "courses",
@@ -607,7 +616,12 @@ const Students = ({
     {
       key: "full_name",
       title: "Name",
-      render: (row) => <strong>{row.full_name}</strong>,
+      render: (row) => (
+        <div>
+          <strong>{row.full_name}</strong>
+          <span className="table-subtext">{row.student_code || row.id}</span>
+        </div>
+      ),
     },
     {
       key: "father_name",
@@ -822,6 +836,13 @@ const Students = ({
         <form onSubmit={handleSubmitStudent}>
           <div className="student-form-grid">
             <Input
+              label="Student ID"
+              name="studentCode"
+              value={form.studentCode}
+              onChange={handleFormChange}
+              placeholder="Leave empty for auto ID"
+            />
+            <Input
               label="Student Name"
               name="fullName"
               value={form.fullName}
@@ -924,8 +945,8 @@ const Students = ({
         {selectedRecord && (
           <div className="student-detail-grid">
             <div>
-              <strong>Name:</strong>
-              <p>{selectedRecord.full_name}</p>
+              <strong>Student ID:</strong>
+              <p>{selectedRecord.student_code || selectedRecord.id}</p>
             </div>
 
             <div>

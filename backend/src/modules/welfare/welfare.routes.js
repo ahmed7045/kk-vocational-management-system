@@ -20,6 +20,7 @@ const {
 
   createDonationController,
   getDonationsController,
+  updateDonationController,
   deleteDonationController,
 
   getDonorDonationsController,
@@ -163,6 +164,13 @@ router.post(
   authMiddleware,
   requirePermission("welfare.donation.create"),
   createDonationController
+);
+
+router.put(
+  "/donations/:id",
+  authMiddleware,
+  requirePermission("welfare.donation.create"),
+  updateDonationController
 );
 
 router.delete(

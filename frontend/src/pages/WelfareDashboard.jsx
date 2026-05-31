@@ -398,6 +398,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   };
 
   const openAddDonationModal = async () => {
+    setSelectedDonation(null);
     resetDonationForm();
 
     try {
@@ -765,7 +766,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     }
   };
 
-  const createDonation = async (event) => {
+  const saveDonation = async (event) => {
     event.preventDefault();
 
     if (!donationForm.name.trim()) {
@@ -786,29 +787,27 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     try {
       setSaving(true);
 
-      await axiosInstance.post("/welfare/donations", {
+      const payload = {
         donorId: donationForm.donorId || null,
         name: donationForm.name.trim(),
         contact: donationForm.contact || null,
         amount: Number(donationForm.amount),
         methodId: Number(donationForm.methodId),
         date: donationForm.date || getTodayDate(),
-      });
+      };
+
+      if (selectedDonation?.id) {
+        await axiosInstance.put(`/welfare/donations/${selectedDonation.id}`, payload);
+      } else {
+        await axiosInstance.post("/welfare/donations", payload);
+      }
 
       setDonationModalOpen(false);
-      // setDonationForm({
-      //   name: "",
-      //   contact: "",
-      //   amount: "",
-      //   methodId: "",
-      //   date: "",
-      // });
-
+      setSelectedDonation(null);
       resetDonationForm();
-
       fetchWelfareData();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to create donation");
+      alert(error.response?.data?.message || "Failed to save donation");
     } finally {
       setSaving(false);
     }
@@ -867,6 +866,33 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditDonation = async (donation) => {
+    setSelectedDonation(donation);
+
+    try {
+      const [donorsRes, methodsRes] = await Promise.all([
+        axiosInstance.get("/welfare/donors?page=1&limit=100"),
+        axiosInstance.get("/welfare/donation-methods"),
+      ]);
+
+      setDonors(donorsRes.data.data || []);
+      setDonationMethods(methodsRes.data.data || []);
+    } catch (error) {
+      console.error("Donation edit data error:", error.response?.data?.message);
+    }
+
+    setDonationForm({
+      donorId: donation.donor_id || "",
+      name: donation.name || donation.donor_name || "",
+      contact: donation.contact || "",
+      amount: donation.amount || "",
+      methodId: donation.donation_method_id || "",
+      date: donation.donation_date?.split("T")[0] || getTodayDate(),
+    });
+
+    setDonationModalOpen(true);
   };
 
   const handleViewDonation = (donation) => {
@@ -1383,10 +1409,10 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       render: (row) => (
         <ActionButtons
           onView={() => handleViewDonation(row)}
-          onEdit={null}
+          onEdit={() => handleEditDonation(row)}
           onDelete={() => handleDeleteDonationClick(row)}
           canView={true}
-          canEdit={false}
+          canEdit={true}
           canDelete={true}
         />
       ),
@@ -1513,6 +1539,10 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   const monthlyDonations = dashboard?.monthlyDonations || [];
   const monthlyCharity = dashboard?.monthlyCharity || [];
 
+  const selectedDonorTotalDonation = selectedDonorDonations.reduce(
+    (sum, donation) => sum + Number(donation.amount || 0),
+    0
+  );
   if (loading) {
     return (
       <div className="page">
@@ -1521,47 +1551,47 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     );
   }
 
-const donorColumns = [
-  {
-    key: "donor_name",
-    title: "Donor Name",
-    render: (row) => (
-      <span
-        type="button"
-        className="donor-profile-link"
-        onClick={() => handleViewDonor(row)}
-      >
-        {row.donor_name || row.full_name || row.name || "-"}
-      </span>
-    ),
-  },
-  {
-    key: "phone",
-    title: "Phone",
-    render: (row) => row.phone || "-",
-  },
-  {
-    key: "email",
-    title: "Email",
-    render: (row) => row.email || "-",
-  },
-  {
-    key: "address",
-    title: "Address",
-    render: (row) => row.address || "-",
-  },
-  {
-    key: "actions",
-    title: "Actions",
-    render: (row) => (
-      <ActionButtons
-        onView={() => handleViewDonor(row)}
-        onEdit={() => handleEditDonor(row)}
-        onDelete={() => handleDeleteDonorClick(row)}
-      />
-    ),
-  },
-];
+  const donorColumns = [
+    {
+      key: "donor_name",
+      title: "Donor Name",
+      render: (row) => (
+        <span
+          type="button"
+          className="donor-profile-link"
+          onClick={() => handleViewDonor(row)}
+        >
+          {row.donor_name || row.full_name || row.name || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "phone",
+      title: "Phone",
+      render: (row) => row.phone || "-",
+    },
+    {
+      key: "email",
+      title: "Email",
+      render: (row) => row.email || "-",
+    },
+    {
+      key: "address",
+      title: "Address",
+      render: (row) => row.address || "-",
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <ActionButtons
+          onView={() => handleViewDonor(row)}
+          onEdit={() => handleEditDonor(row)}
+          onDelete={() => handleDeleteDonorClick(row)}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="page welfare-page">
@@ -1764,7 +1794,7 @@ const donorColumns = [
                     margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <XAxis dataKey="month" interval={0} />
                     <YAxis />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Bar dataKey="amount" radius={[8, 8, 0, 0]} />
@@ -1781,7 +1811,7 @@ const donorColumns = [
                     margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <XAxis dataKey="month" interval={0} />
                     <YAxis />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                     <Line
@@ -2032,10 +2062,15 @@ const donorColumns = [
             </div>
 
             <div style={{ marginTop: "24px" }}>
-              <div className="modal-section-header">
+              <div className="modal-section-header donor-history-header">
                 <div>
                   <h3>Donation History</h3>
                   <p>All donations made by this donor.</p>
+                </div>
+
+                <div className="donor-total-donation">
+                  <span>Total Donation</span>
+                  <strong>{formatCurrency(selectedDonorTotalDonation)}</strong>
                 </div>
 
                 <Button type="button" onClick={openDonorDonationModal}>
@@ -2388,11 +2423,15 @@ const donorColumns = [
 
       <Modal
         open={donationModalOpen}
-        title="Add Donation"
-        onClose={() => setDonationModalOpen(false)}
+        title={selectedDonation?.id ? "Edit Donation" : "Add Donation"}
+        onClose={() => {
+          setDonationModalOpen(false);
+          setSelectedDonation(null);
+          resetDonationForm();
+        }}
         size="md"
       >
-        <form onSubmit={createDonation}>
+        <form onSubmit={saveDonation}>
           <Input
             label="Name"
             name="name"
@@ -2414,7 +2453,7 @@ const donorColumns = [
             name="contact"
             value={donationForm.contact}
             onChange={handleChange(setDonationForm)}
-            // disabled={Boolean(donationForm.donorId)}
+          // disabled={Boolean(donationForm.donorId)}
           />
 
           <Input
@@ -2450,13 +2489,17 @@ const donorColumns = [
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setDonationModalOpen(false)}
+              onClick={() => {
+                setDonationModalOpen(false);
+                setSelectedDonation(null);
+                resetDonationForm();
+              }}
             >
               Cancel
             </Button>
 
             <Button type="submit" loading={saving}>
-              Save Donation
+              {selectedDonation?.id ? "Update Donation" : "Save Donation"}
             </Button>
           </div>
         </form>

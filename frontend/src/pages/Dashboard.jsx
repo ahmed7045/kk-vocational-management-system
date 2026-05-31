@@ -46,10 +46,10 @@ const Dashboard = () => {
     year: "numeric",
   });
 
-const [dashboardData, setDashboardData] = useState(null);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
-const [showRevenue, setShowRevenue] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showRevenue, setShowRevenue] = useState(true);
 
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -142,35 +142,35 @@ const [showRevenue, setShowRevenue] = useState(true);
 
   return (
     <div className="page dashboard-page">
-<div className="page-header dashboard-top-header">
-  <div className="dashboard-welcome-header">
-    <div>
-      <h1>Welcome back, {user?.fullName || user?.full_name || "User"}</h1>
-      <p>{todayText}</p>
-    </div>
-  </div>
+      <div className="page-header dashboard-top-header">
+        <div className="dashboard-welcome-header">
+          <div>
+            <h1>Welcome back, {user?.fullName || user?.full_name || "User"}</h1>
+            <p>{todayText}</p>
+          </div>
+        </div>
 
-  <div className="dashboard-revenue-card">
-    <div>
-      <p>Total Revenue</p>
+        <div className="dashboard-revenue-card">
+          <div>
+            <p>Total Revenue</p>
 
-      <div className="dashboard-revenue-amount">
-        <strong>
-          {showRevenue
-            ? formatCurrency(summary.monthlyRevenue || 0)
-            : "••••••"}
-        </strong>
+            <div className="dashboard-revenue-amount">
+              <strong>
+                {showRevenue
+                  ? formatCurrency(summary.totalRevenue || 0)
+                  : "••••••"}
+              </strong>
 
-        <button
-          type="button"
-          onClick={() => setShowRevenue((prev) => !prev)}
-        >
-          {showRevenue ? <EyeOff size={15} /> : <Eye size={15} />}
-        </button>
+              <button
+                type="button"
+                onClick={() => setShowRevenue((prev) => !prev)}
+              >
+                {showRevenue ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
       <div className="dashboard-stats-grid">
         {statCards.map((item) => {
@@ -202,7 +202,11 @@ const [showRevenue, setShowRevenue] = useState(true);
           <div className="chart-box">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={revenueAnalytics}>
-                <XAxis dataKey="month" />
+                <XAxis
+                  dataKey="month"
+                  interval={0}
+                  tickFormatter={(value) => String(value).split(" ")[0]}
+                />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="revenue" radius={[8, 8, 0, 0]} />
@@ -216,7 +220,11 @@ const [showRevenue, setShowRevenue] = useState(true);
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={expenseAnalytics}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis
+                  dataKey="month"
+                  interval={0}
+                  tickFormatter={(value) => String(value).split(" ")[0]}
+                />
                 <YAxis />
                 <Tooltip />
                 <Line

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Award,
   Download,
+  Eye,
   Plus,
   Search,
 } from "lucide-react";
@@ -28,6 +29,18 @@ const getTodayDate = () => {
   return new Date().toISOString().split("T")[0];
 };
 
+const getCertificateFileName = (certificate) => {
+  const studentName = (certificate.student_name || "certificate")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9.]+/gi, "");
+
+  const studentId =
+    certificate.student_code ||
+    certificate.student_id ||
+    certificate.id;
+
+  return `${studentName}_${studentId}.pdf`;
+};
 const Certificates = () => {
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -235,6 +248,30 @@ const Certificates = () => {
     }
   };
 
+  const previewCertificate = async (certificate) => {
+    try {
+      const response = await axiosInstance.get(
+        `/certificates/${certificate.id}/download`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 60000);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to preview certificate");
+    }
+  };
+
   const downloadCertificate = async (certificate) => {
     try {
       const response = await axiosInstance.get(
@@ -248,10 +285,7 @@ const Certificates = () => {
       const link = document.createElement("a");
 
       link.href = blobUrl;
-      link.setAttribute(
-        "download",
-        `${certificate.certificate_no || "certificate"}.pdf`
-      );
+      link.setAttribute("download", getCertificateFileName(certificate));
 
       document.body.appendChild(link);
       link.click();
@@ -277,7 +311,12 @@ const Certificates = () => {
     {
       key: "student_name",
       title: "Student",
-      render: (row) => row.student_name || "-",
+      render: (row) => (
+        <div>
+          <strong>{row.student_name || "-"}</strong>
+          <span className="table-subtext">{row.student_code || row.student_id || "-"}</span>
+        </div>
+      ),
     },
     {
       key: "course_name",
@@ -306,19 +345,29 @@ const Certificates = () => {
       title: "Created",
       render: (row) => formatDate(row.created_at),
     },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (row) => (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => downloadCertificate(row)}
-        >
-          <Download size={14} /> Download
-        </Button>
-      ),
-    },
+{
+  key: "actions",
+  title: "Actions",
+  render: (row) => (
+    <div className="certificate-action-buttons">
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => previewCertificate(row)}
+      >
+        <Eye size={14} /> Preview
+      </Button>
+
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => downloadCertificate(row)}
+      >
+        <Download size={14} /> Download
+      </Button>
+    </div>
+  ),
+},
   ];
 
   if (loading) {

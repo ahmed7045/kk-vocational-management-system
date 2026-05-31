@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, UserCog } from "lucide-react";
-
+import { Eye, EyeOff, Plus, Search, UserCog } from "lucide-react";
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -39,6 +38,7 @@ const Employees = () => {
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -128,14 +128,14 @@ const Employees = () => {
     }
   };
 
-const fetchBranches = async () => {
-  try {
-    const response = await axiosInstance.get("/branches");
-    setBranches(response.data.data || []);
-  } catch (error) {
-    console.error("Branch fetch error:", error.response?.data?.message);
-  }
-};
+  const fetchBranches = async () => {
+    try {
+      const response = await axiosInstance.get("/branches");
+      setBranches(response.data.data || []);
+    } catch (error) {
+      console.error("Branch fetch error:", error.response?.data?.message);
+    }
+  };
 
   useEffect(() => {
     fetchBranches();
@@ -214,6 +214,7 @@ const fetchBranches = async () => {
 
   const openAddModal = () => {
     setSelectedRecord(null);
+    setShowPassword(false);
     resetForm();
     setModalOpen(true);
   };
@@ -503,6 +504,7 @@ const fetchBranches = async () => {
         onClose={() => {
           setModalOpen(false);
           setSelectedRecord(null);
+          setShowPassword(false);
           resetForm();
         }}
         size="lg"
@@ -575,19 +577,35 @@ const fetchBranches = async () => {
                   required={!selectedRecord?.id}
                 />
 
-                <Input
-                  label="Password"
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder={
-                    selectedRecord?.id
-                      ? "Leave empty to keep old password"
-                      : "Min. 6 characters"
-                  }
-                  required={!selectedRecord?.id}
-                />
+                <div className="form-group employee-password-group">
+                  <label htmlFor="password">
+                    Password {!selectedRecord?.id && <span>*</span>}
+                  </label>
+
+                  <div className="employee-password-field">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder={
+                        selectedRecord?.id
+                          ? "Leave empty to keep old password"
+                          : "Min. 6 characters"
+                      }
+                      required={!selectedRecord?.id}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="permissions-box">
@@ -674,6 +692,7 @@ const fetchBranches = async () => {
               onClick={() => {
                 setModalOpen(false);
                 setSelectedRecord(null);
+                setShowPassword(false);
                 resetForm();
               }}
             >

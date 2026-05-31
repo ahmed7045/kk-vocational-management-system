@@ -8,6 +8,7 @@ const {
   create,
   list,
   update,
+  remove,
 } = require("./shift.controller");
 
 router.get(
@@ -30,5 +31,10 @@ router.put(
   requirePermission("shifts.update"),
   update
 );
-
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("shifts.delete"),
+  remove
+);
 module.exports = router;

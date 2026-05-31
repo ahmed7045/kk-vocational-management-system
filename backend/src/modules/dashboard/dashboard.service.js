@@ -144,7 +144,7 @@ const getRevenueAnalytics = async (query, currentUser) => {
   const result = await pool.query(
     `
     SELECT
-      TO_CHAR(months.month, 'Mon YYYY') AS month,
+      TO_CHAR(months.month, 'Mon') AS month,
       COALESCE(SUM(p.amount), 0) AS revenue
     FROM (
       SELECT generate_series(
@@ -178,7 +178,7 @@ const getExpenseAnalytics = async (query, currentUser) => {
   const result = await pool.query(
     `
     SELECT
-      TO_CHAR(months.month, 'Mon YYYY') AS month,
+      TO_CHAR(months.month, 'Mon') AS month,
       COALESCE(SUM(e.amount), 0) AS expenses
     FROM (
       SELECT generate_series(

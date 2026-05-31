@@ -9,14 +9,15 @@ const canAccessBranch = (user, branchId) => {
 const createShift = async (data, currentUser) => {
   const {
     branchId,
+    courseId,
     shiftName,
     startTime,
     endTime,
   } = data;
 
-  if (!branchId || !shiftName || !startTime || !endTime) {
-    throw new ApiError(400, "Branch, shift name, start time and end time are required");
-  }
+if (!branchId || !courseId || !shiftName || !startTime || !endTime) {
+  throw new ApiError(400, "Branch, course, shift name, start time and end time are required");
+}
 
   if (!canAccessBranch(currentUser, branchId)) {
     throw new ApiError(403, "You cannot create shift for this branch");
@@ -51,7 +52,18 @@ const createShift = async (data, currentUser) => {
     ]
   );
 
-  return result.rows[0];
+  const shift = result.rows[0];
+
+await pool.query(
+  `
+  INSERT INTO course_shifts (course_id, shift_id)
+  VALUES ($1, $2)
+  ON CONFLICT DO NOTHING
+  `,
+  [courseId, shift.id]
+);
+
+return shift;
 };
 
 const getShifts = async (query, currentUser) => {
@@ -68,6 +80,12 @@ const result = await pool.query(
     s.id,
     s.branch_id,
     b.name AS branch_name,
+    (
+      SELECT cs.course_id
+      FROM course_shifts cs
+      WHERE cs.shift_id = s.id
+      LIMIT 1
+    ) AS course_id,
     s.shift_name,
     s.start_time,
     s.end_time,
@@ -75,10 +93,17 @@ const result = await pool.query(
     s.created_at
   FROM shift_timings s
   LEFT JOIN branches b ON b.id = s.branch_id
-  LEFT JOIN course_shifts cs ON cs.shift_id = s.id
   WHERE 
     ($1::INT IS NULL OR s.branch_id = $1)
-    AND ($2::INT IS NULL OR cs.course_id = $2)
+    AND (
+      $2::INT IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM course_shifts cs
+        WHERE cs.shift_id = s.id
+          AND cs.course_id = $2
+      )
+    )
   ORDER BY s.start_time ASC
   `,
   [branchId || null, courseId]
@@ -103,12 +128,13 @@ const updateShift = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this shift");
   }
 
-  const {
-    shiftName,
-    startTime,
-    endTime,
-    isActive,
-  } = data;
+const {
+  courseId,
+  shiftName,
+  startTime,
+  endTime,
+  isActive,
+} = data;
 
   const result = await pool.query(
     `
@@ -143,11 +169,71 @@ const updateShift = async (id, data, currentUser) => {
     ]
   );
 
-  return result.rows[0];
+  if (courseId) {
+  await pool.query(
+    `
+    DELETE FROM course_shifts
+    WHERE shift_id = $1
+    `,
+    [id]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO course_shifts (course_id, shift_id)
+    VALUES ($1, $2)
+    ON CONFLICT DO NOTHING
+    `,
+    [courseId, id]
+  );
+}
+
+return result.rows[0];
+};
+
+const deleteShift = async (id, currentUser) => {
+  const existing = await pool.query(
+    `SELECT * FROM shift_timings WHERE id = $1`,
+    [id]
+  );
+
+  if (existing.rows.length === 0) {
+    throw new ApiError(404, "Shift not found");
+  }
+
+  const shift = existing.rows[0];
+
+  if (!canAccessBranch(currentUser, shift.branch_id)) {
+    throw new ApiError(403, "You cannot delete this shift");
+  }
+
+  await pool.query(
+    `
+    DELETE FROM shift_timings
+    WHERE id = $1
+    `,
+    [id]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "DELETE_SHIFT",
+      "shift_timings",
+      `Deleted shift ${shift.shift_name}`,
+    ]
+  );
+
+  return true;
 };
 
 module.exports = {
   createShift,
   getShifts,
   updateShift,
+  deleteShift,
 };

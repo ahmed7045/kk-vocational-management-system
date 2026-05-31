@@ -139,14 +139,13 @@ useEffect(() => {
     );
   };
 
-  const getBranchBalance = (branch) => {
-    return Number(
-      branch.balance ??
-        branch.monthly_revenue ??
-        branch.total_balance ??
-        0
-    );
-  };
+const getBranchBalance = (branch) => {
+  return Number(
+    branch.total_payments ??
+      branch.totalPayments ??
+      0
+  );
+};
 
   if (loading) {
     return <Loader fullPage text="Loading branches..." />;

@@ -97,7 +97,7 @@ const generateCertificate = async (data, currentUser) => {
       courseName || student.course_name || "Vocational Training",
       courseDuration || student.duration || "6 months",
       achievementText ||
-        "Furthermore, the student has achieved a Distinguished Position in recognition of outstanding performance, dedication, and hard work. This certificate is proudly awarded in appreciation of their commitment and excellence.",
+      "Furthermore, the student has achieved a Distinguished Position in recognition of outstanding performance, dedication, and hard work. This certificate is proudly awarded in appreciation of their commitment and excellence.",
       issueDate || new Date(),
       secretaryName || "Aftab Ahmed",
       presidentName || "Muhammad Rafiq Mara",
@@ -134,10 +134,12 @@ const getCertificates = async (query, currentUser) => {
 
   const result = await pool.query(
     `
-    SELECT
-      cert.id,
-      cert.certificate_no,
-      cert.student_name,
+SELECT
+  cert.id,
+  cert.student_id,
+  s.student_code,
+  cert.certificate_no,
+  cert.student_name,
       cert.course_name,
       cert.course_duration,
       cert.issue_date,
@@ -168,9 +170,10 @@ const getCertificates = async (query, currentUser) => {
 const getCertificateById = async (id, currentUser) => {
   const result = await pool.query(
     `
-    SELECT
-      cert.*,
-      s.branch_id,
+SELECT
+  cert.*,
+  s.student_code,
+  s.branch_id,
       b.name AS branch_name
     FROM certificates cert
     LEFT JOIN students s ON s.id = cert.student_id

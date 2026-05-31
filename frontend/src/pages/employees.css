@@ -171,6 +171,29 @@
   margin-top: 18px;
 }
 
+.employee-password-field {
+  position: relative;
+}
+
+.employee-password-field input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.employee-password-field button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
 @media (max-width: 750px) {
 .employees-toolbar,
 .employee-form-grid,
