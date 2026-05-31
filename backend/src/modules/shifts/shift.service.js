@@ -56,29 +56,33 @@ const createShift = async (data, currentUser) => {
 
 const getShifts = async (query, currentUser) => {
   let branchId = query.branchId;
+  const courseId = query.courseId || null;
 
   if (currentUser.role !== "super_admin") {
     branchId = currentUser.branchId;
   }
 
-  const result = await pool.query(
-    `
-    SELECT
-      s.id,
-      s.branch_id,
-      b.name AS branch_name,
-      s.shift_name,
-      s.start_time,
-      s.end_time,
-      s.is_active,
-      s.created_at
-    FROM shift_timings s
-    LEFT JOIN branches b ON b.id = s.branch_id
-    WHERE ($1::INT IS NULL OR s.branch_id = $1)
-    ORDER BY s.start_time ASC
-    `,
-    [branchId || null]
-  );
+const result = await pool.query(
+  `
+  SELECT
+    s.id,
+    s.branch_id,
+    b.name AS branch_name,
+    s.shift_name,
+    s.start_time,
+    s.end_time,
+    s.is_active,
+    s.created_at
+  FROM shift_timings s
+  LEFT JOIN branches b ON b.id = s.branch_id
+  LEFT JOIN course_shifts cs ON cs.shift_id = s.id
+  WHERE 
+    ($1::INT IS NULL OR s.branch_id = $1)
+    AND ($2::INT IS NULL OR cs.course_id = $2)
+  ORDER BY s.start_time ASC
+  `,
+  [branchId || null, courseId]
+);
 
   return result.rows;
 };

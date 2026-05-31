@@ -160,6 +160,51 @@
   margin-bottom: 34px;
 }
 
+.dashboard-top-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-revenue-card {
+  min-width: 155px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+
+.dashboard-revenue-card p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dashboard-revenue-amount {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-revenue-amount strong {
+  color: var(--text-main);
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-revenue-amount button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
 .dashboard-welcome-header h1 {
   margin: 0;
   font-size: 28px;
@@ -188,4 +233,12 @@
   .dashboard-stats-grid {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-top-header {
+  flex-direction: column;
+}
+
+.dashboard-revenue-card {
+  width: 100%;
+}
 }

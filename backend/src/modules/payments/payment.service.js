@@ -199,6 +199,7 @@ const createPayment = async (data, currentUser) => {
     amount,
     paymentMethodId,
     paymentDate,
+    feeDate,
     referenceNo,
     note,
   } = data;
@@ -237,18 +238,19 @@ const createPayment = async (data, currentUser) => {
 
     const paymentResult = await client.query(
       `
-      INSERT INTO payments
-      (
-        branch_id,
-        student_id,
-        amount,
-        payment_method_id,
-        payment_date,
-        reference_no,
-        note,
-        created_by
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+INSERT INTO payments
+(
+  branch_id,
+  student_id,
+  amount,
+  payment_method_id,
+  payment_date,
+  fee_date,
+  reference_no,
+  note,
+  created_by
+)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       RETURNING *
       `,
       [
@@ -257,6 +259,7 @@ const createPayment = async (data, currentUser) => {
         Number(amount),
         paymentMethodId || null,
         paymentDate || new Date(),
+        feeDate || null,
         referenceNo || null,
         note || null,
         currentUser.id,
@@ -281,14 +284,14 @@ const createPayment = async (data, currentUser) => {
     await client.query("COMMIT");
 
     return {
-    payment: paymentResult.rows[0],
-    studentFee: {
-    totalFee: updatedStudent.total_fee,
-    paidFee: updatedStudent.paid_fee,
-    remainingFee: updatedStudent.remaining_fee,
-    feeStatus: updatedStudent.fee_status,
-  },
-};
+      payment: paymentResult.rows[0],
+      studentFee: {
+        totalFee: updatedStudent.total_fee,
+        paidFee: updatedStudent.paid_fee,
+        remainingFee: updatedStudent.remaining_fee,
+        feeStatus: updatedStudent.fee_status,
+      },
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

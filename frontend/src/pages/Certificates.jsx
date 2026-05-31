@@ -10,6 +10,7 @@ import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
+import Select from "../components/common/Select";
 import Table from "../components/common/Table";
 import Badge from "../components/common/Badge";
 import Modal from "../components/common/Modal";
@@ -133,39 +134,33 @@ const Certificates = () => {
     }));
   };
 
-  const handleStudentNameChange = (event) => {
-    const studentName = event.target.value;
+  const handleStudentSelect = (event) => {
+    const studentId = event.target.value;
 
     const selectedStudent = students.find(
-      (student) =>
-        student.full_name?.toLowerCase().trim() ===
-        studentName.toLowerCase().trim()
+      (student) => Number(student.id) === Number(studentId)
     );
 
-    let courseName = "";
-    let courseDuration = "";
+    const firstCourse = selectedStudent?.courses?.[0];
 
-    if (selectedStudent?.courses?.length) {
-      const firstCourse = selectedStudent.courses[0];
+    const courseName =
+      firstCourse?.courseName ||
+      firstCourse?.course_name ||
+      firstCourse?.name ||
+      "";
 
-      courseName =
-        firstCourse.courseName ||
-        firstCourse.course_name ||
-        firstCourse.name ||
-        "";
-
-      courseDuration =
-        firstCourse.duration ||
-        selectedStudent.duration ||
-        "";
-    }
+    const courseDuration =
+      firstCourse?.duration ||
+      selectedStudent?.duration ||
+      "";
 
     setForm((prev) => ({
       ...prev,
-      studentName,
-      studentId: selectedStudent?.id || "",
-      courseName: selectedStudent ? courseName : prev.courseName,
-      courseDuration: selectedStudent ? courseDuration : prev.courseDuration,
+      studentId,
+      studentName: selectedStudent?.full_name || "",
+      courseName,
+      courseDuration,
+      issueDate: getTodayDate(),
     }));
   };
 
@@ -196,19 +191,12 @@ const Certificates = () => {
   const generateCertificate = async (event) => {
     event.preventDefault();
 
-    const matchedStudent = students.find(
-      (student) =>
-        student.full_name?.toLowerCase().trim() ===
-        form.studentName.toLowerCase().trim()
-    );
 
-    const finalStudentId = form.studentId || matchedStudent?.id;
-
-    if (!finalStudentId) {
-      alert("Please enter an existing student name.");
+    if (!form.studentId) {
+      alert("Please Select a student.");
       return;
     }
-
+    const finalStudentId = form.studentId;
     if (!form.studentName.trim()) {
       alert("Student name is required.");
       return;
@@ -402,11 +390,16 @@ const Certificates = () => {
             <h4>Student Information</h4>
 
             <div className="certificate-form-grid">
-              <Input
+              <Select
                 label="Student Name"
-                name="studentName"
-                value={form.studentName}
-                onChange={handleStudentNameChange}
+                name="studentId"
+                value={form.studentId}
+                onChange={handleStudentSelect}
+                placeholder="Select Student"
+                options={students.map((student) => ({
+                  label: student.full_name,
+                  value: student.id,
+                }))}
                 required
               />
 

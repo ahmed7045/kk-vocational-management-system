@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
+  Eye,
+  EyeOff,
   Plus,
   Users,
   UserCheck,
@@ -27,7 +29,7 @@ import Loader from "../components/common/Loader";
 // import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import {
-  // formatCurrency,
+  formatCurrency,
   getSelectedBranchId,
   getSelectedBranchName,
 } from "../utils/formatters";
@@ -44,9 +46,10 @@ const Dashboard = () => {
     year: "numeric",
   });
 
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+const [dashboardData, setDashboardData] = useState(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+const [showRevenue, setShowRevenue] = useState(true);
 
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
@@ -139,24 +142,35 @@ const Dashboard = () => {
 
   return (
     <div className="page dashboard-page">
-      <div className="page-header">
-        <div className="dashboard-welcome-header">
-          <div>
-            <h1>Welcome back, {user?.fullName || user?.full_name || "User"}</h1>
-            <p>{todayText}</p>
-          </div>
-        </div>
-        {/* <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">
-            Overview for {branchName || "All Branches"}
-          </p>
-        </div> */}
+<div className="page-header dashboard-top-header">
+  <div className="dashboard-welcome-header">
+    <div>
+      <h1>Welcome back, {user?.fullName || user?.full_name || "User"}</h1>
+      <p>{todayText}</p>
+    </div>
+  </div>
 
-        {/* <Button variant="secondary" onClick={fetchDashboard}>
-          <RefreshCcw size={16} /> Refresh
-        </Button> */}
+  <div className="dashboard-revenue-card">
+    <div>
+      <p>Total Revenue</p>
+
+      <div className="dashboard-revenue-amount">
+        <strong>
+          {showRevenue
+            ? formatCurrency(summary.monthlyRevenue || 0)
+            : "••••••"}
+        </strong>
+
+        <button
+          type="button"
+          onClick={() => setShowRevenue((prev) => !prev)}
+        >
+          {showRevenue ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
       </div>
+    </div>
+  </div>
+</div>
 
       <div className="dashboard-stats-grid">
         {statCards.map((item) => {

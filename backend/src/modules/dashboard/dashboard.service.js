@@ -52,12 +52,14 @@ const getDashboardSummary = async (query, currentUser) => {
         WHERE ($1::INT IS NULL OR p.branch_id = $1)
       ), 0) AS total_revenue,
 
-      COALESCE((
-        SELECT SUM(p.amount)
-        FROM payments p
-        WHERE ($1::INT IS NULL OR p.branch_id = $1)
-        AND DATE_TRUNC('month', p.payment_date) = DATE_TRUNC('month', CURRENT_DATE)
-      ), 0) AS monthly_revenue,
+COALESCE((
+  SELECT SUM(s2.paid_fee)
+  FROM students s2
+  WHERE ($1::INT IS NULL OR s2.branch_id = $1)
+    AND s2.student_status = 'active'
+    AND s2.fee_status = 'paid'
+    AND DATE_TRUNC('month', s2.admission_date) = DATE_TRUNC('month', CURRENT_DATE)
+), 0) AS monthly_revenue,
 
       COALESCE((
         SELECT SUM(e.amount)

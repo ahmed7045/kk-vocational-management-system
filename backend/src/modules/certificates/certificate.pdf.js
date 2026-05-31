@@ -180,33 +180,37 @@ const generateCertificatePdf = (certificate, res) => {
     });
   }
 
-  // Association name
-  doc
-    .fillColor("#222222")
-    .font("Times-Bold")
-    .fontSize(26)
-    .text(
-      certificate.association_name ||
-        "KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION",
-      40,
-      145,
-      {
-        width: pageWidth - 80,
-        align: "center",
-        lineGap: 3,
-      }
-    );
+  // Header title - fixed two centered lines
+doc
+  .fillColor("#222222")
+  .font("Times-Bold")
+  .fontSize(24)
+  .text("KUTCHI KUMBHAR KHIDMAT-E-KHALQ", 42, 140, {
+    width: pageWidth - 84,
+    align: "center",
+    lineBreak: false,
+  });
 
-  // Regd text
-  doc
-    .fillColor("#b30000")
-    .font("Helvetica-Bold")
-    .fontSize(11)
-    .text(certificate.registration_text || "(Regd)", pageWidth - 165, 190, {
-      width: 80,
-      align: "left",
-      lineBreak: false,
-    });
+doc
+  .fillColor("#222222")
+  .font("Times-Bold")
+  .fontSize(24)
+  .text("WELFARE ASSOCIATION", 42, 170, {
+    width: pageWidth - 84,
+    align: "center",
+    lineBreak: false,
+  });
+
+// Regd text - no overlap
+doc
+  .fillColor("#b30000")
+  .font("Helvetica-Bold")
+  .fontSize(10)
+  .text(certificate.registration_text || "(Regd)", pageWidth - 168, 178, {
+    width: 70,
+    align: "left",
+    lineBreak: false,
+  });
 
   // Institute name
   doc
@@ -215,8 +219,8 @@ const generateCertificatePdf = (certificate, res) => {
     .fontSize(25)
     .text(
       certificate.institute_name || "Khidmat-e-Khalq Vocational IT Center",
-      40,
-      227,
+      42,
+      218,
       {
         width: pageWidth - 80,
         align: "center",

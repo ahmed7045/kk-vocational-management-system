@@ -119,6 +119,7 @@
 
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Button from "../components/common/Button";
@@ -140,6 +141,7 @@ const Login = () => {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -275,15 +277,31 @@ const Login = () => {
               required
             />
 
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
-            />
+            <div className="form-group">
+              <label htmlFor="password">
+                Password <span>*</span>
+              </label>
+
+              <div className="login-password-field">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  required
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
 
             <div className="login-options">
               <label>
@@ -302,6 +320,20 @@ const Login = () => {
             <Button type="submit" loading={loading}>
               Login to Portal
             </Button>
+
+            <div className="login-footer">
+              <p>© 2026 KK Welfare Association. All rights reserved.</p>
+              <p>
+                Powered by{" "}
+                <a
+                  href="https://www.cybrox.info/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Cybrox
+                </a>
+              </p>
+            </div>
           </form>
         </Card>
       </div>

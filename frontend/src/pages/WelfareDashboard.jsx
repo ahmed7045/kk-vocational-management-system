@@ -43,6 +43,8 @@ import "./welfare.css";
 
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
+const getTodayDate = () => new Date().toISOString().split("T")[0];
+
 const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   const { user } = useAuth();
 
@@ -139,6 +141,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     address: "",
   });
 
+  const [donationForm, setDonationForm] = useState({
+    donorId: "",
+    name: "",
+    contact: "",
+    amount: "",
+    methodId: "",
+    date: getTodayDate(),
+  });
+
   const [charityForm, setCharityForm] = useState({
     charityName: "",
     fatherName: "",
@@ -167,13 +178,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     note: "",
   });
 
-  const [donationForm, setDonationForm] = useState({
-    name: "",
-    contact: "",
-    amount: "",
-    methodId: "",
-    date: "",
-  });
 
   const [donorDonationForm, setDonorDonationForm] = useState({
     amount: "",
@@ -321,7 +325,8 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     if (!openModal) return;
 
     if (openModal === "donation" && defaultTab === "donations") {
-      setDonationModalOpen(true);
+      // setDonationModalOpen(true);
+      openAddDonationModal();
     }
 
     if (openModal === "charity" && defaultTab === "charities") {
@@ -379,6 +384,51 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     });
 
     return query.toString();
+  };
+
+  const resetDonationForm = () => {
+    setDonationForm({
+      donorId: "",
+      name: "",
+      contact: "",
+      amount: "",
+      methodId: "",
+      date: getTodayDate(),
+    });
+  };
+
+  const openAddDonationModal = async () => {
+    resetDonationForm();
+
+    try {
+      const [donorsRes, methodsRes] = await Promise.all([
+        axiosInstance.get("/welfare/donors?page=1&limit=100"),
+        axiosInstance.get("/welfare/donation-methods"),
+      ]);
+
+      setDonors(donorsRes.data.data || []);
+      setDonationMethods(methodsRes.data.data || []);
+    } catch (error) {
+      console.error("Donation form data error:", error.response?.data?.message);
+    }
+
+    setDonationModalOpen(true);
+  };
+
+  const handleDonationNameChange = (event) => {
+    const name = event.target.value;
+
+    const selectedDonor = donors.find(
+      (donor) => donor.full_name?.toLowerCase() === name.toLowerCase()
+    );
+
+    setDonationForm((prev) => ({
+      ...prev,
+      donorId: selectedDonor?.id || "",
+      name,
+      contact: selectedDonor?.phone || "",
+      date: getTodayDate(),
+    }));
   };
 
   const resetDonorForm = () => {
@@ -737,21 +787,24 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       setSaving(true);
 
       await axiosInstance.post("/welfare/donations", {
+        donorId: donationForm.donorId || null,
         name: donationForm.name.trim(),
         contact: donationForm.contact || null,
         amount: Number(donationForm.amount),
         methodId: Number(donationForm.methodId),
-        date: donationForm.date || null,
+        date: donationForm.date || getTodayDate(),
       });
 
       setDonationModalOpen(false);
-      setDonationForm({
-        name: "",
-        contact: "",
-        amount: "",
-        methodId: "",
-        date: "",
-      });
+      // setDonationForm({
+      //   name: "",
+      //   contact: "",
+      //   amount: "",
+      //   methodId: "",
+      //   date: "",
+      // });
+
+      resetDonationForm();
 
       fetchWelfareData();
     } catch (error) {
@@ -1557,7 +1610,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           )}
 
           {activeTab === "donations" && (
-            <Button onClick={() => setDonationModalOpen(true)}>
+            <Button onClick={openAddDonationModal}>
               <Plus size={16} /> Add Donation
             </Button>
           )}
@@ -2325,15 +2378,24 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             label="Name"
             name="name"
             value={donationForm.name}
-            onChange={handleChange(setDonationForm)}
+            onChange={handleDonationNameChange}
+            placeholder="Search existing donor or type new donor"
+            list="donor-name-list"
             required
           />
+
+          <datalist id="donor-name-list">
+            {donors.map((donor) => (
+              <option key={donor.id} value={donor.full_name} />
+            ))}
+          </datalist>
 
           <Input
             label="Contact"
             name="contact"
             value={donationForm.contact}
             onChange={handleChange(setDonationForm)}
+            // disabled={Boolean(donationForm.donorId)}
           />
 
           <Input

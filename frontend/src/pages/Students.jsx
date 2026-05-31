@@ -4,6 +4,7 @@ import { Eye, EyeOff, Plus, Search, Wallet } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
+import DateRangePicker from "../components/common/DateRangePicker";
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -23,6 +24,10 @@ import {
 import "./students.css";
 
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+
+const capitalizeWords = (value) => {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
 
 const Students = ({
   defaultStudentStatus = "active",
@@ -48,11 +53,20 @@ const Students = ({
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [paidDateModalOpen, setPaidDateModalOpen] = useState(false);
+  const [paidDateForm, setPaidDateForm] = useState({
+    feeDate: "",
+    paidDate: "",
+  });
   const [deleting, setDeleting] = useState(false);
 
   const [filters, setFilters] = useState({
     search: "",
     feeStatus: searchParams.get("feeStatus") || "",
+    fromDate: "",
+    toDate: "",
+    month: String(new Date().getMonth() + 1),
+    year: String(new Date().getFullYear()),
   });
   const [showSummaryAmount, setShowSummaryAmount] = useState(true);
   const [form, setForm] = useState({
@@ -60,6 +74,7 @@ const Students = ({
     fatherName: "",
     phone: "",
     courseId: "",
+    shiftId: "",
     admissionDate: "",
     paidFee: "",
     feeStatus: "paid",
@@ -71,6 +86,7 @@ const Students = ({
       fatherName: "",
       phone: "",
       courseId: "",
+      shiftId: "",
       admissionDate: "",
       paidFee: "",
       feeStatus: "paid",
@@ -122,6 +138,13 @@ const Students = ({
       if (branchId) params.append("branchId", branchId);
       if (filters.search.trim()) params.append("search", filters.search.trim());
       if (filters.feeStatus) params.append("feeStatus", filters.feeStatus);
+      if (filters.fromDate) params.append("fromDate", filters.fromDate);
+      if (filters.toDate) params.append("toDate", filters.toDate);
+
+      if (isFeeListMode && !filters.fromDate && !filters.toDate) {
+        if (filters.month) params.append("month", filters.month);
+        if (filters.year) params.append("year", filters.year);
+      }
 
       params.append("studentStatus", defaultStudentStatus);
       params.append("page", "1");
@@ -138,17 +161,32 @@ const Students = ({
 
   const fetchDropdownData = async () => {
     try {
-      const [coursesRes, shiftsRes, teachersRes] = await Promise.all([
+      const [coursesRes, teachersRes] = await Promise.all([
         axiosInstance.get(`/courses?branchId=${branchId || ""}`),
-        axiosInstance.get(`/shifts?branchId=${branchId || ""}`),
         axiosInstance.get(`/employees?branchId=${branchId || ""}`),
       ]);
 
       setCourses(coursesRes.data.data || []);
-      setShifts(shiftsRes.data.data || []);
       setTeachers(teachersRes.data.data || []);
     } catch (error) {
       console.error("Dropdown fetch error:", error.response?.data?.message);
+    }
+  };
+
+  const fetchShiftsByCourse = async (courseId) => {
+    if (!courseId) {
+      setShifts([]);
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.get(
+        `/shifts?branchId=${branchId || ""}&courseId=${courseId}`
+      );
+
+      setShifts(response.data.data || []);
+    } catch (error) {
+      console.error("Shift fetch error:", error.response?.data?.message);
     }
   };
 
@@ -158,7 +196,16 @@ const Students = ({
 
   useEffect(() => {
     fetchStudents();
-  }, [branchId, defaultStudentStatus, filters.search, filters.feeStatus]);
+  }, [
+    branchId,
+    defaultStudentStatus,
+    filters.search,
+    filters.feeStatus,
+    filters.fromDate,
+    filters.toDate,
+    filters.month,
+    filters.year,
+  ]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -193,10 +240,20 @@ const Students = ({
   const handleFormChange = (event) => {
     const { name, value } = event.target;
 
+    const finalValue =
+      name === "fullName" || name === "fatherName"
+        ? capitalizeWords(value)
+        : value;
+
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: finalValue,
+      ...(name === "courseId" ? { shiftId: "" } : {}),
     }));
+
+    if (name === "courseId") {
+      fetchShiftsByCourse(value);
+    }
   };
 
   const handleSubmitStudent = async (event) => {
@@ -217,7 +274,7 @@ const Students = ({
       address: "",
       courseIds: form.courseId ? [Number(form.courseId)] : [],
       assignedTeacherId: null,
-      shiftId: null,
+      shiftId: form.shiftId ? Number(form.shiftId) : null,
       admissionDate: form.admissionDate || null,
       admissionStatus: "confirmed",
       studentStatus: "active",
@@ -347,11 +404,15 @@ const Students = ({
         fatherName: student.father_name || "",
         phone: student.phone || "",
         courseId: student.courses?.[0]?.id || "",
+        shiftId: student.shift_id || "",
         admissionDate: student.admission_date?.split("T")[0] || "",
         paidFee: student.total_fee || student.paid_fee || "",
         feeStatus: student.fee_status || "paid",
       });
 
+      if (student.courses?.[0]?.id) {
+        fetchShiftsByCourse(student.courses[0].id);
+      }
       setModalOpen(true);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to load student for edit");
@@ -421,13 +482,61 @@ const Students = ({
       : "-";
   };
 
-  const getFeeExpiryDate = (row) => {
+  const getFeeDate = (row) => {
+    if (row.fees_date) return formatDate(row.fees_date);
     if (!row.admission_date) return "-";
 
     const date = new Date(row.admission_date);
     date.setMonth(date.getMonth() + 1);
 
     return formatDate(date);
+  };
+
+  const getFeeDateValue = (row) => {
+    if (row.fees_date) return row.fees_date.split("T")[0];
+    if (!row.admission_date) return "";
+
+    const date = new Date(row.admission_date);
+    date.setMonth(date.getMonth() + 1);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const getPaidDate = (row) => {
+    return row.paid_date ? formatDate(row.paid_date) : "-";
+  };
+
+  const openPaidDateModal = (row) => {
+    setSelectedRecord(row);
+    setPaidDateForm({
+      feeDate: getFeeDateValue(row),
+      paidDate: row.paid_date ? row.paid_date.split("T")[0] : "",
+    });
+    setPaidDateModalOpen(true);
+  };
+
+  const submitPaidDate = async (event) => {
+    event.preventDefault();
+
+    if (!selectedRecord?.id) return;
+
+    try {
+      await axiosInstance.patch(`/students/${selectedRecord.id}/payment-date`, {
+        feeDate: paidDateForm.feeDate,
+        paidDate: paidDateForm.paidDate,
+      });
+
+      setPaidDateModalOpen(false);
+      setSelectedRecord(null);
+      setPaidDateForm({
+        feeDate: "",
+        paidDate: "",
+      });
+
+      await fetchStudents();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to update paid date");
+    }
   };
 
   const totalCollected = students.reduce(
@@ -440,14 +549,16 @@ const Students = ({
     0
   );
 
-  const shouldShowSummaryCard = defaultStudentStatus !== "non_active";
+  const isFeeListMode =
+    filters.feeStatus === "paid" || filters.feeStatus === "pending";
+
+  const shouldShowSummaryCard = isFeeListMode;
 
   const summaryTitle =
     filters.feeStatus === "pending"
       ? "TOTAL PENDING"
-      : filters.feeStatus === "paid"
-        ? "TOTAL COLLECTED"
-        : "TOTAL STUDENTS FEES";
+      : "TOTAL COLLECTED";
+
   const compactColumns = [
     {
       key: "full_name",
@@ -465,22 +576,29 @@ const Students = ({
       render: (row) => formatCurrency(row.total_fee || row.paid_fee || 0),
     },
     {
-      key: "fee_expiry",
-      title: "Expire Fees",
-      render: (row) => getFeeExpiryDate(row),
+      key: "fees_date",
+      title: "Fees Date",
+      render: (row) => getFeeDate(row),
+    },
+    {
+      key: "paid_date",
+      title: "Paid Date",
+      render: (row) => getPaidDate(row),
     },
     {
       key: "actions",
       title: "Actions",
       render: (row) => (
-        <ActionButtons
-          onView={() => handleView(row)}
-          onEdit={() => handleEdit(row)}
-          onDelete={() => handleDeleteClick(row)}
-          canView={hasPermission("students.view")}
-          canEdit={hasPermission("students.update")}
-          canDelete={hasPermission("students.delete")}
-        />
+        <div className="fee-list-actions">
+          <ActionButtons
+            onView={() => handleView(row)}
+            onEdit={() => openPaidDateModal(row)}
+            onDelete={() => handleDeleteClick(row)}
+            canView={hasPermission("students.view")}
+            canEdit={hasPermission("students.update")}
+            canDelete={hasPermission("students.delete")}
+          />
+        </div>
       ),
     },
   ];
@@ -541,7 +659,33 @@ const Students = ({
     },
   ];
 
-  const columns = filters.feeStatus ? compactColumns : fullColumns;
+  const monthOptions = [
+    { label: "January", value: "1" },
+    { label: "February", value: "2" },
+    { label: "March", value: "3" },
+    { label: "April", value: "4" },
+    { label: "May", value: "5" },
+    { label: "June", value: "6" },
+    { label: "July", value: "7" },
+    { label: "August", value: "8" },
+    { label: "September", value: "9" },
+    { label: "October", value: "10" },
+    { label: "November", value: "11" },
+    { label: "December", value: "12" },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
+  const yearOptions = Array.from({ length: 6 }, (_, index) => {
+    const year = currentYear - index;
+
+    return {
+      label: String(year),
+      value: String(year),
+    };
+  });
+
+  const columns = isFeeListMode ? compactColumns : fullColumns;
   if (loading) {
     return (
       <div className="page">
@@ -558,7 +702,8 @@ const Students = ({
           <p className="page-subtitle">{displaySubtitle}</p>
         </div>
 
-        {defaultStudentStatus !== "non_active" &&
+        {!isFeeListMode &&
+          defaultStudentStatus !== "non_active" &&
           hasPermission("students.create") && (
             <Button onClick={openAddModal}>
               <Plus size={16} /> Add Student
@@ -590,18 +735,21 @@ const Students = ({
               </button>
             </div>
 
-            <span>
-              Bal.{" "}
-              {showSummaryAmount
-                ? formatCurrency(totalBalance)
-                : "••••••"}
-            </span>
+            {!isFeeListMode && (
+              <span>
+                Bal.{" "}
+                {showSummaryAmount
+                  ? formatCurrency(totalBalance)
+                  : "••••••"}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      <Card className="student-card">
-        <div className="students-toolbar">
+      <Card className={`student-card ${isFeeListMode ? "fee-list-card" : ""}`}>
+
+        <div className={`students-toolbar ${isFeeListMode ? "fee-list-toolbar" : ""}`}>
           <div className="students-search">
             <Search size={17} />
             <input
@@ -612,26 +760,48 @@ const Students = ({
             />
           </div>
 
-          <Select
-            name="feeStatus"
-            value={filters.feeStatus}
-            onChange={handleFilterChange}
-            placeholder="Fee status"
-            options={[
-              { label: "All Fee Status", value: "" },
-              { label: "Paid", value: "paid" },
-              { label: "Pending", value: "pending" },
-              { label: "Partial", value: "partial" },
-            ]}
-          />
+          {isFeeListMode && (
+            <>
+              <DateRangePicker
+                fromDate={filters.fromDate}
+                toDate={filters.toDate}
+                onChange={({ fromDate, toDate }) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    fromDate,
+                    toDate,
+                  }));
+                }}
+              />
 
-          {/* <Button variant="secondary" onClick={clearFilters}>
-            Clear Filters
-          </Button> */}
+              <Select
+                name="month"
+                value={filters.month}
+                onChange={handleFilterChange}
+                options={monthOptions}
+              />
 
-          {/* <Button variant="secondary" onClick={fetchStudents}>
-            <RefreshCcw size={16} /> Refresh
-          </Button> */}
+              <Select
+                name="year"
+                value={filters.year}
+                onChange={handleFilterChange}
+                options={yearOptions}
+              />
+            </>
+          )}
+
+          {!isFeeListMode && (
+            <Select
+              name="feeStatus"
+              value={filters.feeStatus}
+              onChange={handleFilterChange}
+              placeholder="Fee status"
+              options={[
+                { label: "Paid", value: "paid" },
+                { label: "Pending", value: "pending" },
+              ]}
+            />
+          )}
         </div>
 
         {error && <div className="students-error">{error}</div>}
@@ -672,7 +842,6 @@ const Students = ({
               value={form.phone}
               onChange={handleFormChange}
             />
-
             <Select
               label="Course"
               name="courseId"
@@ -682,6 +851,18 @@ const Students = ({
                 label: course.course_name,
                 value: course.id,
               }))}
+            />
+            <Select
+              label="Shift"
+              name="shiftId"
+              value={form.shiftId}
+              onChange={handleFormChange}
+              placeholder={form.courseId ? "Select shift" : "Select course first"}
+              options={shifts.map((shift) => ({
+                label: `${shift.shift_name} (${shift.start_time} - ${shift.end_time})`,
+                value: shift.id,
+              }))}
+              disabled={!form.courseId}
             />
 
             <Input
@@ -785,7 +966,58 @@ const Students = ({
           </div>
         )}
       </Modal>
+      <Modal
+        open={paidDateModalOpen}
+        title="Edit Paid Date"
+        onClose={() => {
+          setPaidDateModalOpen(false);
+          setSelectedRecord(null);
+          setPaidDateForm({
+            feeDate: "",
+            paidDate: "",
+          });
+        }}
+      >
+        <form onSubmit={submitPaidDate}>
+          <div className="student-form-grid">
+            <Input
+              label="Fees Date"
+              name="feeDate"
+              type="date"
+              value={paidDateForm.feeDate}
+              disabled
+            />
 
+            <Input
+              label="Paid Date"
+              name="paidDate"
+              type="date"
+              value={paidDateForm.paidDate}
+              onChange={(event) =>
+                setPaidDateForm((prev) => ({
+                  ...prev,
+                  paidDate: event.target.value,
+                }))
+              }
+              required
+            />
+          </div>
+
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPaidDateModalOpen(false)}
+            >
+              Cancel
+            </Button>
+
+            <Button type="submit">
+              Save Paid Date
+            </Button>
+          </div>
+        </form>
+      </Modal>
       <ConfirmDeleteModal
         open={deleteModalOpen}
         title="Delete Student"
