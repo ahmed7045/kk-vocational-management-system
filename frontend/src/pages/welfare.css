@@ -538,13 +538,22 @@
     font-weight: 700;
     color: var(--text-main);
   }
+
 /* Responsive */
 
   .quick-add-menu button:hover {
     background: var(--primary-light);
     color: var(--primary-dark);
   }
+.donor-profile-link {
+  color: var(--text-main);
+  font-weight: 800;
+  cursor: pointer;
+}
 
+.donor-profile-link:hover {
+  color: var(--primary);
+}
   @media (max-width: 700px) {
     .welfare-header-actions {
       width: 100%;

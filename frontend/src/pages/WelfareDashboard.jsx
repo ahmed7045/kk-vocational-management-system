@@ -1521,28 +1521,47 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     );
   }
 
-  const donorColumns = [
-    {
-      key: "donor_name",
-      title: "Donor Name",
-      render: (row) => row.donor_name || row.full_name || row.name || "-",
-    },
-    {
-      key: "phone",
-      title: "Phone",
-      render: (row) => row.phone || "-",
-    },
-    {
-      key: "email",
-      title: "Email",
-      render: (row) => row.email || "-",
-    },
-    {
-      key: "address",
-      title: "Address",
-      render: (row) => row.address || "-",
-    },
-  ];
+const donorColumns = [
+  {
+    key: "donor_name",
+    title: "Donor Name",
+    render: (row) => (
+      <span
+        type="button"
+        className="donor-profile-link"
+        onClick={() => handleViewDonor(row)}
+      >
+        {row.donor_name || row.full_name || row.name || "-"}
+      </span>
+    ),
+  },
+  {
+    key: "phone",
+    title: "Phone",
+    render: (row) => row.phone || "-",
+  },
+  {
+    key: "email",
+    title: "Email",
+    render: (row) => row.email || "-",
+  },
+  {
+    key: "address",
+    title: "Address",
+    render: (row) => row.address || "-",
+  },
+  {
+    key: "actions",
+    title: "Actions",
+    render: (row) => (
+      <ActionButtons
+        onView={() => handleViewDonor(row)}
+        onEdit={() => handleEditDonor(row)}
+        onDelete={() => handleDeleteDonorClick(row)}
+      />
+    ),
+  },
+];
 
   return (
     <div className="page welfare-page">
