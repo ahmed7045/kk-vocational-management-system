@@ -43,6 +43,7 @@ const Students = ({
   const [courses, setCourses] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,6 +58,14 @@ const Students = ({
   const [paidDateForm, setPaidDateForm] = useState({
     feeDate: "",
     paidDate: "",
+  });
+
+  const [markPaidModalOpen, setMarkPaidModalOpen] = useState(false);
+  const [markPaidForm, setMarkPaidForm] = useState({
+    feeDate: "",
+    paidDate: new Date().toISOString().split("T")[0],
+    amount: "",
+    paymentMethodId: "",
   });
   const [deleting, setDeleting] = useState(false);
 
@@ -163,13 +172,15 @@ const Students = ({
 
   const fetchDropdownData = async () => {
     try {
-      const [coursesRes, teachersRes] = await Promise.all([
+      const [coursesRes, teachersRes, paymentMethodsRes] = await Promise.all([
         axiosInstance.get(`/courses?branchId=${branchId || ""}`),
         axiosInstance.get(`/employees?branchId=${branchId || ""}`),
+        axiosInstance.get("/payments/methods"),
       ]);
 
       setCourses(coursesRes.data.data || []);
       setTeachers(teachersRes.data.data || []);
+      setPaymentMethods(paymentMethodsRes.data.data || []);
     } catch (error) {
       console.error("Dropdown fetch error:", error.response?.data?.message);
     }
@@ -519,6 +530,46 @@ const Students = ({
     setPaidDateModalOpen(true);
   };
 
+  const openMarkPaidModal = (row) => {
+    setSelectedRecord(row);
+    setMarkPaidForm({
+      feeDate: getFeeDateValue(row),
+      paidDate: new Date().toISOString().split("T")[0],
+      amount: row.cycle_amount || row.total_fee || row.paid_fee || "",
+      paymentMethodId: "",
+    });
+    setMarkPaidModalOpen(true);
+  };
+
+  const submitMarkPaid = async (event) => {
+    event.preventDefault();
+
+    if (!selectedRecord?.id) return;
+
+    try {
+      await axiosInstance.patch(`/students/${selectedRecord.id}/mark-paid`, {
+        feeCycleId: selectedRecord.fee_cycle_id,
+        feeDate: markPaidForm.feeDate,
+        paidDate: markPaidForm.paidDate,
+        amount: markPaidForm.amount,
+        paymentMethodId: markPaidForm.paymentMethodId || null,
+      });
+
+      setMarkPaidModalOpen(false);
+      setSelectedRecord(null);
+      setMarkPaidForm({
+        feeDate: "",
+        paidDate: new Date().toISOString().split("T")[0],
+        amount: "",
+        paymentMethodId: "",
+      });
+
+      await fetchStudents();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to mark student as paid");
+    }
+  };
+
   const submitPaidDate = async (event) => {
     event.preventDefault();
 
@@ -543,10 +594,17 @@ const Students = ({
     }
   };
 
-  const totalCollected = students.reduce(
-    (sum, student) => sum + Number(student.paid_fee || 0),
-    0
-  );
+  const totalCollected = students.reduce((sum, student) => {
+    if (filters.feeStatus === "paid") {
+      return sum + Number(student.payment_amount || student.paid_fee || 0);
+    }
+
+    if (filters.feeStatus === "pending") {
+      return sum + Number(student.cycle_amount || student.total_fee || 0);
+    }
+
+    return sum + Number(student.paid_fee || 0);
+  }, 0);
 
   const totalBalance = students.reduce(
     (sum, student) => sum + Number(student.remaining_fee || 0),
@@ -582,31 +640,45 @@ const Students = ({
     {
       key: "total_fee",
       title: "Fees",
-      render: (row) => formatCurrency(row.total_fee || row.paid_fee || 0),
+      render: (row) => formatCurrency(row.cycle_amount || row.total_fee || row.paid_fee || 0),
     },
     {
       key: "fees_date",
       title: "Fees Date",
       render: (row) => getFeeDate(row),
     },
-    {
-      key: "paid_date",
-      title: "Paid Date",
-      render: (row) => getPaidDate(row),
-    },
+    ...(filters.feeStatus === "paid"
+      ? [
+        {
+          key: "paid_date",
+          title: "Paid Date",
+          render: (row) => getPaidDate(row),
+        },
+      ]
+      : []),
     {
       key: "actions",
       title: "Actions",
       render: (row) => (
         <div className="fee-list-actions">
-          <ActionButtons
-            onView={() => handleView(row)}
-            onEdit={() => openPaidDateModal(row)}
-            onDelete={() => handleDeleteClick(row)}
-            canView={hasPermission("students.view")}
-            canEdit={hasPermission("students.update")}
-            canDelete={hasPermission("students.delete")}
-          />
+          {filters.feeStatus === "pending" ? (
+            <Button
+              size="sm"
+              onClick={() => openMarkPaidModal(row)}
+              disabled={!hasPermission("students.update")}
+            >
+              Mark Paid
+            </Button>
+          ) : (
+            <ActionButtons
+              onView={() => handleView(row)}
+              onEdit={() => openPaidDateModal(row)}
+              onDelete={() => handleDeleteClick(row)}
+              canView={hasPermission("students.view")}
+              canEdit={hasPermission("students.update")}
+              canDelete={hasPermission("students.delete")}
+            />
+          )}
         </div>
       ),
     },
@@ -986,6 +1058,91 @@ const Students = ({
             </div>
           </div>
         )}
+      </Modal>
+      <Modal
+        open={markPaidModalOpen}
+        title={`${selectedRecord?.full_name || "Student"} — Mark as Paid`}
+        onClose={() => {
+          setMarkPaidModalOpen(false);
+          setSelectedRecord(null);
+          setMarkPaidForm({
+            feeDate: "",
+            paidDate: new Date().toISOString().split("T")[0],
+            amount: "",
+            paymentMethodId: "",
+          });
+        }}
+      >
+        <form onSubmit={submitMarkPaid}>
+          <div className="student-form-grid">
+            <Input
+              label="Monthly Fee"
+              name="amount"
+              type="number"
+              value={markPaidForm.amount}
+              onChange={(event) =>
+                setMarkPaidForm((prev) => ({
+                  ...prev,
+                  amount: event.target.value,
+                }))
+              }
+              required
+            />
+
+            <Select
+              label="Payment Method"
+              name="paymentMethodId"
+              value={markPaidForm.paymentMethodId}
+              onChange={(event) =>
+                setMarkPaidForm((prev) => ({
+                  ...prev,
+                  paymentMethodId: event.target.value,
+                }))
+              }
+              options={paymentMethods.map((method) => ({
+                label: method.method_name,
+                value: method.id,
+              }))}
+              required
+            />
+
+            <Input
+              label="Fees Date"
+              name="feeDate"
+              type="date"
+              value={markPaidForm.feeDate}
+              disabled
+            />
+
+            <Input
+              label="Paid At"
+              name="paidDate"
+              type="date"
+              value={markPaidForm.paidDate}
+              onChange={(event) =>
+                setMarkPaidForm((prev) => ({
+                  ...prev,
+                  paidDate: event.target.value,
+                }))
+              }
+              required
+            />
+          </div>
+
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setMarkPaidModalOpen(false)}
+            >
+              Cancel
+            </Button>
+
+            <Button type="submit">
+              Mark Paid
+            </Button>
+          </div>
+        </form>
       </Modal>
       <Modal
         open={paidDateModalOpen}

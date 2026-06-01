@@ -246,6 +246,28 @@
   flex: 0 0 230px;
 }
 
+.expense-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.expense-category-filter,
+.expenses-page .form-group select {
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 0 12px;
+  outline: none;
+}
+
+.expense-category-filter {
+  width: 210px;
+  flex: 0 0 210px;
+}
+
 @media (max-width: 700px) {
   .expense-detail-grid {
     grid-template-columns: 1fr;

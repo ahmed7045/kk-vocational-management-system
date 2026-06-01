@@ -10,6 +10,7 @@ const {
   details,
   update,
   updateStatus,
+  markPaid,
   updatePaymentDate,
   remove,
 } = require("./student.controller");
@@ -47,6 +48,13 @@ router.patch(
   authMiddleware,
   requirePermission("students.update"),
   updateStatus
+);
+
+router.patch(
+  "/:id/mark-paid",
+  authMiddleware,
+  requirePermission("students.update"),
+  markPaid
 );
 
 router.patch(

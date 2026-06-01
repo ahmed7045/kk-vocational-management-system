@@ -6,6 +6,7 @@ const {
   updateStudentStatus,
   deleteStudent,
   upsertStudentPaymentDate,
+  markStudentPaid,
 } = require("./student.service");
 
 const create = async (req, res, next) => {
@@ -89,6 +90,30 @@ const updateStatus = async (req, res, next) => {
   }
 };
 
+const markPaid = async (req, res, next) => {
+  try {
+    const data = await markStudentPaid(
+      {
+        studentId: req.params.id,
+        feeCycleId: req.body.feeCycleId,
+        feeDate: req.body.feeDate,
+        paidDate: req.body.paidDate,
+        amount: req.body.amount,
+        paymentMethodId: req.body.paymentMethodId,
+      },
+      req.user
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Student marked as paid successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const updatePaymentDate = async (req, res, next) => {
   try {
     const data = await upsertStudentPaymentDate(
@@ -129,6 +154,7 @@ module.exports = {
   details,
   update,
   updateStatus,
+  markPaid,
   updatePaymentDate,
   remove,
 };

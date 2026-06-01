@@ -34,13 +34,13 @@ const getDashboardSummary = async (query, currentUser) => {
         WHERE s.student_status = 'non_active'
       ) AS non_active_students,
 
-      COUNT(DISTINCT s.id) FILTER (
-        WHERE s.fee_status = 'paid'
-      ) AS paid_students,
+COUNT(DISTINCT s.id) FILTER (
+  WHERE latest_cycle.status = 'paid'
+) AS paid_students,
 
-      COUNT(DISTINCT s.id) FILTER (
-        WHERE s.fee_status = 'pending'
-      ) AS pending_students,
+COUNT(DISTINCT s.id) FILTER (
+  WHERE latest_cycle.status = 'pending'
+) AS pending_students,
 
       COUNT(DISTINCT s.id) FILTER (
         WHERE s.fee_status = 'partial'
@@ -77,6 +77,14 @@ COALESCE((
       ), 0) AS monthly_expenses
 
     FROM students s
+    LEFT JOIN LATERAL (
+  SELECT fc.status
+  FROM student_fee_cycles fc
+  WHERE fc.student_id = s.id
+    AND fc.fee_date <= CURRENT_DATE
+  ORDER BY fc.fee_date DESC
+  LIMIT 1
+) latest_cycle ON TRUE
     WHERE ($1::INT IS NULL OR s.branch_id = $1)
     `,
     [branchId]

@@ -54,6 +54,7 @@ const Expenses = () => {
   const portalType = getCurrentPortalType();
 
   const [expenses, setExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,12 +69,14 @@ const Expenses = () => {
 
   const [filters, setFilters] = useState({
     search: "",
+    categoryId: "",
     fromDate: "",
     toDate: "",
   });
   const [showCollectiveAmount, setShowCollectiveAmount] = useState(true);
   const [form, setForm] = useState({
     name: "",
+    categoryId: "",
     amount: "",
     date: "",
     note: "",
@@ -92,6 +95,9 @@ const Expenses = () => {
 
       if (filters.search.trim()) {
         params.append("search", filters.search.trim());
+      }
+      if (filters.categoryId) {
+        params.append("categoryId", filters.categoryId);
       }
 
       if (filters.fromDate) {
@@ -115,11 +121,25 @@ const Expenses = () => {
   };
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axiosInstance.get("/expenses/categories");
+        setCategories(response.data.data || []);
+      } catch (error) {
+        console.error("Failed to fetch expense categories", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
     fetchExpenses();
   }, [
     branchId,
     portalType,
     filters.search,
+    filters.categoryId,
     filters.fromDate,
     filters.toDate,
   ]);
@@ -133,7 +153,75 @@ const Expenses = () => {
     }));
   };
 
+  const buildReportQuery = () => {
+    const params = new URLSearchParams();
 
+    if (branchId) params.append("branchId", branchId);
+    params.append("portalType", portalType);
+
+    if (filters.categoryId) params.append("categoryId", filters.categoryId);
+    if (filters.fromDate) params.append("fromDate", filters.fromDate);
+    if (filters.toDate) params.append("toDate", filters.toDate);
+
+    return params.toString();
+  };
+
+
+// const downloadFile = async (url, fileName) => {
+//   try {
+//     const response = await axiosInstance.get(url, {
+//       responseType: "blob",
+//     });
+
+//     const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+
+//     const link = document.createElement("a");
+//     link.href = fileUrl;
+//     link.setAttribute("download", fileName);
+//     document.body.appendChild(link);
+//     link.click();
+
+//     link.remove();
+//     window.URL.revokeObjectURL(fileUrl);
+//   } catch (error) {
+//     alert(error.response?.data?.message || "Failed to download report");
+//   }
+// };
+
+const downloadFile = async (url, fileName) => {
+  try {
+    const response = await axiosInstance.get(url, {
+      responseType: "blob",
+    });
+
+    const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(fileUrl);
+  } catch (error) {
+    alert("Failed to download report. Please login again if the issue continues.");
+  }
+};
+
+const downloadPdf = () => {
+  downloadFile(
+    `/expenses/report/pdf?${buildReportQuery()}`,
+    `${portalType}-expenses-report.pdf`
+  );
+};
+
+const downloadExcel = () => {
+  downloadFile(
+    `/expenses/report/excel?${buildReportQuery()}`,
+    `${portalType}-expenses-report.xlsx`
+  );
+};
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -147,6 +235,7 @@ const Expenses = () => {
   const resetForm = () => {
     setForm({
       name: "",
+      categoryId: "",
       amount: "",
       date: "",
       note: "",
@@ -181,6 +270,7 @@ const Expenses = () => {
       branchId: Number(branchId),
       portalType,
       name: form.name.trim(),
+      categoryId: form.categoryId ? Number(form.categoryId) : null,
       amount: Number(form.amount),
       date: form.date || null,
       note: form.note || null,
@@ -282,6 +372,7 @@ const Expenses = () => {
 
       setForm({
         name: expenseData.name || expenseData.title || "",
+        categoryId: expenseData.category_id || "",
         amount: expenseData.amount || "",
         date:
           expenseData.date?.split("T")[0] ||
@@ -364,6 +455,11 @@ const Expenses = () => {
       render: (row) => <strong>{formatCurrency(row.amount)}</strong>,
     },
     {
+      key: "category_name",
+      title: "Category",
+      render: (row) => row.category_name || "-",
+    },
+    {
       key: "expense_date",
       title: "Date",
       render: (row) => formatDate(row.date || row.expense_date),
@@ -406,9 +502,19 @@ const Expenses = () => {
           </p>
         </div>
 
-        <Button onClick={openAddModal}>
-          <Plus size={16} /> Add Expense
-        </Button>
+        <div className="expense-header-actions">
+          <Button variant="secondary" onClick={downloadPdf}>
+            PDF
+          </Button>
+
+          <Button variant="secondary" onClick={downloadExcel}>
+            Excel
+          </Button>
+
+          <Button onClick={openAddModal}>
+            <Plus size={16} /> Add Expense
+          </Button>
+        </div>
       </div>
 
       <div className="expense-collective-card">
@@ -447,6 +553,20 @@ const Expenses = () => {
               placeholder="Search expense name or note..."
             />
           </div>
+
+          <select
+            className="expense-category-filter"
+            name="categoryId"
+            value={filters.categoryId}
+            onChange={handleFilterChange}
+          >
+            <option value="">All Categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.category_name}
+              </option>
+            ))}
+          </select>
 
           <DateRangePicker
             fromDate={filters.fromDate}
@@ -489,6 +609,21 @@ const Expenses = () => {
             placeholder="e.g. Electricity Bill"
             required
           />
+          <div className="form-group">
+            <label>Category</label>
+            <select
+              name="categoryId"
+              value={form.categoryId}
+              onChange={handleFormChange}
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.category_name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Input
             label="Amount"

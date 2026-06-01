@@ -12,6 +12,8 @@ const {
   remove,
   categories,
   createCategory,
+  exportPdf,
+exportExcel,
 } = require("./expense.controller");
 
 router.get(
@@ -33,6 +35,20 @@ router.get(
   authMiddleware,
   requirePermission("expenses.view"),
   list
+);
+
+router.get(
+  "/report/pdf",
+  authMiddleware,
+  requirePermission("expenses.view"),
+  exportPdf
+);
+
+router.get(
+  "/report/excel",
+  authMiddleware,
+  requirePermission("expenses.view"),
+  exportExcel
 );
 
 router.get(
@@ -62,5 +78,7 @@ router.delete(
   requirePermission("expenses.delete"),
   remove
 );
+
+
 
 module.exports = router;

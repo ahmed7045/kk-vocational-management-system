@@ -26,10 +26,133 @@ const generateStudentCode = (studentId) => {
 const getInitialFeeDate = (admissionDate) => {
   if (!admissionDate) return null;
 
-  const date = new Date(admissionDate);
-  date.setMonth(date.getMonth() + 1);
+  return new Date(admissionDate).toISOString().split("T")[0];
+};
 
-  return date.toISOString().split("T")[0];
+const syncStudentFeeStatusFromCycles = async (clientOrPool = pool, branchId = null) => {
+  await clientOrPool.query(
+    `
+    UPDATE students s
+    SET
+      fee_status = COALESCE(
+        (
+          SELECT fc.status
+          FROM student_fee_cycles fc
+          WHERE fc.student_id = s.id
+            AND fc.fee_date <= CURRENT_DATE
+          ORDER BY fc.fee_date DESC
+          LIMIT 1
+        ),
+        s.fee_status
+      ),
+      paid_fee = CASE
+        WHEN (
+          SELECT fc.status
+          FROM student_fee_cycles fc
+          WHERE fc.student_id = s.id
+            AND fc.fee_date <= CURRENT_DATE
+          ORDER BY fc.fee_date DESC
+          LIMIT 1
+        ) = 'paid'
+        THEN s.total_fee
+        ELSE 0
+      END,
+      remaining_fee = CASE
+        WHEN (
+          SELECT fc.status
+          FROM student_fee_cycles fc
+          WHERE fc.student_id = s.id
+            AND fc.fee_date <= CURRENT_DATE
+          ORDER BY fc.fee_date DESC
+          LIMIT 1
+        ) = 'pending'
+        THEN s.total_fee
+        ELSE 0
+      END,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE s.student_status = 'active'
+      AND ($1::INT IS NULL OR s.branch_id = $1)
+    `,
+    [branchId || null]
+  );
+};
+
+const ensureStudentFeeCycles = async (branchId = null) => {
+  await pool.query(
+    `
+    INSERT INTO student_fee_cycles
+    (
+      student_id,
+      branch_id,
+      fee_date,
+      amount,
+      status,
+      payment_id,
+      paid_date
+    )
+    SELECT
+      x.student_id,
+      x.branch_id,
+      x.fee_date,
+      x.amount,
+      CASE WHEN p.id IS NOT NULL THEN 'paid' ELSE x.default_status END,
+      p.id,
+      p.payment_date
+    FROM (
+      SELECT
+        s.id AS student_id,
+        s.branch_id,
+        s.total_fee AS amount,
+        CASE
+          WHEN n = 0 THEN s.admission_date::DATE
+          ELSE (s.admission_date::DATE + (n || ' months')::INTERVAL)::DATE
+        END AS fee_date,
+        CASE
+          WHEN n = 0 AND s.fee_status = 'paid' THEN 'paid'
+          ELSE 'pending'
+        END AS default_status
+      FROM students s
+      JOIN LATERAL generate_series(
+        0,
+        GREATEST(
+          (
+            SELECT COALESCE(MAX(
+              CASE
+                WHEN LOWER(c.duration) LIKE '%year%' THEN
+                  COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT * 12
+                WHEN LOWER(c.duration) LIKE '%month%' THEN
+                  COALESCE(NULLIF(SUBSTRING(c.duration FROM '([0-9]+)'), ''), '0')::INT
+                ELSE 1
+              END
+            ), 1)
+            FROM student_courses sc
+            JOIN courses c ON c.id = sc.course_id
+            WHERE sc.student_id = s.id
+          ) - 1,
+          0
+        )
+      ) n ON TRUE
+      WHERE s.student_status = 'active'
+        AND s.admission_date IS NOT NULL
+        AND ($1::INT IS NULL OR s.branch_id = $1)
+    ) x
+    LEFT JOIN payments p
+      ON p.student_id = x.student_id
+      AND p.fee_date = x.fee_date
+    WHERE x.fee_date <= CURRENT_DATE
+    ON CONFLICT (student_id, fee_date)
+    DO UPDATE SET
+      amount = EXCLUDED.amount,
+      status = CASE
+        WHEN student_fee_cycles.status = 'paid' THEN 'paid'
+        ELSE EXCLUDED.status
+      END,
+      payment_id = COALESCE(EXCLUDED.payment_id, student_fee_cycles.payment_id),
+      paid_date = COALESCE(EXCLUDED.paid_date, student_fee_cycles.paid_date),
+      updated_at = CURRENT_TIMESTAMP
+    `,
+    [branchId || null]
+  );
 };
 
 const updateCompletedStudentsStatus = async (branchId = null) => {
@@ -199,9 +322,11 @@ const createStudent = async (data, currentUser) => {
       }
     }
 
-    if (finalFeeStatus === "paid" && paid > 0) {
-      await client.query(
-        `
+let admissionPaymentId = null;
+
+if (finalFeeStatus === "paid" && paid > 0) {
+  const paymentResult = await client.query(
+    `
     INSERT INTO payments
     (
       branch_id,
@@ -215,18 +340,55 @@ const createStudent = async (data, currentUser) => {
       created_by
     )
     VALUES ($1,$2,$3,NULL,CURRENT_DATE,$4,$5,$6,$7)
+    RETURNING id
     `,
-        [
-          branchId,
-          student.id,
-          paid,
-          getInitialFeeDate(admissionDate),
-          `AUTO-STUDENT-${student.id}`,
-          "Auto payment created from student admission",
-          currentUser.id,
-        ]
-      );
-    }
+    [
+      branchId,
+      student.id,
+      paid,
+      getInitialFeeDate(admissionDate),
+      `AUTO-STUDENT-${student.id}`,
+      "Auto payment created from student admission",
+      currentUser.id,
+    ]
+  );
+
+  admissionPaymentId = paymentResult.rows[0].id;
+}
+
+if (admissionDate) {
+  await client.query(
+    `
+    INSERT INTO student_fee_cycles
+    (
+      student_id,
+      branch_id,
+      fee_date,
+      amount,
+      status,
+      payment_id,
+      paid_date
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    ON CONFLICT (student_id, fee_date)
+    DO UPDATE SET
+      amount = EXCLUDED.amount,
+      status = EXCLUDED.status,
+      payment_id = EXCLUDED.payment_id,
+      paid_date = EXCLUDED.paid_date,
+      updated_at = CURRENT_TIMESTAMP
+    `,
+    [
+      student.id,
+      branchId,
+      getInitialFeeDate(admissionDate),
+      total,
+      finalFeeStatus === "paid" ? "paid" : "pending",
+      admissionPaymentId,
+      finalFeeStatus === "paid" ? new Date() : null,
+    ]
+  );
+}
 
     await client.query(
       `
@@ -361,6 +523,177 @@ const upsertStudentPaymentDate = async (data, currentUser) => {
   }
 };
 
+const markStudentPaid = async (data, currentUser) => {
+  const {
+    studentId,
+    feeCycleId,
+    feeDate,
+    paidDate,
+    amount,
+    paymentMethodId,
+  } = data;
+
+  if (!studentId || !feeDate || !paidDate || !amount) {
+    throw new ApiError(400, "Student, fees date, paid date and amount are required");
+  }
+
+  if (Number(amount) <= 0) {
+    throw new ApiError(400, "Amount must be greater than zero");
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const studentResult = await client.query(
+      `
+      SELECT id, branch_id, full_name, total_fee
+      FROM students
+      WHERE id = $1
+      `,
+      [studentId]
+    );
+
+    if (studentResult.rows.length === 0) {
+      throw new ApiError(404, "Student not found");
+    }
+
+    const student = studentResult.rows[0];
+
+    if (!canAccessBranch(currentUser, student.branch_id)) {
+      throw new ApiError(403, "You cannot mark paid for this student");
+    }
+
+    const paymentResult = await client.query(
+      `
+      INSERT INTO payments
+      (
+        branch_id,
+        student_id,
+        amount,
+        payment_method_id,
+        payment_date,
+        fee_date,
+        reference_no,
+        note,
+        created_by
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      ON CONFLICT DO NOTHING
+      RETURNING *
+      `,
+      [
+        student.branch_id,
+        studentId,
+        Number(amount),
+        paymentMethodId || null,
+        paidDate,
+        feeDate,
+        `MARK-PAID-${studentId}-${feeDate}`,
+        "Payment marked from pending list",
+        currentUser.id,
+      ]
+    );
+
+    let payment = paymentResult.rows[0];
+
+    if (!payment) {
+      const existingPayment = await client.query(
+        `
+        SELECT *
+        FROM payments
+        WHERE student_id = $1
+          AND fee_date = $2
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [studentId, feeDate]
+      );
+
+      payment = existingPayment.rows[0];
+    }
+
+if (feeCycleId) {
+  await client.query(
+    `
+    UPDATE student_fee_cycles
+    SET
+      amount = $1,
+      status = 'paid',
+      payment_id = $2,
+      paid_date = $3,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $4
+      AND student_id = $5
+    `,
+    [
+      Number(amount),
+      payment?.id || null,
+      paidDate,
+      feeCycleId,
+      studentId,
+    ]
+  );
+} else {
+  await client.query(
+    `
+    INSERT INTO student_fee_cycles
+    (
+      student_id,
+      branch_id,
+      fee_date,
+      amount,
+      status,
+      payment_id,
+      paid_date
+    )
+    VALUES ($1,$2,$3,$4,'paid',$5,$6)
+    ON CONFLICT (student_id, fee_date)
+    DO UPDATE SET
+      amount = EXCLUDED.amount,
+      status = 'paid',
+      payment_id = EXCLUDED.payment_id,
+      paid_date = EXCLUDED.paid_date,
+      updated_at = CURRENT_TIMESTAMP
+    `,
+    [
+      studentId,
+      student.branch_id,
+      feeDate,
+      Number(amount),
+      payment?.id || null,
+      paidDate,
+    ]
+  );
+}
+
+    await syncStudentFeeStatusFromCycles(client, student.branch_id);
+
+    await client.query(
+      `
+      INSERT INTO audit_logs (user_id, action, module_name, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        currentUser.id,
+        "MARK_STUDENT_PAID",
+        "students",
+        `Marked ${student.full_name} as paid for ${feeDate}`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return payment;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 const getStudents = async (filters = {}) => {
   const {
     branchId,
@@ -374,7 +707,105 @@ const getStudents = async (filters = {}) => {
     page = 1,
     limit = 50,
   } = filters;
+
   await updateCompletedStudentsStatus(branchId);
+  await ensureStudentFeeCycles(branchId);
+
+  const offset = (Number(page) - 1) * Number(limit);
+
+  if (feeStatus === "paid" || feeStatus === "pending") {
+    const values = [];
+    const conditions = [];
+
+    if (branchId) {
+      values.push(branchId);
+      conditions.push(`s.branch_id = $${values.length}`);
+    }
+
+    if (search) {
+      values.push(`%${search}%`);
+      conditions.push(`
+        (
+          s.full_name ILIKE $${values.length}
+          OR s.father_name ILIKE $${values.length}
+          OR s.phone ILIKE $${values.length}
+          OR s.student_code ILIKE $${values.length}
+        )
+      `);
+    }
+
+    values.push(feeStatus);
+    conditions.push(`fc.status = $${values.length}`);
+
+    if (studentStatus) {
+      values.push(studentStatus);
+      conditions.push(`s.student_status = $${values.length}`);
+    }
+
+    if (fromDate && toDate) {
+      values.push(fromDate);
+      conditions.push(`fc.fee_date >= $${values.length}`);
+
+      values.push(toDate);
+      conditions.push(`fc.fee_date <= $${values.length}`);
+    } else if (month && year) {
+      values.push(Number(month));
+      conditions.push(`EXTRACT(MONTH FROM fc.fee_date) = $${values.length}`);
+
+      values.push(Number(year));
+      conditions.push(`EXTRACT(YEAR FROM fc.fee_date) = $${values.length}`);
+    }
+
+    const whereClause = conditions.length
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    values.push(Number(limit));
+    const limitIndex = values.length;
+
+    values.push(offset);
+    const offsetIndex = values.length;
+
+    const result = await pool.query(
+      `
+      SELECT
+        s.*,
+        b.name AS branch_name,
+        fc.id AS fee_cycle_id,
+        fc.fee_date AS fees_date,
+        fc.amount AS cycle_amount,
+        fc.status AS cycle_status,
+        fc.paid_date,
+        fc.payment_id,
+        p.amount AS payment_amount,
+        p.payment_method_id,
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', c.id,
+              'courseName', c.course_name,
+              'duration', c.duration
+            )
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'
+        ) AS courses
+      FROM student_fee_cycles fc
+      JOIN students s ON s.id = fc.student_id
+      LEFT JOIN branches b ON b.id = s.branch_id
+      LEFT JOIN payments p ON p.id = fc.payment_id
+      LEFT JOIN student_courses sc ON sc.student_id = s.id
+      LEFT JOIN courses c ON c.id = sc.course_id
+      ${whereClause}
+      GROUP BY s.id, b.name, fc.id, p.id
+      ORDER BY fc.fee_date DESC, s.created_at DESC
+      LIMIT $${limitIndex}
+      OFFSET $${offsetIndex}
+      `,
+      values
+    );
+
+    return result.rows;
+  }
 
   const values = [];
   const conditions = [];
@@ -391,13 +822,9 @@ const getStudents = async (filters = {}) => {
         s.full_name ILIKE $${values.length}
         OR s.father_name ILIKE $${values.length}
         OR s.phone ILIKE $${values.length}
+        OR s.student_code ILIKE $${values.length}
       )
     `);
-  }
-
-  if (feeStatus) {
-    values.push(feeStatus);
-    conditions.push(`s.fee_status = $${values.length}`);
   }
 
   if (studentStatus) {
@@ -405,26 +832,9 @@ const getStudents = async (filters = {}) => {
     conditions.push(`s.student_status = $${values.length}`);
   }
 
-  const listDateExpression = `s.admission_date::DATE`;
-
-  if (fromDate && toDate) {
-    values.push(fromDate);
-    conditions.push(`${listDateExpression} >= $${values.length}`);
-
-    values.push(toDate);
-    conditions.push(`${listDateExpression} <= $${values.length}`);
-  } else if (month && year) {
-    values.push(Number(month));
-    conditions.push(`EXTRACT(MONTH FROM ${listDateExpression}) = $${values.length}`);
-
-    values.push(Number(year));
-    conditions.push(`EXTRACT(YEAR FROM ${listDateExpression}) = $${values.length}`);
-  }
   const whereClause = conditions.length
     ? `WHERE ${conditions.join(" AND ")}`
     : "";
-
-  const offset = (Number(page) - 1) * Number(limit);
 
   values.push(Number(limit));
   const limitIndex = values.length;
@@ -434,34 +844,29 @@ const getStudents = async (filters = {}) => {
 
   const result = await pool.query(
     `
-  SELECT 
-    s.*,
-    b.name AS branch_name,
-    (s.admission_date::DATE + INTERVAL '1 month')::DATE AS fees_date,
-    MAX(p.payment_date) AS paid_date,
-    COALESCE(
-      json_agg(
-        DISTINCT jsonb_build_object(
-          'id', c.id,
-          'courseName', c.course_name,
-          'duration', c.duration
-        )
-      ) FILTER (WHERE c.id IS NOT NULL),
-      '[]'
-    ) AS courses
-  FROM students s
-  LEFT JOIN branches b ON b.id = s.branch_id
-  LEFT JOIN student_courses sc ON sc.student_id = s.id
-  LEFT JOIN courses c ON c.id = sc.course_id
-  LEFT JOIN payments p
-    ON p.student_id = s.id
-    AND p.fee_date = (s.admission_date::DATE + INTERVAL '1 month')::DATE
-  ${whereClause}
-  GROUP BY s.id, b.name
-  ORDER BY s.created_at DESC
-  LIMIT $${limitIndex}
-  OFFSET $${offsetIndex}
-  `,
+    SELECT
+      s.*,
+      b.name AS branch_name,
+      COALESCE(
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', c.id,
+            'courseName', c.course_name,
+            'duration', c.duration
+          )
+        ) FILTER (WHERE c.id IS NOT NULL),
+        '[]'
+      ) AS courses
+    FROM students s
+    LEFT JOIN branches b ON b.id = s.branch_id
+    LEFT JOIN student_courses sc ON sc.student_id = s.id
+    LEFT JOIN courses c ON c.id = sc.course_id
+    ${whereClause}
+    GROUP BY s.id, b.name
+    ORDER BY s.created_at DESC
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+    `,
     values
   );
 
@@ -629,6 +1034,39 @@ const updateStudent = async (id, data, currentUser) => {
       }
     }
 
+    const admissionDateChanged =
+  admissionDate &&
+  oldStudent.admission_date &&
+  new Date(admissionDate).toISOString().split("T")[0] !==
+    new Date(oldStudent.admission_date).toISOString().split("T")[0];
+
+const feeChanged =
+  totalFee !== undefined &&
+  Number(totalFee) !== Number(oldStudent.total_fee);
+
+if (admissionDateChanged || feeChanged) {
+  await client.query(
+    `
+    DELETE FROM student_fee_cycles
+    WHERE student_id = $1
+    `,
+    [id]
+  );
+
+  await client.query(
+    `
+    DELETE FROM payments
+    WHERE student_id = $1
+      AND note IN (
+        'Auto payment created from student admission',
+        'Payment marked from pending list',
+        'Paid date added from fee list'
+      )
+    `,
+    [id]
+  );
+}
+
     await client.query(
       `
       INSERT INTO audit_logs (user_id, action, module_name, description)
@@ -643,6 +1081,8 @@ const updateStudent = async (id, data, currentUser) => {
     );
 
     await client.query("COMMIT");
+
+    await ensureStudentFeeCycles(oldStudent.branch_id);
 
     return result.rows[0];
   } catch (error) {
@@ -770,5 +1210,6 @@ module.exports = {
   updateStudent,
   updateStudentStatus,
   upsertStudentPaymentDate,
+  markStudentPaid,
   deleteStudent,
 };

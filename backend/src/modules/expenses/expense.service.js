@@ -1,3 +1,6 @@
+const ExcelJS = require("exceljs");
+const PDFDocument = require("pdfkit");
+
 const pool = require("../../config/db");
 const ApiError = require("../../utils/ApiError");
 
@@ -322,6 +325,72 @@ const createExpenseCategory = async (data) => {
   return result.rows[0];
 };
 
+const generateExpensePdf = async (
+  { branchId, categoryId, fromDate, toDate, portalType },
+  currentUser
+) => {
+  const result = await pool.query(
+    `
+    SELECT
+      e.title,
+      e.amount,
+      e.expense_date,
+      ec.category_name
+    FROM expenses e
+    LEFT JOIN expense_categories ec ON ec.id = e.category_id
+    WHERE
+      ($1::INT IS NULL OR e.branch_id = $1)
+      AND ($2::INT IS NULL OR e.category_id = $2)
+      AND e.expense_type = $3
+      AND ($4::DATE IS NULL OR e.expense_date >= $4)
+      AND ($5::DATE IS NULL OR e.expense_date <= $5)
+    ORDER BY e.expense_date ASC
+    `,
+    [
+      branchId || null,
+      categoryId || null,
+      normalizePortalType(portalType),
+      fromDate || null,
+      toDate || null,
+    ]
+  );
+
+  return result.rows;
+};
+
+const generateExpenseExcel = async (
+  { branchId, categoryId, fromDate, toDate, portalType },
+  currentUser
+) => {
+  const result = await pool.query(
+    `
+    SELECT
+      e.title,
+      e.amount,
+      e.expense_date,
+      ec.category_name
+    FROM expenses e
+    LEFT JOIN expense_categories ec ON ec.id = e.category_id
+    WHERE
+      ($1::INT IS NULL OR e.branch_id = $1)
+      AND ($2::INT IS NULL OR e.category_id = $2)
+      AND e.expense_type = $3
+      AND ($4::DATE IS NULL OR e.expense_date >= $4)
+      AND ($5::DATE IS NULL OR e.expense_date <= $5)
+    ORDER BY e.expense_date ASC
+    `,
+    [
+      branchId || null,
+      categoryId || null,
+      normalizePortalType(portalType),
+      fromDate || null,
+      toDate || null,
+    ]
+  );
+
+  return result.rows;
+};
+
 module.exports = {
   createExpense,
   getExpenses,
@@ -330,4 +399,6 @@ module.exports = {
   deleteExpense,
   getExpenseCategories,
   createExpenseCategory,
+  generateExpensePdf,
+generateExpenseExcel,
 };
