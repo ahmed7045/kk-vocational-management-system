@@ -23,6 +23,18 @@ const apiLogger = require("./middleware/logger.middleware");
 const errorMiddleware = require("./middleware/error.middleware");
 
 const app = express();
+
+// CACHE CODE PROXY
+app.set("trust proxy", 1);
+app.set("etag", false);
+
+// CACHE CODE FOR DASHBOARD PROBLEM
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 //LOCAL SETINGS
 // app.use(
 //   cors({
