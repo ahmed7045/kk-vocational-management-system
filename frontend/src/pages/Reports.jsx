@@ -398,10 +398,11 @@ const Reports = () => {
               <Wallet size={16} /> Financial Report
             </button>
           )}
+          
         </div>
 
 
-        <div>
+        <div className="reports-tabs-right">
 
           <Card className="reports-filter-card">
             <div className="reports-filter-bar">

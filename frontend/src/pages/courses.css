@@ -141,46 +141,6 @@
   font-size: 14px;
 }
 
-.courses-page .course-card .table-wrapper table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(1),
-.courses-page .course-card .table-wrapper td:nth-child(1) {
-  width: 27%;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(2),
-.courses-page .course-card .table-wrapper td:nth-child(2) {
-  width: 16%;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(3),
-.courses-page .course-card .table-wrapper td:nth-child(3) {
-  width: 16%;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(4),
-.courses-page .course-card .table-wrapper td:nth-child(4) {
-  width: 17%;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(5),
-.courses-page .course-card .table-wrapper td:nth-child(5) {
-  width: 24%;
-  text-align: left;
-}
-
-.courses-page .course-card .table-wrapper td:nth-child(5) > div {
-  justify-content: flex-start;
-}
-
-.courses-page .course-card .table-wrapper th:nth-child(4),
-.courses-page .course-card .table-wrapper td:nth-child(4) {
-  text-align: left;
-}
-
 @media (max-width: 800px) {
   .course-header-actions {
     flex-direction: column;

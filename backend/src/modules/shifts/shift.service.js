@@ -15,9 +15,9 @@ const createShift = async (data, currentUser) => {
     endTime,
   } = data;
 
-if (!branchId || !courseId || !shiftName || !startTime || !endTime) {
-  throw new ApiError(400, "Branch, course, shift name, start time and end time are required");
-}
+  if (!branchId || !courseId || !shiftName || !startTime || !endTime) {
+    throw new ApiError(400, "Branch, course, shift name, start time and end time are required");
+  }
 
   if (!canAccessBranch(currentUser, branchId)) {
     throw new ApiError(403, "You cannot create shift for this branch");
@@ -54,16 +54,16 @@ if (!branchId || !courseId || !shiftName || !startTime || !endTime) {
 
   const shift = result.rows[0];
 
-await pool.query(
-  `
+  await pool.query(
+    `
   INSERT INTO course_shifts (course_id, shift_id)
   VALUES ($1, $2)
   ON CONFLICT DO NOTHING
   `,
-  [courseId, shift.id]
-);
+    [courseId, shift.id]
+  );
 
-return shift;
+  return shift;
 };
 
 const getShifts = async (query, currentUser) => {
@@ -74,8 +74,8 @@ const getShifts = async (query, currentUser) => {
     branchId = currentUser.branchId;
   }
 
-const result = await pool.query(
-  `
+  const result = await pool.query(
+    `
   SELECT
     s.id,
     s.branch_id,
@@ -87,10 +87,17 @@ const result = await pool.query(
       LIMIT 1
     ) AS course_id,
     s.shift_name,
-    s.start_time,
-    s.end_time,
-    s.is_active,
-    s.created_at
+s.start_time,
+s.end_time,
+(
+  s.shift_name || ' (' ||
+  TO_CHAR(s.start_time::TIME, 'HH12:MI AM') ||
+  ' to ' ||
+  TO_CHAR(s.end_time::TIME, 'HH12:MI AM') ||
+  ')'
+) AS shift_label,
+s.is_active,
+s.created_at
   FROM shift_timings s
   LEFT JOIN branches b ON b.id = s.branch_id
   WHERE 
@@ -106,8 +113,8 @@ const result = await pool.query(
     )
   ORDER BY s.start_time ASC
   `,
-  [branchId || null, courseId]
-);
+    [branchId || null, courseId]
+  );
 
   return result.rows;
 };
@@ -128,13 +135,13 @@ const updateShift = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this shift");
   }
 
-const {
-  courseId,
-  shiftName,
-  startTime,
-  endTime,
-  isActive,
-} = data;
+  const {
+    courseId,
+    shiftName,
+    startTime,
+    endTime,
+    isActive,
+  } = data;
 
   const result = await pool.query(
     `
@@ -170,25 +177,25 @@ const {
   );
 
   if (courseId) {
-  await pool.query(
-    `
+    await pool.query(
+      `
     DELETE FROM course_shifts
     WHERE shift_id = $1
     `,
-    [id]
-  );
+      [id]
+    );
 
-  await pool.query(
-    `
+    await pool.query(
+      `
     INSERT INTO course_shifts (course_id, shift_id)
     VALUES ($1, $2)
     ON CONFLICT DO NOTHING
     `,
-    [courseId, id]
-  );
-}
+      [courseId, id]
+    );
+  }
 
-return result.rows[0];
+  return result.rows[0];
 };
 
 const deleteShift = async (id, currentUser) => {

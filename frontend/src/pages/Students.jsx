@@ -952,7 +952,7 @@ const Students = ({
               onChange={handleFormChange}
               placeholder={form.courseId ? "Select shift" : "Select course first"}
               options={shifts.map((shift) => ({
-                label: `${shift.shift_name} (${shift.start_time} - ${shift.end_time})`,
+                label: shift.shift_label || shift.shift_name,
                 value: shift.id,
               }))}
               disabled={!form.courseId}

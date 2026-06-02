@@ -121,6 +121,53 @@ const generateCertificate = async (data, currentUser) => {
   return result.rows[0];
 };
 
+const getCertificateStudents = async (query, currentUser) => {
+  const branchId =
+    currentUser.role === "super_admin"
+      ? query.branchId || null
+      : currentUser.branchId;
+
+  const result = await pool.query(
+    `
+    SELECT
+      s.id,
+      s.full_name,
+      s.father_name,
+      COALESCE(NULLIF(TRIM(s.student_code), ''), LPAD(s.id::TEXT, 5, '0')) AS student_code,
+      TRIM(
+        s.full_name ||
+        CASE
+          WHEN s.father_name IS NULL OR TRIM(s.father_name) = ''
+          THEN ''
+          ELSE ' ' || s.father_name
+        END ||
+        ' - ' ||
+        COALESCE(NULLIF(TRIM(s.student_code), ''), LPAD(s.id::TEXT, 5, '0'))
+      ) AS student_label,
+      course_data.course_name,
+      course_data.duration
+    FROM students s
+    LEFT JOIN LATERAL (
+      SELECT
+        c.course_name,
+        c.duration
+      FROM student_courses sc
+      JOIN courses c ON c.id = sc.course_id
+      WHERE sc.student_id = s.id
+      ORDER BY sc.id ASC
+      LIMIT 1
+    ) course_data ON true
+    WHERE
+      ($1::INT IS NULL OR s.branch_id = $1)
+      AND s.student_status = 'active'
+    ORDER BY s.full_name ASC
+    `,
+    [branchId]
+  );
+
+  return result.rows;
+};
+
 const getCertificates = async (query, currentUser) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 20;
@@ -202,6 +249,7 @@ SELECT
 
 module.exports = {
   generateCertificate,
+  getCertificateStudents,
   getCertificates,
   getCertificateById,
 };

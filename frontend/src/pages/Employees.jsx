@@ -499,6 +499,7 @@ const Employees = () => {
       </Card>
 
       <Modal
+    
         open={modalOpen}
         title={selectedRecord?.id ? "Edit Employee" : "Add Employee"}
         onClose={() => {
@@ -507,7 +508,8 @@ const Employees = () => {
           setShowPassword(false);
           resetForm();
         }}
-        size="lg"
+        size="md"
+        style={{ overflow: "hidden !important" }}
       >
         <form onSubmit={handleSaveEmployee}>
           <div className="employee-account-toggle">

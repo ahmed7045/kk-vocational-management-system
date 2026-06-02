@@ -41,6 +41,8 @@ import { formatCurrency, formatDate } from "../utils/formatters";
 
 import "./welfare.css";
 
+const CHART_BLUE = "#3182bd";
+
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 const getTodayDate = () => new Date().toISOString().split("T")[0];
@@ -1797,7 +1799,11 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                     <XAxis dataKey="month" interval={0} />
                     <YAxis />
                     <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Bar dataKey="amount" radius={[8, 8, 0, 0]} />
+                    <Bar
+                      dataKey="amount"
+                      fill={CHART_BLUE}
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1817,6 +1823,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                     <Line
                       type="monotone"
                       dataKey="amount"
+                      stroke={CHART_BLUE}
                       strokeWidth={3}
                       dot={{ r: 4 }}
                     />

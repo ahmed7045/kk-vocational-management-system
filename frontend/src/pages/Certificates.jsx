@@ -106,7 +106,7 @@ const Certificates = () => {
   const fetchStudents = async () => {
     try {
       const response = await axiosInstance.get(
-        `/students?branchId=${branchId || ""}&page=1&limit=200`
+        `/certificates/students/dropdown?branchId=${branchId || ""}`
       );
 
       setStudents(response.data.data || []);
@@ -154,18 +154,9 @@ const Certificates = () => {
       (student) => Number(student.id) === Number(studentId)
     );
 
-    const firstCourse = selectedStudent?.courses?.[0];
+    const courseName = selectedStudent?.course_name || "";
 
-    const courseName =
-      firstCourse?.courseName ||
-      firstCourse?.course_name ||
-      firstCourse?.name ||
-      "";
-
-    const courseDuration =
-      firstCourse?.duration ||
-      selectedStudent?.duration ||
-      "";
+    const courseDuration = selectedStudent?.duration || "";
 
     setForm((prev) => ({
       ...prev,
@@ -345,29 +336,29 @@ const Certificates = () => {
       title: "Created",
       render: (row) => formatDate(row.created_at),
     },
-{
-  key: "actions",
-  title: "Actions",
-  render: (row) => (
-    <div className="certificate-action-buttons">
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() => previewCertificate(row)}
-      >
-        <Eye size={14} /> Preview
-      </Button>
+    {
+      key: "actions",
+      title: "Actions",
+      render: (row) => (
+        <div className="certificate-action-buttons">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => previewCertificate(row)}
+          >
+            <Eye size={14} /> Preview
+          </Button>
 
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() => downloadCertificate(row)}
-      >
-        <Download size={14} /> Download
-      </Button>
-    </div>
-  ),
-},
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => downloadCertificate(row)}
+          >
+            <Download size={14} /> Download
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   if (loading) {
@@ -446,7 +437,7 @@ const Certificates = () => {
                 onChange={handleStudentSelect}
                 placeholder="Select Student"
                 options={students.map((student) => ({
-                  label: student.full_name,
+                  label: student.student_label,
                   value: student.id,
                 }))}
                 required

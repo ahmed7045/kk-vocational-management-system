@@ -6,6 +6,7 @@ const requirePermission = require("../../middleware/permission.middleware");
 
 const {
   create,
+  studentsDropdown,
   list,
   download,
 } = require("./certificate.controller");
@@ -17,12 +18,21 @@ router.get(
   list
 );
 
+router.get(
+  "/students/dropdown",
+  authMiddleware,
+  requirePermission("certificates.view"),
+  studentsDropdown
+);
+
 router.post(
   "/generate",
   authMiddleware,
   requirePermission("certificates.generate"),
   create
 );
+
+
 
 router.get(
   "/:id/download",

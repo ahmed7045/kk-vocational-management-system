@@ -34,6 +34,7 @@ import {
   getSelectedBranchName,
 } from "../utils/formatters";
 import "./dashboard.css";
+const CHART_BLUE = "#3182bd";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -209,7 +210,11 @@ const Dashboard = () => {
                 />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="revenue" radius={[8, 8, 0, 0]} />
+                <Bar
+                  dataKey="revenue"
+                  fill={CHART_BLUE}
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -230,6 +235,7 @@ const Dashboard = () => {
                 <Line
                   type="monotone"
                   dataKey="expenses"
+                  stroke={CHART_BLUE}
                   strokeWidth={3}
                   dot
                 />

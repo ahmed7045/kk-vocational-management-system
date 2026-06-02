@@ -559,12 +559,12 @@
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  column-gap: 36px;
+  column-gap: 30px;
 }
 
 .donor-total-donation {
   text-align: right;
-  justify-self: end;
+  margin-left: 50px;
 }
 
 .donor-total-donation span {

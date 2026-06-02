@@ -321,7 +321,22 @@ const Login = () => {
               Login to Portal
             </Button>
 
-            <div className="login-footer">
+            {/* <div className="login-footer">
+              <p>© 2026 KK Welfare Association. All rights reserved.</p>
+              <p>
+                Powered by{" "}
+                <a
+                  href="https://www.cybrox.info/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Cybrox
+                </a>
+              </p>
+            </div> */}
+          </form>
+        </Card>
+         <div className="login-footer">
               <p>© 2026 KK Welfare Association. All rights reserved.</p>
               <p>
                 Powered by{" "}
@@ -334,8 +349,6 @@ const Login = () => {
                 </a>
               </p>
             </div>
-          </form>
-        </Card>
       </div>
     </div>
   );

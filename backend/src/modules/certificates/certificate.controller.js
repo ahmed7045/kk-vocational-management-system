@@ -1,5 +1,6 @@
 const {
   generateCertificate,
+  getCertificateStudents,
   getCertificates,
   getCertificateById,
 } = require("./certificate.service");
@@ -14,6 +15,20 @@ const create = async (req, res, next) => {
       success: true,
       message: "Certificate generated successfully",
       data: certificate,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const studentsDropdown = async (req, res, next) => {
+  try {
+    const students = await getCertificateStudents(req.query, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Certificate students fetched successfully",
+      data: students,
     });
   } catch (error) {
     next(error);
@@ -45,6 +60,7 @@ const download = async (req, res, next) => {
 
 module.exports = {
   create,
+  studentsDropdown,
   list,
   download,
 };
