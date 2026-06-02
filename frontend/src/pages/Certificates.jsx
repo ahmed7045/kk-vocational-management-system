@@ -161,7 +161,7 @@ const Certificates = () => {
     setForm((prev) => ({
       ...prev,
       studentId,
-      studentName: selectedStudent?.full_name || "",
+      studentName: selectedStudent?.certificate_name || selectedStudent?.full_name|| "",
       courseName,
       courseDuration,
       issueDate: getTodayDate(),

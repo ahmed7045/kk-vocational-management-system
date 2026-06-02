@@ -762,6 +762,7 @@ const getAllCharityRecords = async (query) => {
   const search = query.search || "";
   const fromDate = query.fromDate || null;
   const toDate = query.toDate || null;
+  const charityType = query.charityType || null;
 
   const result = await pool.query(
     `
@@ -784,21 +785,20 @@ const getAllCharityRecords = async (query) => {
     FROM charity_records cr
     LEFT JOIN charities c ON c.id = cr.charity_id
     LEFT JOIN users u ON u.id = cr.created_by
-    WHERE
-      ($1::DATE IS NULL OR cr.charity_date >= $1)
-      AND ($2::DATE IS NULL OR cr.charity_date <= $2)
-      AND (
-        c.charity_name ILIKE $3
-        OR c.phone ILIKE $3
-        OR c.cnic ILIKE $3
-        OR cr.charity_type ILIKE $3
-        OR cr.item_name ILIKE $3
-        OR cr.note ILIKE $3
-      )
-    ORDER BY cr.charity_date DESC, cr.id DESC
-    LIMIT $4 OFFSET $5
+WHERE
+  ($1::DATE IS NULL OR cr.charity_date >= $1)
+  AND ($2::DATE IS NULL OR cr.charity_date <= $2)
+  AND ($3::VARCHAR IS NULL OR cr.charity_type = $3)
+  AND (
+    c.charity_name ILIKE $4
+    OR c.phone ILIKE $4
+    OR c.cnic ILIKE $4
+    OR cr.charity_type ILIKE $4
+  )
+ORDER BY cr.charity_date DESC, cr.id DESC
+LIMIT $5 OFFSET $6
     `,
-    [fromDate, toDate, `%${search}%`, limit, offset]
+    [fromDate, toDate,charityType, `%${search}%`, limit, offset]
   );
 
   return result.rows;
@@ -1691,11 +1691,10 @@ const getWelfareDashboard = async () => {
     SELECT
       COALESCE((SELECT SUM(amount) FROM donations), 0) AS total_donations,
 
-      COALESCE((
-        SELECT SUM(amount)
-        FROM expenses
-        WHERE expense_type = 'welfare'
-      ), 0) AS total_welfare_expenses,
+COALESCE((
+  SELECT SUM(amount)
+  FROM charity_records
+), 0) AS total_welfare_expenses,
 
       COUNT(*) FILTER (
         WHERE case_status = 'pending'

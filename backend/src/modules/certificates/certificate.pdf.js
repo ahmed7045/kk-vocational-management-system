@@ -279,6 +279,8 @@ doc
   // Main body
   const bodyY = 425;
 
+  const certificateStudentName = certificate.student_name || "";
+
   doc
     .fillColor("#111111")
     .font("Helvetica")
@@ -291,7 +293,7 @@ doc
   doc
     .font("Times-BoldItalic")
     .fontSize(22)
-    .text(certificate.student_name || "", 220, bodyY - 10, {
+    .text(certificateStudentName, 220, bodyY - 10, {
       width: 310,
       align: "center",
       lineBreak: false,

@@ -33,6 +33,7 @@ const generateCertificate = async (data, currentUser) => {
     SELECT 
       s.id,
       s.full_name,
+      s.father_name,
       s.branch_id,
       c.id AS course_id,
       c.course_name,
@@ -60,6 +61,14 @@ const generateCertificate = async (data, currentUser) => {
   }
 
   const certificateNo = generateCertificateNo();
+
+  const certificateStudentName = [
+    student.full_name,
+    student.father_name,
+  ]
+    .filter((value) => value && String(value).trim())
+    .join(" ")
+    .trim();
 
   const result = await pool.query(
     `
@@ -93,7 +102,7 @@ const generateCertificate = async (data, currentUser) => {
       associationName || "KUTCHI KUMBHAR KHIDMAT-E-KHALQ WELFARE ASSOCIATION",
       registrationText || "(Regd)",
       instituteName || "Khidmat-e-Khalq Vocational IT Center",
-      studentName || student.full_name,
+      certificateStudentName || student.full_name,
       courseName || student.course_name || "Vocational Training",
       courseDuration || student.duration || "6 months",
       achievementText ||
@@ -114,7 +123,7 @@ const generateCertificate = async (data, currentUser) => {
       currentUser.id,
       "GENERATE_CERTIFICATE",
       "certificates",
-      `Generated certificate for ${studentName || student.full_name}`,
+      `Generated certificate for ${certificateStudentName || student.full_name}`,
     ]
   );
 
@@ -134,17 +143,25 @@ const getCertificateStudents = async (query, currentUser) => {
       s.full_name,
       s.father_name,
       COALESCE(NULLIF(TRIM(s.student_code), ''), LPAD(s.id::TEXT, 5, '0')) AS student_code,
-      TRIM(
-        s.full_name ||
-        CASE
-          WHEN s.father_name IS NULL OR TRIM(s.father_name) = ''
-          THEN ''
-          ELSE ' ' || s.father_name
-        END ||
-        ' - ' ||
-        COALESCE(NULLIF(TRIM(s.student_code), ''), LPAD(s.id::TEXT, 5, '0'))
-      ) AS student_label,
-      course_data.course_name,
+TRIM(
+  s.full_name ||
+  CASE
+    WHEN s.father_name IS NULL OR TRIM(s.father_name) = ''
+    THEN ''
+    ELSE ' ' || s.father_name
+  END
+) AS certificate_name,
+TRIM(
+  s.full_name ||
+  CASE
+    WHEN s.father_name IS NULL OR TRIM(s.father_name) = ''
+    THEN ''
+    ELSE ' ' || s.father_name
+  END ||
+  ' - ' ||
+  COALESCE(NULLIF(TRIM(s.student_code), ''), LPAD(s.id::TEXT, 5, '0'))
+) AS student_label,
+course_data.course_name,
       course_data.duration
     FROM students s
     LEFT JOIN LATERAL (

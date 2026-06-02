@@ -112,6 +112,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     charityRecordSearch: "",
     charityRecordFromDate: "",
     charityRecordToDate: "",
+    charityRecordType: "",
 
     donationSearch: "",
     donationMethodId: "",
@@ -262,6 +263,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           search: filters.charityRecordSearch,
           fromDate: filters.charityRecordFromDate,
           toDate: filters.charityRecordToDate,
+          charityType: filters.charityRecordType,
         });
 
         const recordsRes = await axiosInstance.get(
@@ -1334,50 +1336,35 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     },
   ];
 
-  const charityRecordColumns = [
-    {
-      key: "beneficiary_name",
-      title: "Beneficiary",
-      render: (row) => (
-        <div>
-          <strong>{row.beneficiary_name || "-"}</strong>
-          <span className="table-subtext">
-            {row.beneficiary_phone || row.beneficiary_cnic || "-"}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "charity_type",
-      title: "Type",
-      render: (row) => row.charity_type || "-",
-    },
-    {
-      key: "amount",
-      title: "Amount",
-      render: (row) => formatCurrency(row.amount || 0),
-    },
-    {
-      key: "item_name",
-      title: "Item",
-      render: (row) => row.item_name || "-",
-    },
-    {
-      key: "quantity",
-      title: "Qty",
-      render: (row) => row.quantity || 0,
-    },
-    {
-      key: "charity_date",
-      title: "Date",
-      render: (row) => formatDate(row.charity_date),
-    },
-    {
-      key: "note",
-      title: "Note",
-      render: (row) => row.note || "-",
-    },
-  ];
+const charityRecordColumns = [
+  {
+    key: "beneficiary_name",
+    title: "Beneficiary",
+    render: (row) => (
+      <div>
+        <strong>{row.beneficiary_name || "-"}</strong>
+        <span className="table-subtext">
+          {row.beneficiary_phone || row.beneficiary_cnic || "-"}
+        </span>
+      </div>
+    ),
+  },
+  {
+    key: "charity_type",
+    title: "Type",
+    render: (row) => row.charity_type || "-",
+  },
+  {
+    key: "amount",
+    title: "Amount",
+    render: (row) => formatCurrency(row.amount || 0),
+  },
+  {
+    key: "charity_date",
+    title: "Date",
+    render: (row) => formatDate(row.charity_date),
+  },
+];
 
   const donationColumns = [
     {
@@ -1461,38 +1448,41 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         </Badge>
       ),
     },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (row) => (
-        <div className="welfare-actions">
-          <ActionButtons
-            onView={() => handleViewApplication(row)}
-            onEdit={() => handleEditApplication(row)}
-            onDelete={() => handleDeleteApplicationClick(row)}
-          />
-          {row.case_status === "pending" && (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openStatusModal(row, "approved")}
-              >
-                <CheckCircle size={14} /> Approve
-              </Button>
+{
+  key: "actions",
+  title: "Actions",
+  render: (row) => (
+    <div className="welfare-actions">
+      <ActionButtons
+        onView={() => handleViewApplication(row)}
+        onEdit={() => handleEditApplication(row)}
+        onDelete={() => handleDeleteApplicationClick(row)}
+      />
 
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => openStatusModal(row, "rejected")}
-              >
-                <XCircle size={14} /> Reject
-              </Button>
-            </>
-          )}
-        </div>
-      ),
-    },
+      {row.case_status === "pending" && (
+        <>
+          <button
+            type="button"
+            className="welfare-status-icon-btn welfare-approve-icon"
+            onClick={() => openStatusModal(row, "approved")}
+            title="Approve"
+          >
+            <CheckCircle size={15} />
+          </button>
+
+          <button
+            type="button"
+            className="welfare-status-icon-btn welfare-reject-icon"
+            onClick={() => openStatusModal(row, "rejected")}
+            title="Reject"
+          >
+            <XCircle size={15} />
+          </button>
+        </>
+      )}
+    </div>
+  ),
+},
   ];
 
   // const donationByDate = donations.reduce((acc, donation) => {
@@ -1870,42 +1860,54 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         </Card>
       )}
 
-      {activeTab === "charityRecords" && (
-        <Card
-          title="Charity History"
-          subtitle="View all charity records generated from approved applications"
-        >
-          <div className="filter-bar">
-            <Input
-              label="Search"
-              name="charityRecordSearch"
-              value={filters.charityRecordSearch}
-              onChange={handleFilterChange}
-              placeholder="Search beneficiary, type, item, note"
-            />
+{activeTab === "charityRecords" && (
+  <Card
+    title="Charity History"
+    subtitle="View all charity records generated from approved applications"
+  >
+    <div className="filter-bar charity-history-filter-bar">
+      <Input
+        className="charity-history-search-input"
+        name="charityRecordSearch"
+        value={filters.charityRecordSearch}
+        onChange={handleFilterChange}
+        placeholder="Search beneficiary, phone, CNIC or type"
+      />
 
+      <DateRangePicker
+        fromDate={filters.charityRecordFromDate}
+        toDate={filters.charityRecordToDate}
+        onChange={({ fromDate, toDate }) => {
+          setFilters((prev) => ({
+            ...prev,
+            charityRecordFromDate: fromDate,
+            charityRecordToDate: toDate,
+          }));
+        }}
+      />
 
+      <Select
+        name="charityRecordType"
+        value={filters.charityRecordType}
+        onChange={handleFilterChange}
+        options={[
+          { label: "All Types", value: "" },
+          { label: "Education Help", value: "Education Help" },
+          { label: "Ration", value: "Ration" },
+          { label: "Rent", value: "Rent" },
+          { label: "Medical", value: "Medical" },
+          { label: "Other", value: "Other" },
+        ]}
+      />
+    </div>
 
-            <DateRangePicker
-              fromDate={filters.charityRecordFromDate}
-              toDate={filters.charityRecordToDate}
-              onChange={({ fromDate, toDate }) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  charityRecordFromDate: fromDate,
-                  charityRecordToDate: toDate,
-                }));
-              }}
-            />
-          </div>
-
-          <Table
-            columns={charityRecordColumns}
-            data={charityRecords}
-            emptyText="No charity history found"
-          />
-        </Card>
-      )}
+    <Table
+      columns={charityRecordColumns}
+      data={charityRecords}
+      emptyText="No charity history found"
+    />
+  </Card>
+)}
 
       {activeTab === "donations" && (
         <Card className="donations-card">
