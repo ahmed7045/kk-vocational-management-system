@@ -846,48 +846,51 @@ const Students = ({
             />
           </div>
 
-          {isFeeListMode && (
-            <>
-              <DateRangePicker
-                fromDate={filters.fromDate}
-                toDate={filters.toDate}
-                onChange={({ fromDate, toDate }) => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    fromDate,
-                    toDate,
-                  }));
-                }}
-              />
+          <div className="filter-actions">
 
+            {isFeeListMode && (
+              <>
+                <DateRangePicker
+                  fromDate={filters.fromDate}
+                  toDate={filters.toDate}
+                  onChange={({ fromDate, toDate }) => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      fromDate,
+                      toDate,
+                    }));
+                  }}
+                />
+
+                <Select
+                  name="month"
+                  value={filters.month}
+                  onChange={handleFilterChange}
+                  options={monthOptions}
+                />
+
+                <Select
+                  name="year"
+                  value={filters.year}
+                  onChange={handleFilterChange}
+                  options={yearOptions}
+                />
+              </>
+            )}
+
+            {!isFeeListMode && (
               <Select
-                name="month"
-                value={filters.month}
+                name="feeStatus"
+                value={filters.feeStatus}
                 onChange={handleFilterChange}
-                options={monthOptions}
+                placeholder="Fee status"
+                options={[
+                  { label: "Paid", value: "paid" },
+                  { label: "Pending", value: "pending" },
+                ]}
               />
-
-              <Select
-                name="year"
-                value={filters.year}
-                onChange={handleFilterChange}
-                options={yearOptions}
-              />
-            </>
-          )}
-
-          {!isFeeListMode && (
-            <Select
-              name="feeStatus"
-              value={filters.feeStatus}
-              onChange={handleFilterChange}
-              placeholder="Fee status"
-              options={[
-                { label: "Paid", value: "paid" },
-                { label: "Pending", value: "pending" },
-              ]}
-            />
-          )}
+            )}
+          </div>
         </div>
 
         {error && <div className="students-error">{error}</div>}

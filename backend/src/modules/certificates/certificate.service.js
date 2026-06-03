@@ -264,9 +264,38 @@ SELECT
   return certificate;
 };
 
+const deleteCertificate = async (id, currentUser) => {
+  const certificate = await getCertificateById(id, currentUser);
+
+  const result = await pool.query(
+    `
+    DELETE FROM certificates
+    WHERE id = $1
+    RETURNING id, certificate_no
+    `,
+    [id]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "DELETE_CERTIFICATE",
+      "certificates",
+      `Deleted certificate ${certificate.certificate_no}`,
+    ]
+  );
+
+  return result.rows[0];
+};
+
 module.exports = {
   generateCertificate,
   getCertificateStudents,
   getCertificates,
   getCertificateById,
+  deleteCertificate,
 };

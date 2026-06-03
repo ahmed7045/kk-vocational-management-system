@@ -223,7 +223,7 @@ const Dashboard = () => {
         <Card title="Expense Analytics" subtitle="Last 12 months expenses">
           <div className="chart-box">
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={expenseAnalytics}>
+              <LineChart data={expenseAnalytics} margin={{ top: 10, right: 20, left: 5, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="month"

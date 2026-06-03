@@ -3,6 +3,7 @@ const {
   getCertificateStudents,
   getCertificates,
   getCertificateById,
+  deleteCertificate,
 } = require("./certificate.service");
 
 const generateCertificatePdf = require("./certificate.pdf");
@@ -58,9 +59,23 @@ const download = async (req, res, next) => {
   }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    await deleteCertificate(req.params.id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Certificate deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   create,
   studentsDropdown,
   list,
   download,
+  remove
 };

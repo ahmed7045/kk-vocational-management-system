@@ -72,9 +72,12 @@
 
 .dashboard-grid-2 {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
+  /* grid-template-columns: 1.3fr 1fr; */
+  grid-template-columns: 1fr 1fr; 
+  /* grid-template-columns: 1fr; */
   gap: 22px;
   margin-bottom: 22px;
+  align-items: stretch;
 }
 
 .dashboard-grid-2.single {
@@ -84,6 +87,7 @@
 .chart-box {
   width: 100%;
   height: 280px;
+  min-width: 0;
 }
 
 .course-list {

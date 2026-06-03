@@ -740,17 +740,19 @@ const Courses = () => {
               >
                 Courses
               </button>
-              <button
-                className={activeTab === "teachers" ? "active" : ""}
-                onClick={() => setActiveTab("teachers")}
-              >
-                Teachers
-              </button>
+
               <button
                 className={activeTab === "shifts" ? "active" : ""}
                 onClick={() => setActiveTab("shifts")}
               >
                 Shift Timings
+              </button>
+
+              <button
+                className={activeTab === "teachers" ? "active" : ""}
+                onClick={() => setActiveTab("teachers")}
+              >
+                Teachers
               </button>
             </div>
           </div>

@@ -29,6 +29,31 @@ const getInitialFeeDate = (admissionDate) => {
   return new Date(admissionDate).toISOString().split("T")[0];
 };
 
+const checkStudentCodeInBranch = async (
+  clientOrPool,
+  branchId,
+  studentCode,
+  excludeStudentId = null
+) => {
+  if (!studentCode || !String(studentCode).trim()) return;
+
+  const result = await clientOrPool.query(
+    `
+    SELECT id
+    FROM students
+    WHERE branch_id = $1
+      AND LOWER(TRIM(student_code)) = LOWER(TRIM($2))
+      AND ($3::INT IS NULL OR id <> $3)
+    LIMIT 1
+    `,
+    [branchId, studentCode, excludeStudentId]
+  );
+
+  if (result.rows.length > 0) {
+    throw new ApiError(409, "Student ID already exists in this branch");
+  }
+};
+
 const syncStudentFeeStatusFromCycles = async (clientOrPool = pool, branchId = null) => {
   await clientOrPool.query(
     `
@@ -246,6 +271,12 @@ const createStudent = async (data, currentUser) => {
   try {
     await client.query("BEGIN");
 
+    await checkStudentCodeInBranch(
+      client,
+      branchId,
+      studentCode?.trim() || null
+    );
+
     const studentResult = await client.query(
       `
   INSERT INTO students
@@ -322,11 +353,11 @@ const createStudent = async (data, currentUser) => {
       }
     }
 
-let admissionPaymentId = null;
+    let admissionPaymentId = null;
 
-if (finalFeeStatus === "paid" && paid > 0) {
-  const paymentResult = await client.query(
-    `
+    if (finalFeeStatus === "paid" && paid > 0) {
+      const paymentResult = await client.query(
+        `
     INSERT INTO payments
     (
       branch_id,
@@ -342,23 +373,23 @@ if (finalFeeStatus === "paid" && paid > 0) {
     VALUES ($1,$2,$3,NULL,CURRENT_DATE,$4,$5,$6,$7)
     RETURNING id
     `,
-    [
-      branchId,
-      student.id,
-      paid,
-      getInitialFeeDate(admissionDate),
-      `AUTO-STUDENT-${student.id}`,
-      "Auto payment created from student admission",
-      currentUser.id,
-    ]
-  );
+        [
+          branchId,
+          student.id,
+          paid,
+          getInitialFeeDate(admissionDate),
+          `AUTO-STUDENT-${student.id}`,
+          "Auto payment created from student admission",
+          currentUser.id,
+        ]
+      );
 
-  admissionPaymentId = paymentResult.rows[0].id;
-}
+      admissionPaymentId = paymentResult.rows[0].id;
+    }
 
-if (admissionDate) {
-  await client.query(
-    `
+    if (admissionDate) {
+      await client.query(
+        `
     INSERT INTO student_fee_cycles
     (
       student_id,
@@ -378,17 +409,17 @@ if (admissionDate) {
       paid_date = EXCLUDED.paid_date,
       updated_at = CURRENT_TIMESTAMP
     `,
-    [
-      student.id,
-      branchId,
-      getInitialFeeDate(admissionDate),
-      total,
-      finalFeeStatus === "paid" ? "paid" : "pending",
-      admissionPaymentId,
-      finalFeeStatus === "paid" ? new Date() : null,
-    ]
-  );
-}
+        [
+          student.id,
+          branchId,
+          getInitialFeeDate(admissionDate),
+          total,
+          finalFeeStatus === "paid" ? "paid" : "pending",
+          admissionPaymentId,
+          finalFeeStatus === "paid" ? new Date() : null,
+        ]
+      );
+    }
 
     await client.query(
       `
@@ -614,9 +645,9 @@ const markStudentPaid = async (data, currentUser) => {
       payment = existingPayment.rows[0];
     }
 
-if (feeCycleId) {
-  await client.query(
-    `
+    if (feeCycleId) {
+      await client.query(
+        `
     UPDATE student_fee_cycles
     SET
       amount = $1,
@@ -627,17 +658,17 @@ if (feeCycleId) {
     WHERE id = $4
       AND student_id = $5
     `,
-    [
-      Number(amount),
-      payment?.id || null,
-      paidDate,
-      feeCycleId,
-      studentId,
-    ]
-  );
-} else {
-  await client.query(
-    `
+        [
+          Number(amount),
+          payment?.id || null,
+          paidDate,
+          feeCycleId,
+          studentId,
+        ]
+      );
+    } else {
+      await client.query(
+        `
     INSERT INTO student_fee_cycles
     (
       student_id,
@@ -657,16 +688,16 @@ if (feeCycleId) {
       paid_date = EXCLUDED.paid_date,
       updated_at = CURRENT_TIMESTAMP
     `,
-    [
-      studentId,
-      student.branch_id,
-      feeDate,
-      Number(amount),
-      payment?.id || null,
-      paidDate,
-    ]
-  );
-}
+        [
+          studentId,
+          student.branch_id,
+          feeDate,
+          Number(amount),
+          payment?.id || null,
+          paidDate,
+        ]
+      );
+    }
 
     await syncStudentFeeStatusFromCycles(client, student.branch_id);
 
@@ -1035,26 +1066,26 @@ const updateStudent = async (id, data, currentUser) => {
     }
 
     const admissionDateChanged =
-  admissionDate &&
-  oldStudent.admission_date &&
-  new Date(admissionDate).toISOString().split("T")[0] !==
-    new Date(oldStudent.admission_date).toISOString().split("T")[0];
+      admissionDate &&
+      oldStudent.admission_date &&
+      new Date(admissionDate).toISOString().split("T")[0] !==
+      new Date(oldStudent.admission_date).toISOString().split("T")[0];
 
-const feeChanged =
-  totalFee !== undefined &&
-  Number(totalFee) !== Number(oldStudent.total_fee);
+    const feeChanged =
+      totalFee !== undefined &&
+      Number(totalFee) !== Number(oldStudent.total_fee);
 
-if (admissionDateChanged || feeChanged) {
-  await client.query(
-    `
+    if (admissionDateChanged || feeChanged) {
+      await client.query(
+        `
     DELETE FROM student_fee_cycles
     WHERE student_id = $1
     `,
-    [id]
-  );
+        [id]
+      );
 
-  await client.query(
-    `
+      await client.query(
+        `
     DELETE FROM payments
     WHERE student_id = $1
       AND note IN (
@@ -1063,9 +1094,9 @@ if (admissionDateChanged || feeChanged) {
         'Paid date added from fee list'
       )
     `,
-    [id]
-  );
-}
+        [id]
+      );
+    }
 
     await client.query(
       `

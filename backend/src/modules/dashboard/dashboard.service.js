@@ -23,28 +23,28 @@ const getDashboardSummary = async (query, currentUser) => {
 
   const result = await pool.query(
     `
-    SELECT
-      COUNT(DISTINCT s.id) AS total_students,
+SELECT
+  COUNT(DISTINCT s.id) FILTER (
+    WHERE s.student_status = 'active'
+  ) AS total_students,
 
-      COUNT(DISTINCT s.id) FILTER (
-        WHERE s.student_status = 'active'
-      ) AS active_students,
+  COUNT(DISTINCT s.id) FILTER (
+    WHERE s.student_status = 'active'
+  ) AS active_students,
 
-      COUNT(DISTINCT s.id) FILTER (
-        WHERE s.student_status = 'non_active'
-      ) AS non_active_students,
+  COUNT(DISTINCT s.id) FILTER (
+    WHERE s.student_status = 'non_active'
+  ) AS non_active_students,
 
 COUNT(DISTINCT s.id) FILTER (
   WHERE latest_cycle.status = 'paid'
+    AND s.student_status = 'active'
 ) AS paid_students,
 
 COUNT(DISTINCT s.id) FILTER (
   WHERE latest_cycle.status = 'pending'
+    AND s.student_status = 'active'
 ) AS pending_students,
-
-      COUNT(DISTINCT s.id) FILTER (
-        WHERE s.fee_status = 'partial'
-      ) AS partial_students,
 
       COALESCE((
         SELECT SUM(p.amount)
@@ -101,7 +101,6 @@ COALESCE((
     nonActiveStudents: Number(data.non_active_students) || 0,
     paidStudents: Number(data.paid_students) || 0,
     pendingStudents: Number(data.pending_students) || 0,
-    partialStudents: Number(data.partial_students) || 0,
     totalRevenue: Number(data.total_revenue) || 0,
     monthlyRevenue,
     totalExpenses: Number(data.total_expenses) || 0,
@@ -220,13 +219,16 @@ const getStudentStats = async (query, currentUser) => {
 
   const result = await pool.query(
     `
-    SELECT
-      fee_status,
-      COUNT(*) AS total
-    FROM students
-    WHERE ($1::INT IS NULL OR branch_id = $1)
-    GROUP BY fee_status
-    ORDER BY fee_status ASC
+SELECT
+  fee_status,
+  COUNT(*) AS total
+FROM students
+WHERE
+  ($1::INT IS NULL OR branch_id = $1)
+  AND student_status = 'active'
+  AND fee_status IN ('paid', 'pending')
+GROUP BY fee_status
+ORDER BY fee_status ASC
     `,
     [branchId]
   );
@@ -246,16 +248,19 @@ const getCoursePopularity = async (query, currentUser) => {
 
   const result = await pool.query(
     `
-    SELECT
-      c.id,
-      c.course_name,
-      COUNT(sc.student_id) AS total_students
-    FROM courses c
-    LEFT JOIN student_courses sc ON sc.course_id = c.id
-    WHERE ($1::INT IS NULL OR c.branch_id = $1)
-    GROUP BY c.id, c.course_name
-    ORDER BY total_students DESC
-    LIMIT 10
+SELECT
+  c.id,
+  c.course_name,
+  COUNT(s.id) AS total_students
+FROM courses c
+LEFT JOIN student_courses sc ON sc.course_id = c.id
+LEFT JOIN students s
+  ON s.id = sc.student_id
+  AND s.student_status = 'active'
+WHERE ($1::INT IS NULL OR c.branch_id = $1)
+GROUP BY c.id, c.course_name
+ORDER BY total_students DESC
+LIMIT 10
     `,
     [branchId]
   );

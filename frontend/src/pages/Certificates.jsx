@@ -5,6 +5,7 @@ import {
   Eye,
   Plus,
   Search,
+  Trash2,
 } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
@@ -288,6 +289,21 @@ const Certificates = () => {
     }
   };
 
+  const deleteCertificate = async (certificate) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete certificate ${certificate.certificate_no}?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await axiosInstance.delete(`/certificates/${certificate.id}`);
+    fetchCertificates();
+  } catch (error) {
+    alert(error.response?.data?.message || "Failed to delete certificate");
+  }
+};
+
   const columns = [
     {
       key: "certificate_no",
@@ -336,29 +352,40 @@ const Certificates = () => {
       title: "Created",
       render: (row) => formatDate(row.created_at),
     },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (row) => (
-        <div className="certificate-action-buttons">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => previewCertificate(row)}
-          >
-            <Eye size={14} /> Preview
-          </Button>
+{
+  key: "actions",
+  title: "Actions",
+  render: (row) => (
+    <div className="certificate-action-buttons">
+      <button
+        type="button"
+        className="certificate-icon-btn certificate-preview-btn"
+        onClick={() => previewCertificate(row)}
+        title="Preview"
+      >
+        <Eye size={15} />
+      </button>
 
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => downloadCertificate(row)}
-          >
-            <Download size={14} /> Download
-          </Button>
-        </div>
-      ),
-    },
+      <button
+        type="button"
+        className="certificate-icon-btn certificate-download-btn"
+        onClick={() => downloadCertificate(row)}
+        title="Download"
+      >
+        <Download size={15} />
+      </button>
+
+      <button
+        type="button"
+        className="certificate-icon-btn certificate-delete-btn"
+        onClick={() => deleteCertificate(row)}
+        title="Delete"
+      >
+        <Trash2 size={15} />
+      </button>
+    </div>
+  ),
+},
   ];
 
   if (loading) {

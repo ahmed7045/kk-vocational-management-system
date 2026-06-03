@@ -3,13 +3,13 @@ const env = require("../config/env");
 
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, env.jwtAccessSecret, {
-    expiresIn: "15m",
+    expiresIn: env.jwtAccessExpiresIn,
   });
 };
 
 const generateRefreshToken = (payload) => {
   return jwt.sign(payload, env.jwtRefreshSecret, {
-    expiresIn: "7d",
+    expiresIn: env.jwtRefreshExpiresIn,
   });
 };
 

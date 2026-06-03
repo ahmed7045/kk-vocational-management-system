@@ -9,6 +9,7 @@ const {
   studentsDropdown,
   list,
   download,
+  remove,
 } = require("./certificate.controller");
 
 router.get(
@@ -32,6 +33,12 @@ router.post(
   create
 );
 
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("certificates.generate"),
+  remove
+);
 
 
 router.get(
