@@ -739,8 +739,9 @@ const getStudents = async (filters = {}) => {
     limit = 50,
   } = filters;
 
-  await updateCompletedStudentsStatus(branchId);
-  await ensureStudentFeeCycles(branchId);
+await updateCompletedStudentsStatus(branchId);
+await ensureStudentFeeCycles(branchId);
+await syncStudentFeeStatusFromCycles(pool, branchId);
 
   const offset = (Number(page) - 1) * Number(limit);
 

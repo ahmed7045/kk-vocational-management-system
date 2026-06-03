@@ -6,6 +6,18 @@ const canAccessBranch = (user, branchId) => {
   return Number(user.branchId) === Number(branchId);
 };
 
+const normalizeCourseDuration = (duration) => {
+  if (!duration || !String(duration).trim()) return null;
+
+  const value = String(duration).trim();
+
+  if (/^\d+$/.test(value)) {
+    return `${value} months`;
+  }
+
+  return value;
+};
+
 const createCourse = async (data, currentUser) => {
   const {
     branchId,
@@ -24,6 +36,8 @@ const createCourse = async (data, currentUser) => {
     throw new ApiError(403, "You cannot create course for this branch");
   }
 
+  const finalDuration = normalizeCourseDuration(duration);
+
   const result = await pool.query(
     `
     INSERT INTO courses
@@ -35,7 +49,7 @@ const createCourse = async (data, currentUser) => {
       branchId,
       courseName,
       courseCode || null,
-      duration || null,
+      finalDuration,
       fee || 0,
       description || null,
       currentUser.id,
@@ -123,6 +137,8 @@ const updateCourse = async (id, data, currentUser) => {
     isActive,
   } = data;
 
+  const finalDuration = normalizeCourseDuration(duration);
+
   const result = await pool.query(
     `
     UPDATE courses
@@ -139,7 +155,7 @@ const updateCourse = async (id, data, currentUser) => {
     [
       courseName || null,
       courseCode || null,
-      duration || null,
+      finalDuration,
       fee ?? null,
       description || null,
       typeof isActive === "boolean" ? isActive : null,
