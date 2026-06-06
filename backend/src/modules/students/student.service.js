@@ -1235,9 +1235,20 @@ const deleteStudent = async (studentId, currentUser) => {
   }
 };
 
+const getPaidStudentsReportData = async (filters = {}) => {
+  return getStudents({
+    ...filters,
+    feeStatus: "paid",
+    studentStatus: "active",
+    page: 1,
+    limit: 10000,
+  });
+};
+
 module.exports = {
   createStudent,
   getStudents,
+  getPaidStudentsReportData,
   getStudentById,
   updateStudent,
   updateStudentStatus,

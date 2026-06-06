@@ -205,9 +205,10 @@ tr:hover td {
 } */
 
 .table-empty {
-  padding: 24px;
+  padding: 28px 24px;
   color: var(--text-muted);
-  text-align: center;
+  text-align: center !important;
+  width: 100%;
 }
 
 .loader-page {

@@ -12,6 +12,7 @@ const {
   updateStatus,
   markPaid,
   updatePaymentDate,
+  paidStudentsPdfReport,
   remove,
 } = require("./student.controller");
 
@@ -20,6 +21,13 @@ router.get(
   authMiddleware,
   requirePermission("students.view"),
   list
+);
+
+router.get(
+  "/reports/paid/pdf",
+  authMiddleware,
+  requirePermission("students.view"),
+  paidStudentsPdfReport
 );
 
 router.post(
@@ -35,6 +43,8 @@ router.get(
   requirePermission("students.view"),
   details
 );
+
+
 
 router.put(
   "/:id",

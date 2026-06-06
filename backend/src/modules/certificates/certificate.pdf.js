@@ -206,7 +206,7 @@ doc
   .fillColor("#b30000")
   .font("Helvetica-Bold")
   .fontSize(10)
-  .text(certificate.registration_text || "(Regd)", pageWidth - 168, 178, {
+  .text(certificate.registration_text || "(Regd)", pageWidth - 148, 178, {
     width: 70,
     align: "left",
     lineBreak: false,

@@ -763,6 +763,8 @@ const getAllCharityRecords = async (query) => {
   const fromDate = query.fromDate || null;
   const toDate = query.toDate || null;
   const charityType = query.charityType || null;
+  const month = query.month || null;
+  const year = query.year || null;
 
   const result = await pool.query(
     `
@@ -785,23 +787,83 @@ const getAllCharityRecords = async (query) => {
     FROM charity_records cr
     LEFT JOIN charities c ON c.id = cr.charity_id
     LEFT JOIN users u ON u.id = cr.created_by
-WHERE
-  ($1::DATE IS NULL OR cr.charity_date >= $1)
-  AND ($2::DATE IS NULL OR cr.charity_date <= $2)
-  AND ($3::VARCHAR IS NULL OR cr.charity_type = $3)
-  AND (
-    c.charity_name ILIKE $4
-    OR c.phone ILIKE $4
-    OR c.cnic ILIKE $4
-    OR cr.charity_type ILIKE $4
-  )
-ORDER BY cr.charity_date DESC, cr.id DESC
-LIMIT $5 OFFSET $6
+    WHERE
+      (
+        ($1::DATE IS NOT NULL AND $2::DATE IS NOT NULL AND cr.charity_date >= $1 AND cr.charity_date <= $2)
+        OR
+        ($1::DATE IS NULL AND $2::DATE IS NULL AND ($5::INT IS NULL OR EXTRACT(MONTH FROM cr.charity_date) = $5) AND ($6::INT IS NULL OR EXTRACT(YEAR FROM cr.charity_date) = $6))
+      )
+      AND ($3::VARCHAR IS NULL OR cr.charity_type = $3)
+      AND (
+        c.charity_name ILIKE $4
+        OR c.phone ILIKE $4
+        OR c.cnic ILIKE $4
+        OR cr.charity_type ILIKE $4
+      )
+    ORDER BY cr.charity_date DESC, cr.id DESC
+    LIMIT $7 OFFSET $8
     `,
-    [fromDate, toDate,charityType, `%${search}%`, limit, offset]
+    [
+      fromDate,
+      toDate,
+      charityType,
+      `%${search}%`,
+      month ? Number(month) : null,
+      year ? Number(year) : null,
+      limit,
+      offset,
+    ]
   );
 
   return result.rows;
+};
+
+const getCharityRecordsReportData = async (query) => {
+  return getAllCharityRecords({
+    ...query,
+    page: 1,
+    limit: 10000,
+  });
+};
+
+const getCharityRecordsTotal = async (query) => {
+  const search = query.search || "";
+  const fromDate = query.fromDate || null;
+  const toDate = query.toDate || null;
+  const charityType = query.charityType || null;
+  const month = query.month || null;
+  const year = query.year || null;
+
+  const result = await pool.query(
+    `
+    SELECT COALESCE(SUM(cr.amount), 0) AS total_charity
+    FROM charity_records cr
+    LEFT JOIN charities c ON c.id = cr.charity_id
+    WHERE
+      (
+        ($1::DATE IS NOT NULL AND $2::DATE IS NOT NULL AND cr.charity_date >= $1 AND cr.charity_date <= $2)
+        OR
+        ($1::DATE IS NULL AND $2::DATE IS NULL AND ($5::INT IS NULL OR EXTRACT(MONTH FROM cr.charity_date) = $5) AND ($6::INT IS NULL OR EXTRACT(YEAR FROM cr.charity_date) = $6))
+      )
+      AND ($3::VARCHAR IS NULL OR cr.charity_type = $3)
+      AND (
+        c.charity_name ILIKE $4
+        OR c.phone ILIKE $4
+        OR c.cnic ILIKE $4
+        OR cr.charity_type ILIKE $4
+      )
+    `,
+    [
+      fromDate,
+      toDate,
+      charityType,
+      `%${search}%`,
+      month ? Number(month) : null,
+      year ? Number(year) : null,
+    ]
+  );
+
+  return Number(result.rows[0].total_charity) || 0;
 };
 
 const getDonations = async (query) => {
@@ -813,16 +875,18 @@ const getDonations = async (query) => {
   const fromDate = query.fromDate || null;
   const toDate = query.toDate || null;
   const methodId = query.methodId || query.donationMethodId || null;
+  const month = query.month || null;
+  const year = query.year || null;
 
   const result = await pool.query(
     `
-SELECT
-  d.id,
-  d.donor_id,
-  d.donation_method_id,
-  d.amount,
-  d.donation_date,
-  d.created_at,
+    SELECT
+      d.id,
+      d.donor_id,
+      d.donation_method_id,
+      d.amount,
+      d.donation_date,
+      d.created_at,
 
       dn.full_name AS donor_name,
       dn.full_name AS name,
@@ -837,28 +901,81 @@ SELECT
     LEFT JOIN donation_methods dm ON dm.id = d.donation_method_id
     LEFT JOIN users u ON u.id = d.created_by
     WHERE
-      ($1::DATE IS NULL OR d.donation_date >= $1)
-      AND ($2::DATE IS NULL OR d.donation_date <= $2)
+      (
+        ($1::DATE IS NOT NULL AND $2::DATE IS NOT NULL AND d.donation_date >= $1 AND d.donation_date <= $2)
+        OR
+        ($1::DATE IS NULL AND $2::DATE IS NULL AND ($5::INT IS NULL OR EXTRACT(MONTH FROM d.donation_date) = $5) AND ($6::INT IS NULL OR EXTRACT(YEAR FROM d.donation_date) = $6))
+      )
       AND ($3::INT IS NULL OR d.donation_method_id = $3)
       AND (
         dn.full_name ILIKE $4
         OR dn.phone ILIKE $4
         OR dm.method_name ILIKE $4
       )
-    ORDER BY d.id DESC
-    LIMIT $5 OFFSET $6
+    ORDER BY d.donation_date DESC, d.id DESC
+    LIMIT $7 OFFSET $8
     `,
     [
       fromDate,
       toDate,
       methodId,
       `%${search}%`,
+      month ? Number(month) : null,
+      year ? Number(year) : null,
       limit,
       offset,
     ]
   );
 
   return result.rows;
+};
+
+const getDonationsReportData = async (query) => {
+  return getDonations({
+    ...query,
+    page: 1,
+    limit: 10000,
+  });
+};
+
+const getDonationsTotal = async (query) => {
+  const search = query.search || "";
+  const fromDate = query.fromDate || null;
+  const toDate = query.toDate || null;
+  const methodId = query.methodId || query.donationMethodId || null;
+  const month = query.month || null;
+  const year = query.year || null;
+
+  const result = await pool.query(
+    `
+    SELECT COALESCE(SUM(d.amount), 0) AS total_donation
+    FROM donations d
+    LEFT JOIN donors dn ON dn.id = d.donor_id
+    LEFT JOIN donation_methods dm ON dm.id = d.donation_method_id
+    WHERE
+      (
+        ($1::DATE IS NOT NULL AND $2::DATE IS NOT NULL AND d.donation_date >= $1 AND d.donation_date <= $2)
+        OR
+        ($1::DATE IS NULL AND $2::DATE IS NULL AND ($5::INT IS NULL OR EXTRACT(MONTH FROM d.donation_date) = $5) AND ($6::INT IS NULL OR EXTRACT(YEAR FROM d.donation_date) = $6))
+      )
+      AND ($3::INT IS NULL OR d.donation_method_id = $3)
+      AND (
+        dn.full_name ILIKE $4
+        OR dn.phone ILIKE $4
+        OR dm.method_name ILIKE $4
+      )
+    `,
+    [
+      fromDate,
+      toDate,
+      methodId,
+      `%${search}%`,
+      month ? Number(month) : null,
+      year ? Number(year) : null,
+    ]
+  );
+
+  return Number(result.rows[0].total_donation) || 0;
 };
 
 const getDonationById = async (id) => {
@@ -1063,6 +1180,7 @@ const createWelfareApplication = async (data, currentUser) => {
     needsSchoolShoes,
     needsUniversityFee,
     needsOtherEducationHelp,
+    supportOptions,
   } = data;
 
   if (!applicantName) {
@@ -1101,6 +1219,7 @@ const createWelfareApplication = async (data, currentUser) => {
       needs_school_shoes,
       needs_university_fee,
       needs_other_education_help,
+      support_options,
 
       created_by
     )
@@ -1108,7 +1227,7 @@ VALUES
 (
   $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
   $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-  $21,$22,$23,$24,$25,$26,$27
+  $21,$22,$23,$24,$25,$26,$27,$28
 )
     RETURNING *
     `,
@@ -1143,6 +1262,7 @@ VALUES
       Boolean(needsSchoolShoes),
       Boolean(needsUniversityFee),
       Boolean(needsOtherEducationHelp),
+      JSON.stringify(Array.isArray(supportOptions) ? supportOptions : []),
 
       currentUser.id,
     ]
@@ -1198,6 +1318,7 @@ const updateWelfareApplication = async (id, data, currentUser) => {
     needsSchoolShoes,
     needsUniversityFee,
     needsOtherEducationHelp,
+    supportOptions,
   } = data;
 
   if (!applicantName) {
@@ -1235,9 +1356,10 @@ const updateWelfareApplication = async (id, data, currentUser) => {
     needs_school_shoes = $24,
     needs_university_fee = $25,
     needs_other_education_help = $26,
+    support_options = $27,
 
     updated_at = CURRENT_TIMESTAMP
-  WHERE id = $27
+  WHERE id = $28
   RETURNING *
   `,
     [
@@ -1268,6 +1390,7 @@ const updateWelfareApplication = async (id, data, currentUser) => {
       Boolean(needsSchoolShoes),
       Boolean(needsUniversityFee),
       Boolean(needsOtherEducationHelp),
+      JSON.stringify(Array.isArray(supportOptions) ? supportOptions : []),
 
       id,
     ]
@@ -1360,6 +1483,7 @@ const getWelfareApplications = async (query) => {
       needs_school_shoes,
       needs_university_fee,
       needs_other_education_help,
+      support_options,
 
       created_at
     FROM welfare_applications
@@ -1831,11 +1955,14 @@ module.exports = {
   updateCharity,
   deleteCharity,
   getCharityHistory,
-  createCharityForProfile,
   getAllCharityRecords,
+  getCharityRecordsReportData,
+  getCharityRecordsTotal,
 
   createDonation,
   getDonations,
+  getDonationsReportData,
+  getDonationsTotal,
   getDonationById,
   getDonorDonations,
   createDonationForDonor,

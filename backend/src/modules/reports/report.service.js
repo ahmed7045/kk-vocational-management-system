@@ -222,8 +222,674 @@ const getWelfareReport = async (query) => {
   };
 };
 
+const getMonthRange = (month, year) => {
+  const selectedMonth = Number(month);
+  const selectedYear = Number(year);
+
+  if (!selectedMonth || !selectedYear) {
+    throw new ApiError(400, "Month and year are required");
+  }
+
+  const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+  const monthEnd = new Date(selectedYear, selectedMonth, 0);
+  const previousEnd = new Date(selectedYear, selectedMonth - 1, 0);
+
+  return {
+    monthStart: monthStart.toISOString().split("T")[0],
+    monthEnd: monthEnd.toISOString().split("T")[0],
+    previousEnd: previousEnd.toISOString().split("T")[0],
+  };
+};
+
+const generateReportNo = (portalType) => {
+  const prefix = portalType === "welfare" ? "WMR" : "VMR";
+  const year = new Date().getFullYear();
+  const random = Math.floor(100000 + Math.random() * 900000);
+
+  return `${prefix}-${year}-${random}`;
+};
+
+const getUserFullName = async (userId) => {
+  const result = await pool.query(
+    `
+    SELECT full_name
+    FROM users
+    WHERE id = $1
+    `,
+    [userId]
+  );
+
+  return result.rows[0]?.full_name || "User";
+};
+
+const getBranchManagerName = async (branchId) => {
+  const result = await pool.query(
+    `
+    SELECT u.full_name
+    FROM users u
+    LEFT JOIN roles r ON r.id = u.role_id
+    WHERE u.branch_id = $1
+      AND (
+        LOWER(r.name) LIKE '%manager%'
+        OR LOWER(r.name) LIKE '%admin%'
+      )
+    ORDER BY
+      CASE
+        WHEN LOWER(r.name) LIKE '%manager%' THEN 1
+        WHEN LOWER(r.name) LIKE '%admin%' THEN 2
+        ELSE 3
+      END,
+      u.id ASC
+    LIMIT 1
+    `,
+    [branchId]
+  );
+
+  return result.rows[0]?.full_name || "-";
+};
+
+const getOpeningBalance = async (query, currentUser) => {
+  const branchId = getBranchIdForUser(query.branchId, currentUser);
+
+  if (!branchId) {
+    throw new ApiError(400, "Branch is required");
+  }
+
+  checkBranchAccess(branchId, currentUser);
+
+  const result = await pool.query(
+    `
+    SELECT
+      id,
+      branch_id,
+      portal_type,
+      opening_balance,
+      opening_date,
+      note
+    FROM financial_opening_balances
+    WHERE branch_id = $1
+      AND portal_type = 'vocational'
+    LIMIT 1
+    `,
+    [branchId]
+  );
+
+  return result.rows[0] || null;
+};
+
+const upsertOpeningBalance = async (data, currentUser) => {
+  if (currentUser.role !== "super_admin") {
+    throw new ApiError(403, "Only super admin can set opening balance");
+  }
+
+  const { branchId, openingBalance, openingDate, note } = data;
+
+  if (!branchId || openingBalance === undefined || !openingDate) {
+    throw new ApiError(400, "Branch, opening balance and opening date are required");
+  }
+
+  const result = await pool.query(
+    `
+    INSERT INTO financial_opening_balances
+    (
+      branch_id,
+      portal_type,
+      opening_balance,
+      opening_date,
+      note,
+      created_by
+    )
+    VALUES ($1, 'vocational', $2, $3, $4, $5)
+    ON CONFLICT (branch_id, portal_type)
+    DO UPDATE SET
+      opening_balance = EXCLUDED.opening_balance,
+      opening_date = EXCLUDED.opening_date,
+      note = EXCLUDED.note,
+      updated_at = CURRENT_TIMESTAMP
+    RETURNING *
+    `,
+    [
+      branchId,
+      Number(openingBalance || 0),
+      openingDate,
+      note || null,
+      currentUser.id,
+    ]
+  );
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "UPSERT_OPENING_BALANCE",
+      "reports",
+      `Set opening balance for branch ID ${branchId}`,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const getVocationalMonthlyReport = async (query, currentUser) => {
+  const branchId = getBranchIdForUser(query.branchId, currentUser);
+
+  if (!branchId) {
+    throw new ApiError(400, "Branch is required");
+  }
+
+  checkBranchAccess(branchId, currentUser);
+
+  const { monthStart, monthEnd, previousEnd } = getMonthRange(
+    query.month,
+    query.year
+  );
+
+  const openingResult = await pool.query(
+    `
+    SELECT opening_balance, opening_date
+    FROM financial_opening_balances
+    WHERE branch_id = $1
+      AND portal_type = 'vocational'
+    LIMIT 1
+    `,
+    [branchId]
+  );
+
+  if (openingResult.rows.length === 0) {
+    throw new ApiError(400, "Please set opening balance first");
+  }
+
+  const openingBalance = Number(openingResult.rows[0].opening_balance) || 0;
+  const openingDate = openingResult.rows[0].opening_date;
+
+  const branchResult = await pool.query(
+    `
+    SELECT name
+    FROM branches
+    WHERE id = $1
+    `,
+    [branchId]
+  );
+
+  const previousFeesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM student_fee_cycles
+    WHERE branch_id = $1
+      AND status = 'paid'
+      AND paid_date IS NOT NULL
+      AND paid_date >= $2
+      AND paid_date <= $3
+    `,
+    [branchId, openingDate, previousEnd]
+  );
+
+  const previousExpensesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM expenses
+    WHERE branch_id = $1
+      AND expense_type IN ('vocational', 'branch')
+      AND expense_date >= $2
+      AND expense_date <= $3
+    `,
+    [branchId, openingDate, previousEnd]
+  );
+
+  const monthlyFeesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM student_fee_cycles
+    WHERE branch_id = $1
+      AND status = 'paid'
+      AND paid_date IS NOT NULL
+      AND paid_date >= $2
+      AND paid_date <= $3
+    `,
+    [branchId, monthStart, monthEnd]
+  );
+
+  const monthlyExpensesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM expenses
+    WHERE branch_id = $1
+      AND expense_type IN ('vocational', 'branch')
+      AND expense_date >= $2
+      AND expense_date <= $3
+    `,
+    [branchId, monthStart, monthEnd]
+  );
+
+  const previousFees = Number(previousFeesResult.rows[0].total) || 0;
+  const previousExpenses = Number(previousExpensesResult.rows[0].total) || 0;
+  const collectedFees = Number(monthlyFeesResult.rows[0].total) || 0;
+  const expenses = Number(monthlyExpensesResult.rows[0].total) || 0;
+
+  const previousBalance = openingBalance + previousFees - previousExpenses;
+  const currentBalance = previousBalance + collectedFees - expenses;
+
+  return {
+    branchId,
+    branchName: branchResult.rows[0]?.name || "-",
+    branchManagerName: await getBranchManagerName(branchId),
+    generatedBy: await getUserFullName(currentUser.id),
+    month: Number(query.month),
+    year: Number(query.year),
+    monthStart,
+    monthEnd,
+    openingBalance,
+    openingDate,
+    previousBalance,
+    collectedFees,
+    expenses,
+    currentBalance,
+  };
+};
+
+const getWelfareOpeningBalance = async () => {
+  const result = await pool.query(
+    `
+    SELECT
+      id,
+      branch_id,
+      portal_type,
+      opening_balance,
+      opening_date,
+      note
+    FROM financial_opening_balances
+    WHERE branch_id IS NULL
+      AND portal_type = 'welfare'
+    LIMIT 1
+    `
+  );
+
+  return result.rows[0] || null;
+};
+
+const upsertWelfareOpeningBalance = async (data, currentUser) => {
+  if (currentUser.role !== "super_admin") {
+    throw new ApiError(403, "Only super admin can set opening balance");
+  }
+
+  const { openingBalance, openingDate, note } = data;
+
+  if (openingBalance === undefined || !openingDate) {
+    throw new ApiError(400, "Opening balance and opening date are required");
+  }
+
+  const existing = await pool.query(
+    `
+    SELECT id
+    FROM financial_opening_balances
+    WHERE branch_id IS NULL
+      AND portal_type = 'welfare'
+    LIMIT 1
+    `
+  );
+
+  let result;
+
+  if (existing.rows.length > 0) {
+    result = await pool.query(
+      `
+      UPDATE financial_opening_balances
+      SET
+        opening_balance = $1,
+        opening_date = $2,
+        note = $3,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING *
+      `,
+      [
+        Number(openingBalance || 0),
+        openingDate,
+        note || null,
+        existing.rows[0].id,
+      ]
+    );
+  } else {
+    result = await pool.query(
+      `
+      INSERT INTO financial_opening_balances
+      (
+        branch_id,
+        portal_type,
+        opening_balance,
+        opening_date,
+        note,
+        created_by
+      )
+      VALUES (NULL, 'welfare', $1, $2, $3, $4)
+      RETURNING *
+      `,
+      [
+        Number(openingBalance || 0),
+        openingDate,
+        note || null,
+        currentUser.id,
+      ]
+    );
+  }
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "UPSERT_WELFARE_OPENING_BALANCE",
+      "reports",
+      "Set welfare opening balance",
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const getWelfareMonthlyReport = async (query, currentUser) => {
+  const { monthStart, monthEnd, previousEnd } = getMonthRange(
+    query.month,
+    query.year
+  );
+
+  const openingResult = await pool.query(
+    `
+    SELECT opening_balance, opening_date
+    FROM financial_opening_balances
+    WHERE branch_id IS NULL
+      AND portal_type = 'welfare'
+    LIMIT 1
+    `
+  );
+
+  if (openingResult.rows.length === 0) {
+    throw new ApiError(400, "Please set opening balance first");
+  }
+
+  const openingBalance = Number(openingResult.rows[0].opening_balance) || 0;
+  const openingDate = openingResult.rows[0].opening_date;
+
+  const previousDonationsResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM donations
+    WHERE donation_date >= $1
+      AND donation_date <= $2
+    `,
+    [openingDate, previousEnd]
+  );
+
+  const previousCharityResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM charity_records
+    WHERE charity_date >= $1
+      AND charity_date <= $2
+    `,
+    [openingDate, previousEnd]
+  );
+
+  const previousExpensesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM expenses
+    WHERE expense_type = 'welfare'
+      AND expense_date >= $1
+      AND expense_date <= $2
+    `,
+    [openingDate, previousEnd]
+  );
+
+  const monthlyDonationsResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM donations
+    WHERE donation_date >= $1
+      AND donation_date <= $2
+    `,
+    [monthStart, monthEnd]
+  );
+
+  const monthlyCharityResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM charity_records
+    WHERE charity_date >= $1
+      AND charity_date <= $2
+    `,
+    [monthStart, monthEnd]
+  );
+
+  const monthlyExpensesResult = await pool.query(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM expenses
+    WHERE expense_type = 'welfare'
+      AND expense_date >= $1
+      AND expense_date <= $2
+    `,
+    [monthStart, monthEnd]
+  );
+
+  const previousDonations = Number(previousDonationsResult.rows[0].total) || 0;
+  const previousCharity = Number(previousCharityResult.rows[0].total) || 0;
+  const previousExpenses = Number(previousExpensesResult.rows[0].total) || 0;
+
+  const donations = Number(monthlyDonationsResult.rows[0].total) || 0;
+  const charity = Number(monthlyCharityResult.rows[0].total) || 0;
+  const expenses = Number(monthlyExpensesResult.rows[0].total) || 0;
+
+  const previousBalance =
+    openingBalance + previousDonations - previousCharity - previousExpenses;
+
+  const currentBalance = previousBalance + donations - charity - expenses;
+
+  return {
+    generatedBy: await getUserFullName(currentUser.id),
+    month: Number(query.month),
+    year: Number(query.year),
+    monthStart,
+    monthEnd,
+    openingBalance,
+    openingDate,
+    previousBalance,
+    donations,
+    charity,
+    expenses,
+    currentBalance,
+  };
+};
+
+const getSavedMonthlyReports = async (query, currentUser) => {
+  const portalType = query.portalType === "welfare" ? "welfare" : "vocational";
+
+  let branchId = query.branchId || null;
+
+  if (portalType === "vocational") {
+    branchId = getBranchIdForUser(query.branchId, currentUser);
+
+    if (!branchId) {
+      throw new ApiError(400, "Branch is required");
+    }
+
+    checkBranchAccess(branchId, currentUser);
+  }
+
+  const result = await pool.query(
+    `
+    SELECT
+      r.id,
+      r.report_no,
+      r.branch_id,
+      r.portal_type,
+      r.report_month,
+      r.report_year,
+      r.previous_balance,
+      r.collected_fees,
+      r.donations,
+      r.charity_amount,
+      r.expenses,
+      r.current_balance,
+      r.generated_at,
+      u.full_name AS generated_by_name
+    FROM monthly_financial_reports r
+    LEFT JOIN users u ON u.id = r.generated_by
+    WHERE
+      r.portal_type = $1
+      AND (
+        ($1 = 'welfare' AND r.branch_id IS NULL)
+        OR
+        ($1 = 'vocational' AND r.branch_id = $2)
+      )
+    ORDER BY r.generated_at DESC, r.id DESC
+    `,
+    [portalType, branchId]
+  );
+
+  return result.rows;
+};
+
+const createSavedMonthlyReport = async (data, currentUser) => {
+  const portalType = data.portalType === "welfare" ? "welfare" : "vocational";
+
+  let reportData;
+  let branchId = null;
+
+  if (portalType === "welfare") {
+    reportData = await getWelfareMonthlyReport(data, currentUser);
+  } else {
+    branchId = getBranchIdForUser(data.branchId, currentUser);
+
+    if (!branchId) {
+      throw new ApiError(400, "Branch is required");
+    }
+
+    reportData = await getVocationalMonthlyReport(
+      {
+        ...data,
+        branchId,
+      },
+      currentUser
+    );
+  }
+
+  const result = await pool.query(
+    `
+    INSERT INTO monthly_financial_reports
+    (
+      report_no,
+      branch_id,
+      portal_type,
+      report_month,
+      report_year,
+      previous_balance,
+      collected_fees,
+      donations,
+      charity_amount,
+      expenses,
+      current_balance,
+      generated_by
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    RETURNING *
+    `,
+    [
+      generateReportNo(portalType),
+      portalType === "welfare" ? null : branchId,
+      portalType,
+      Number(data.month),
+      Number(data.year),
+      reportData.previousBalance,
+      reportData.collectedFees || 0,
+      reportData.donations || 0,
+      reportData.charity || 0,
+      reportData.expenses || 0,
+      reportData.currentBalance,
+      currentUser.id,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+const getSavedMonthlyReportById = async (id, currentUser) => {
+  const result = await pool.query(
+    `
+    SELECT
+      r.*,
+      u.full_name AS generated_by_name,
+      b.name AS branch_name
+    FROM monthly_financial_reports r
+    LEFT JOIN users u ON u.id = r.generated_by
+    LEFT JOIN branches b ON b.id = r.branch_id
+    WHERE r.id = $1
+    `,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Report not found");
+  }
+
+  const report = result.rows[0];
+
+  if (report.portal_type === "vocational") {
+    checkBranchAccess(report.branch_id, currentUser);
+  }
+
+  return report;
+};
+
+const deleteSavedMonthlyReport = async (id, currentUser) => {
+  const report = await getSavedMonthlyReportById(id, currentUser);
+
+  const result = await pool.query(
+    `
+    DELETE FROM monthly_financial_reports
+    WHERE id = $1
+    RETURNING id
+    `,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Report not found");
+  }
+
+  await pool.query(
+    `
+    INSERT INTO audit_logs (user_id, action, module_name, description)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [
+      currentUser.id,
+      "DELETE_MONTHLY_FINANCIAL_REPORT",
+      "reports",
+      `Deleted ${report.portal_type} report ${report.report_no}`,
+    ]
+  );
+
+  return true;
+};
+
 module.exports = {
   getStudentReport,
   getFinancialReport,
   getWelfareReport,
+  getOpeningBalance,
+  upsertOpeningBalance,
+  getVocationalMonthlyReport,
+  getWelfareOpeningBalance,
+  upsertWelfareOpeningBalance,
+  getWelfareMonthlyReport,
+  getSavedMonthlyReports,
+  createSavedMonthlyReport,
+  getSavedMonthlyReportById,
+  deleteSavedMonthlyReport,
 };

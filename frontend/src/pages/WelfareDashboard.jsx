@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
   ChevronDown,
+  Download,
 } from "lucide-react";
 
 import {
@@ -47,6 +48,25 @@ const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 const getTodayDate = () => new Date().toISOString().split("T")[0];
 
+const supportNeedOptions = [
+  { label: "Cash", value: "cash" },
+  { label: "Ration", value: "ration" },
+  { label: "Medicines", value: "medicines" },
+  { label: "MRI", value: "mri" },
+  { label: "CT Scan", value: "ct_scan" },
+  { label: "Ultrasound", value: "ultrasound" },
+  { label: "Operation", value: "operation" },
+  { label: "ECG", value: "ecg" },
+  { label: "Dental", value: "dental" },
+  { label: "Doctor Fee", value: "doctor_fee" },
+  { label: "Lab", value: "lab" },
+  { label: "X Ray", value: "x_ray" },
+  { label: "EEG", value: "eeg" },
+  { label: "Physiotherapy", value: "physiotherapy" },
+  { label: "Chemotherapy", value: "chemotherapy" },
+  { label: "Radio Therapy", value: "radio_therapy" },
+];
+
 const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   const { user } = useAuth();
 
@@ -63,7 +83,9 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   const [donors, setDonors] = useState([]);
   const [charities, setCharities] = useState([]);
   const [charityRecords, setCharityRecords] = useState([]);
+  const [charityRecordTotal, setCharityRecordTotal] = useState(0);
   const [donations, setDonations] = useState([]);
+  const [donationTotal, setDonationTotal] = useState(0);
   const [applications, setApplications] = useState([]);
   const [donationMethods, setDonationMethods] = useState([]);
 
@@ -112,12 +134,16 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     charityRecordSearch: "",
     charityRecordFromDate: "",
     charityRecordToDate: "",
+    charityRecordMonth: String(new Date().getMonth() + 1),
+    charityRecordYear: String(new Date().getFullYear()),
     charityRecordType: "",
 
     donationSearch: "",
     donationMethodId: "",
     donationFromDate: "",
     donationToDate: "",
+    donationMonth: String(new Date().getMonth() + 1),
+    donationYear: String(new Date().getFullYear()),
 
     applicationSearch: "",
     applicationStatus: searchParams.get("caseStatus") || "",
@@ -197,10 +223,10 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     maritalStatus: "",
     familyMembers: "",
     monthlyIncome: "",
-    monthlyExpense: "",
     requestedAmount: "",
     address: "",
     verificationNotes: "",
+    supportOptions: [],
   });
 
   const [statusForm, setStatusForm] = useState({
@@ -263,6 +289,18 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           search: filters.charityRecordSearch,
           fromDate: filters.charityRecordFromDate,
           toDate: filters.charityRecordToDate,
+          month:
+            !filters.charityRecordFromDate && !filters.charityRecordToDate
+              ? filters.charityRecordMonth
+              : "",
+          // year:
+          //   !filters.charityRecordFromDate && !filters.charityRecordToDate
+          //     ? filters.charityRecordYear
+          //     : "",
+          year:
+            !filters.charityRecordFromDate && !filters.charityRecordToDate
+              ? String(new Date().getFullYear())
+              : "",
           charityType: filters.charityRecordType,
         });
 
@@ -271,6 +309,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         );
 
         setCharityRecords(recordsRes.data.data || []);
+        setCharityRecordTotal(Number(recordsRes.data.totalCharity || 0));
       }
 
       if (activeTab === "donations") {
@@ -281,7 +320,17 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           methodId: filters.donationMethodId,
           fromDate: filters.donationFromDate,
           toDate: filters.donationToDate,
+          month:
+            !filters.donationFromDate && !filters.donationToDate
+              ? filters.donationMonth
+              : "",
+          year:
+            !filters.donationFromDate && !filters.donationToDate
+              ? String(new Date().getFullYear())
+              : "",
         });
+
+
 
         const [donationsRes, donorsRes, charitiesRes, methodsRes] =
           await Promise.all([
@@ -292,6 +341,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           ]);
 
         setDonations(donationsRes.data.data || []);
+        setDonationTotal(Number(donationsRes.data.totalDonation || 0));
         setDonors(donorsRes.data.data || []);
         setCharities(charitiesRes.data.data || []);
         setDonationMethods(methodsRes.data.data || []);
@@ -357,6 +407,17 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     }));
   };
 
+  const handleSupportOptionChange = (event) => {
+    const { value, checked } = event.target;
+
+    setApplicationForm((prev) => ({
+      ...prev,
+      supportOptions: checked
+        ? [...prev.supportOptions, value]
+        : prev.supportOptions.filter((item) => item !== value),
+    }));
+  };
+
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
 
@@ -388,6 +449,88 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     });
 
     return query.toString();
+  };
+
+  const downloadCharityHistoryReport = async () => {
+    try {
+      const reportQuery = buildQuery({
+        search: filters.charityRecordSearch,
+        fromDate: filters.charityRecordFromDate,
+        toDate: filters.charityRecordToDate,
+        month:
+          !filters.charityRecordFromDate && !filters.charityRecordToDate
+            ? filters.charityRecordMonth
+            : "",
+        // year:
+        //   !filters.charityRecordFromDate && !filters.charityRecordToDate
+        //     ? filters.charityRecordYear
+        //     : "",
+        year:
+          !filters.charityRecordFromDate && !filters.charityRecordToDate
+            ? String(new Date().getFullYear())
+            : "",
+        charityType: filters.charityRecordType,
+      });
+
+      const response = await axiosInstance.get(
+        `/welfare/charity-records/report/pdf?${reportQuery}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.setAttribute("download", "charity-history-report.pdf");
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to generate charity report");
+    }
+  };
+
+  const downloadDonationReport = async () => {
+    try {
+      const reportQuery = buildQuery({
+        search: filters.donationSearch,
+        methodId: filters.donationMethodId,
+        fromDate: filters.donationFromDate,
+        toDate: filters.donationToDate,
+        month:
+          !filters.donationFromDate && !filters.donationToDate
+            ? filters.donationMonth
+            : "",
+        year:
+          !filters.donationFromDate && !filters.donationToDate
+            ? String(new Date().getFullYear())
+            : "",
+      });
+
+      const response = await axiosInstance.get(
+        `/welfare/donations/report/pdf?${reportQuery}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.setAttribute("download", "donations-report.pdf");
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to generate donation report");
+    }
   };
 
   const resetDonationForm = () => {
@@ -944,7 +1087,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       residenceType: "",
       educationLevel: "",
       monthlyIncome: "",
-      monthlyExpense: "",
       supportType: "",
       requestedAmount: "",
       address: "",
@@ -956,6 +1098,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       schoolName: "",
       verifierName: "",
       officeRemarks: "",
+
       needsSchoolFee: false,
       needsSchoolDress: false,
       needsSchoolUniform: false,
@@ -963,6 +1106,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       needsSchoolShoes: false,
       needsUniversityFee: false,
       needsOtherEducationHelp: false,
+      supportOptions: [],
     });
   };
 
@@ -979,7 +1123,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       ...applicationForm,
       familyMembers: Number(applicationForm.familyMembers || 0),
       monthlyIncome: Number(applicationForm.monthlyIncome || 0),
-      monthlyExpense: Number(applicationForm.monthlyExpense || 0),
       requestedAmount: Number(applicationForm.requestedAmount || 0),
     };
 
@@ -1132,7 +1275,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         // residenceType: selected.residence_type || "",
         // educationLevel: selected.education_level || "",
         monthlyIncome: selected.monthly_income || "",
-        monthlyExpense: selected.monthly_expense || "",
         // supportType: selected.support_type || "",
         requestedAmount: selected.requested_amount || "",
         address: selected.address || "",
@@ -1151,6 +1293,9 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         needsSchoolShoes: Boolean(selected.needs_school_shoes),
         needsUniversityFee: Boolean(selected.needs_university_fee),
         needsOtherEducationHelp: Boolean(selected.needs_other_education_help),
+        supportOptions: Array.isArray(selected.support_options)
+          ? selected.support_options
+          : [],
       });
 
       setApplicationModalOpen(true);
@@ -1186,6 +1331,25 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       alert(error.response?.data?.message || "Failed to delete application");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const rejectApplicationDirectly = async (application) => {
+    try {
+      await axiosInstance.patch(
+        `/welfare/applications/${application.id}/status`,
+        {
+          caseStatus: "rejected",
+          approvedAmount: 0,
+          verificationNotes: null,
+        }
+      );
+
+      setApplications((prev) =>
+        prev.filter((item) => item.id !== application.id)
+      );
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to reject application");
     }
   };
 
@@ -1473,7 +1637,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               <button
                 type="button"
                 className="welfare-status-icon-btn welfare-reject-icon"
-                onClick={() => openStatusModal(row, "rejected")}
+                onClick={() => rejectApplicationDirectly(row)}
                 title="Reject"
               >
                 <XCircle size={15} />
@@ -1535,6 +1699,33 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     (sum, donation) => sum + Number(donation.amount || 0),
     0
   );
+
+  const monthOptions = [
+    { label: "January", value: "1" },
+    { label: "February", value: "2" },
+    { label: "March", value: "3" },
+    { label: "April", value: "4" },
+    { label: "May", value: "5" },
+    { label: "June", value: "6" },
+    { label: "July", value: "7" },
+    { label: "August", value: "8" },
+    { label: "September", value: "9" },
+    { label: "October", value: "10" },
+    { label: "November", value: "11" },
+    { label: "December", value: "12" },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
+  const yearOptions = Array.from({ length: 6 }, (_, index) => {
+    const year = currentYear - index;
+
+    return {
+      label: String(year),
+      value: String(year),
+    };
+  });
+
   if (loading) {
     return (
       <div className="page">
@@ -1639,9 +1830,9 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               {activeTab === "applications" && "Welfare Applications"}
             </h1>
 
-            <p className="page-subtitle">
+            {/* <p className="page-subtitle">
               Manage welfare records, donations, donors, charities and applications.
-            </p>
+            </p> */}
           </div>
 
           {activeTab === "donors" && (
@@ -1651,14 +1842,25 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
           )}
 
           {activeTab === "donations" && (
-            <Button onClick={openAddDonationModal}>
-              <Plus size={16} /> Add Donation
-            </Button>
+            <div className="welfare-header-actions">
+              <Button onClick={openAddDonationModal}>
+                <Plus size={16} /> Add Donation
+              </Button>
+
+              <Button onClick={downloadDonationReport}>
+                <Download size={16} /> Generate Report
+              </Button>
+            </div>
           )}
 
           {activeTab === "applications" && (
             <Button onClick={openAddApplicationModal}>
               <Plus size={16} /> Add Application
+            </Button>
+          )}
+          {activeTab === "charityRecords" && (
+            <Button onClick={downloadCharityHistoryReport}>
+              <Download size={16} /> Generate Report
             </Button>
           )}
 
@@ -1861,65 +2063,105 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       )}
 
       {activeTab === "charityRecords" && (
-        <Card
-          title="Charity History"
-          subtitle="View all charity records generated from approved applications"
-        >
-          <div className="filter-bar charity-history-filter-bar">
-            <Input
-              className="charity-history-search-input"
-              name="charityRecordSearch"
-              value={filters.charityRecordSearch}
-              onChange={handleFilterChange}
-              placeholder="Search beneficiary, phone, CNIC or type"
-            />
+        <>
+          <div className="student-summary-card charity-total-card">
+            <div className="student-summary-icon">
+              <Wallet size={22} />
+            </div>
 
-            <DateRangePicker
-              fromDate={filters.charityRecordFromDate}
-              toDate={filters.charityRecordToDate}
-              onChange={({ fromDate, toDate }) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  charityRecordFromDate: fromDate,
-                  charityRecordToDate: toDate,
-                }));
-              }}
-            />
-
-            <Select
-              name="charityRecordType"
-              value={filters.charityRecordType}
-              onChange={handleFilterChange}
-              options={[
-                { label: "All Types", value: "" },
-                { label: "Education Help", value: "Education Help" },
-                { label: "Ration", value: "Ration" },
-                { label: "Rent", value: "Rent" },
-                { label: "Medical", value: "Medical" },
-                { label: "Other", value: "Other" },
-              ]}
-            />
+            <div className="student-summary-content">
+              <p>TOTAL CHARITY</p>
+              <div className="student-summary-amount">
+                <h2>{formatCurrency(charityRecordTotal)}</h2>
+              </div>
+            </div>
           </div>
 
-          <Table
-            columns={charityRecordColumns}
-            data={charityRecords}
-            emptyText="No charity history found"
-          />
-        </Card>
+          <Card className="charity-history-card">
+            <div className="filter-bar charity-history-filter-bar">
+              <Input
+                className="charity-history-search-input"
+                name="charityRecordSearch"
+                value={filters.charityRecordSearch}
+                onChange={handleFilterChange}
+                placeholder="Search beneficiary, phone, CNIC or type"
+              />
+
+              <DateRangePicker
+                fromDate={filters.charityRecordFromDate}
+                toDate={filters.charityRecordToDate}
+                onChange={({ fromDate, toDate }) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    charityRecordFromDate: fromDate,
+                    charityRecordToDate: toDate,
+                  }));
+                }}
+              />
+
+              <Select
+                name="charityRecordMonth"
+                value={filters.charityRecordMonth}
+                onChange={handleFilterChange}
+                options={monthOptions}
+              />
+
+              {/* <Select
+                name="charityRecordYear"
+                value={filters.charityRecordYear}
+                onChange={handleFilterChange}
+                options={yearOptions}
+              /> */}
+
+              <Select
+                name="charityRecordType"
+                value={filters.charityRecordType}
+                onChange={handleFilterChange}
+                options={[
+                  { label: "All Types", value: "" },
+                  { label: "Education Help", value: "Education Help" },
+                  { label: "Ration", value: "Ration" },
+                  { label: "Rent", value: "Rent" },
+                  { label: "Medical", value: "Medical" },
+                  { label: "Other", value: "Other" },
+                ]}
+              />
+            </div>
+
+            <Table
+              columns={charityRecordColumns}
+              data={charityRecords}
+              emptyText="No charity history found"
+            />
+          </Card>
+        </>
       )}
 
       {activeTab === "donations" && (
-        <Card className="donations-card">
-          <div className="filter-bar">
-            <Input
-              className="donation-search-input"
-              name="donationSearch"
-              value={filters.donationSearch}
-              onChange={handleFilterChange}
-              placeholder="Search donor, phone, method"
-            />
-            <div className="donation-filter-right">
+        <>
+          <div className="student-summary-card donation-total-card">
+            <div className="student-summary-icon">
+              <Wallet size={22} />
+            </div>
+
+            <div className="student-summary-content">
+              <p>TOTAL DONATION</p>
+              <div className="student-summary-amount">
+                <h2>{formatCurrency(donationTotal)}</h2>
+              </div>
+            </div>
+          </div>
+
+          <Card className="donations-card">
+            <div className="filter-bar donation-history-filter-bar">
+              <Input
+                className="donation-search-input"
+                name="donationSearch"
+                value={filters.donationSearch}
+                onChange={handleFilterChange}
+                placeholder="Search donor, phone, method"
+              />
+
               <DateRangePicker
                 fromDate={filters.donationFromDate}
                 toDate={filters.donationToDate}
@@ -1933,7 +2175,20 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               />
 
               <Select
+                name="donationMonth"
+                value={filters.donationMonth}
+                onChange={handleFilterChange}
+                options={monthOptions}
+              />
 
+              {/* <Select
+          name="donationYear"
+          value={filters.donationYear}
+          onChange={handleFilterChange}
+          options={yearOptions}
+        /> */}
+
+              <Select
                 name="donationMethodId"
                 value={filters.donationMethodId}
                 onChange={handleFilterChange}
@@ -1945,19 +2200,15 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                   })),
                 ]}
               />
-
             </div>
 
-
-
-          </div>
-
-          <Table
-            columns={donationColumns}
-            data={donations}
-            emptyText="No donations found"
-          />
-        </Card>
+            <Table
+              columns={donationColumns}
+              data={donations}
+              emptyText="No donations found"
+            />
+          </Card>
+        </>
       )}
 
       {activeTab === "applications" && (
@@ -2072,7 +2323,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               <div className="modal-section-header donor-history-header">
                 <div>
                   <h3>Donation History</h3>
-                  <p>All donations made by this donor.</p>
+                  {/* <p>All donations made by this donor.</p> */}
                 </div>
 
                 <div className="donor-total-donation">
@@ -2596,7 +2847,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             {/* <Input label="Residence Type" name="residenceType" value={applicationForm.residenceType} onChange={handleChange(setApplicationForm)} />
             <Input label="Education Level" name="educationLevel" value={applicationForm.educationLevel} onChange={handleChange(setApplicationForm)} /> */}
             <Input label="Monthly Income" name="monthlyIncome" type="number" value={applicationForm.monthlyIncome} onChange={handleChange(setApplicationForm)} />
-            <Input label="Monthly Expense" name="monthlyExpense" type="number" value={applicationForm.monthlyExpense} onChange={handleChange(setApplicationForm)} />
+            {/* <Input label="Monthly Expense" name="monthlyExpense" type="number" value={applicationForm.monthlyExpense} onChange={handleChange(setApplicationForm)} /> */}
             {/* <Input label="Support Type" name="supportType" value={applicationForm.supportType} onChange={handleChange(setApplicationForm)} /> */}
             <Input label="Requested Amount" name="requestedAmount" type="number" value={applicationForm.requestedAmount} onChange={handleChange(setApplicationForm)} />
           </div>
@@ -2737,6 +2988,17 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               />
               Other Education Help
             </label>
+            {supportNeedOptions.map((option) => (
+              <label key={option.value}>
+                <input
+                  type="checkbox"
+                  value={option.value}
+                  checked={applicationForm.supportOptions.includes(option.value)}
+                  onChange={handleSupportOptionChange}
+                />
+                {option.label}
+              </label>
+            ))}
           </div>
           <div className="modal-actions">
             <Button
@@ -2778,7 +3040,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             {/* <div><strong>Residence Type:</strong><p>{selectedApplication.residence_type || "-"}</p></div>
             <div><strong>Education Level:</strong><p>{selectedApplication.education_level || "-"}</p></div> */}
             <div><strong>Monthly Income:</strong><p>{formatCurrency(selectedApplication.monthly_income || 0)}</p></div>
-            <div><strong>Monthly Expense:</strong><p>{formatCurrency(selectedApplication.monthly_expense || 0)}</p></div>
+            {/* <div><strong>Monthly Expense:</strong><p>{formatCurrency(selectedApplication.monthly_expense || 0)}</p></div> */}
             {/* <div><strong>Support Type:</strong><p>{selectedApplication.support_type || "-"}</p></div> */}
             <div><strong>Requested Amount:</strong><p>{formatCurrency(selectedApplication.requested_amount || 0)}</p></div>
             <div><strong>Approved Amount:</strong><p>{formatCurrency(selectedApplication.approved_amount || 0)}</p></div>
@@ -2794,7 +3056,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
             <div><strong>Office Remarks:</strong><p>{selectedApplication.office_remarks || "-"}</p></div>
 
             <div>
-              <strong>Required Education Help:</strong>
+              <strong>Required Help:</strong>
               <p>
                 {[
                   selectedApplication.needs_school_fee && "School Fee",
@@ -2804,6 +3066,12 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                   selectedApplication.needs_school_shoes && "School Shoes",
                   selectedApplication.needs_university_fee && "University Fee",
                   selectedApplication.needs_other_education_help && "Other Education Help",
+                  ...supportNeedOptions
+                    .filter((option) =>
+                      Array.isArray(selectedApplication.support_options) &&
+                      selectedApplication.support_options.includes(option.value)
+                    )
+                    .map((option) => option.label),
                 ]
                   .filter(Boolean)
                   .join(", ") || "-"}

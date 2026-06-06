@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  FileText,
-  Download,
-  Users,
-  Wallet,
-  HeartHandshake,
-} from "lucide-react";
+import { Download, Eye, Plus, Settings, Trash2, Wallet } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Select from "../components/common/Select";
+import Input from "../components/common/Input";
+import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
-import Badge from "../components/common/Badge";
-import Loader from "../components/common/Loader";
 import {
   formatCurrency,
   formatDate,
@@ -23,335 +17,341 @@ import {
 
 import "./reports.css";
 
+const monthOptions = [
+  { label: "January", value: "1" },
+  { label: "February", value: "2" },
+  { label: "March", value: "3" },
+  { label: "April", value: "4" },
+  { label: "May", value: "5" },
+  { label: "June", value: "6" },
+  { label: "July", value: "7" },
+  { label: "August", value: "8" },
+  { label: "September", value: "9" },
+  { label: "October", value: "10" },
+  { label: "November", value: "11" },
+  { label: "December", value: "12" },
+];
+
+const getMonthLabel = (month, year) => {
+  const monthName =
+    monthOptions.find((item) => Number(item.value) === Number(month))?.label ||
+    "-";
+
+  return `${monthName} ${year || ""}`;
+};
+
 const Reports = () => {
   const branchId = getSelectedBranchId();
   const branchName = getSelectedBranchName();
+  const isWelfareReport = !branchId;
 
-  const selectedPortal = localStorage.getItem("selectedPortal") || "vocational";
-  const isWelfarePortal = selectedPortal === "welfare";
-
-  const [activeTab, setActiveTab] = useState(
-    isWelfarePortal ? "financial" : "students"
-  );
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [openingBalance, setOpeningBalance] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [reportData, setReportData] = useState(null);
 
-  const [studentReport, setStudentReport] = useState([]);
-  const [financialReport, setFinancialReport] = useState(null);
-  const [welfareReport, setWelfareReport] = useState(null);
+  const [isOpeningModalOpen, setIsOpeningModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  const [filters, setFilters] = useState({
-    feeStatus: "",
-    studentStatus: "",
+  const [savingOpening, setSavingOpening] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  const [openingForm, setOpeningForm] = useState({
+    openingBalance: "",
+    openingDate: "",
+    note: "",
   });
 
-  const handleFilterChange = (event) => {
+  const [reportForm, setReportForm] = useState({
+    month: String(new Date().getMonth() + 1),
+    year: String(new Date().getFullYear()),
+  });
+
+  const currentYear = new Date().getFullYear();
+
+  const yearOptions = Array.from({ length: 6 }, (_, index) => {
+    const year = currentYear - index;
+
+    return {
+      label: String(year),
+      value: String(year),
+    };
+  });
+
+  const fetchOpeningBalance = async () => {
+    try {
+      const url = isWelfareReport
+        ? "/reports/welfare/opening-balance"
+        : `/reports/vocational/opening-balance?branchId=${branchId}`;
+
+      const response = await axiosInstance.get(url);
+      const data = response.data.data;
+
+      setOpeningBalance(data);
+
+      if (data) {
+        setOpeningForm({
+          openingBalance: data.opening_balance || "",
+          openingDate: data.opening_date?.split("T")[0] || "",
+          note: data.note || "",
+        });
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to fetch opening balance");
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const query = new URLSearchParams();
+
+      query.append("portalType", isWelfareReport ? "welfare" : "vocational");
+
+      if (!isWelfareReport) {
+        query.append("branchId", branchId);
+      }
+
+      const response = await axiosInstance.get(
+        `/reports/monthly/saved?${query.toString()}`
+      );
+
+      setReports(response.data.data || []);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to fetch reports");
+    }
+  };
+
+  useEffect(() => {
+    fetchOpeningBalance();
+    fetchReports();
+  }, [branchId]);
+
+  const handleOpeningChange = (event) => {
     const { name, value } = event.target;
 
-    setFilters((prev) => ({
+    setOpeningForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
+  const handleReportChange = (event) => {
+    const { name, value } = event.target;
 
-
-  const buildQuery = (type) => {
-    const params = new URLSearchParams();
-
-    if (type !== "welfare" && branchId) {
-      params.append("branchId", branchId);
-    }
-
-
-    if (type === "students") {
-      if (filters.feeStatus) {
-        params.append("feeStatus", filters.feeStatus);
-      }
-
-      if (filters.studentStatus) {
-        params.append("studentStatus", filters.studentStatus);
-      }
-    }
-
-    return params.toString();
+    setReportForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const fetchStudentReport = async () => {
-    const query = buildQuery("students");
-    const response = await axiosInstance.get(`/reports/students?${query}`);
-    setStudentReport(response.data.data || []);
-  };
-
-  const fetchFinancialReport = async () => {
-    const query = buildQuery("financial");
-
-    if (isWelfarePortal) {
-      const response = await axiosInstance.get(`/reports/welfare?${query}`);
-      const welfareData = response.data.data;
-
-      setFinancialReport({
-        summary: {
-          totalRevenue: welfareData?.summary?.totalDonations || 0,
-          totalExpenses: welfareData?.summary?.totalApprovedSupport || 0,
-          profit: welfareData?.summary?.balanceAfterApprovedSupport || 0,
-        },
-        payments: welfareData?.donations || [],
-        expenses: welfareData?.applications || [],
-      });
-
-      return;
-    }
-
-    const response = await axiosInstance.get(`/reports/financial?${query}`);
-    setFinancialReport(response.data.data);
-  };
-
-  const fetchWelfareReport = async () => {
-    const query = buildQuery("welfare");
-    const response = await axiosInstance.get(`/reports/welfare?${query}`);
-    setWelfareReport(response.data.data);
-  };
-
-  const fetchActiveReport = async () => {
+  const saveOpeningBalance = async () => {
     try {
-      setLoading(true);
+      setSavingOpening(true);
       setError("");
 
-      if (activeTab === "students") {
-        await fetchStudentReport();
-      }
+      const url = isWelfareReport
+        ? "/reports/welfare/opening-balance"
+        : "/reports/vocational/opening-balance";
 
-      if (activeTab === "financial") {
-        await fetchFinancialReport();
-      }
+      const payload = isWelfareReport
+        ? {
+            openingBalance: Number(openingForm.openingBalance || 0),
+            openingDate: openingForm.openingDate,
+            note: openingForm.note || null,
+          }
+        : {
+            branchId: Number(branchId),
+            openingBalance: Number(openingForm.openingBalance || 0),
+            openingDate: openingForm.openingDate,
+            note: openingForm.note || null,
+          };
 
-      if (activeTab === "welfare") {
-        await fetchWelfareReport();
-      }
+      await axiosInstance.put(url, payload);
+
+      setIsOpeningModalOpen(false);
+      await fetchOpeningBalance();
     } catch (error) {
-      setError(error.response?.data?.message || "Failed to fetch report");
+      alert(error.response?.data?.message || "Failed to save opening balance");
     } finally {
-      setLoading(false);
+      setSavingOpening(false);
     }
   };
 
-  useEffect(() => {
-    fetchActiveReport();
-  }, [
-    activeTab,
-    branchId,
-    filters.fromDate,
-    filters.studentStatus,
-  ]);
-
-  const downloadFile = async (url, filename) => {
+  const previewCalculation = async () => {
     try {
-      const response = await axiosInstance.get(url, {
-        responseType: "blob",
+      setError("");
+
+      const query = new URLSearchParams();
+
+      if (!isWelfareReport) {
+        query.append("branchId", branchId);
+      }
+
+      query.append("month", reportForm.month);
+      query.append("year", reportForm.year);
+
+      const url = isWelfareReport
+        ? `/reports/welfare/monthly?${query.toString()}`
+        : `/reports/vocational/monthly?${query.toString()}`;
+
+      const response = await axiosInstance.get(url);
+
+      setReportData(response.data.data);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to calculate report");
+    }
+  };
+
+  const openGenerateModal = async () => {
+    setReportData(null);
+    setIsReportModalOpen(true);
+
+    setTimeout(() => {
+      previewCalculation();
+    }, 0);
+  };
+
+  const generateReport = async () => {
+    try {
+      setGeneratingReport(true);
+
+      await axiosInstance.post("/reports/monthly/saved", {
+        portalType: isWelfareReport ? "welfare" : "vocational",
+        branchId: isWelfareReport ? null : Number(branchId),
+        month: Number(reportForm.month),
+        year: Number(reportForm.year),
       });
+
+      setIsReportModalOpen(false);
+      setReportData(null);
+      await fetchReports();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to generate report");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const previewReport = async (report) => {
+    try {
+      const response = await axiosInstance.get(
+        `/reports/monthly/saved/${report.id}/preview`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 60000);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to preview report");
+    }
+  };
+
+  const downloadReport = async (report) => {
+    try {
+      const response = await axiosInstance.get(
+        `/reports/monthly/saved/${report.id}/download`,
+        {
+          responseType: "blob",
+        }
+      );
 
       const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
 
       link.href = blobUrl;
-      link.setAttribute("download", filename);
+      link.setAttribute("download", `${report.report_no}.pdf`);
+
       document.body.appendChild(link);
       link.click();
 
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to download file");
+      alert(error.response?.data?.message || "Failed to download report");
     }
   };
 
-  const handleExport = (format) => {
-    const query = buildQuery(activeTab);
+  const deleteReport = async (report) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete report ${report.report_no}?`
+    );
 
-    const extension = format === "pdf" ? "pdf" : "xlsx";
-    const filename = `${activeTab}_report.${extension}`;
+    if (!confirmed) return;
 
-    let exportUrl = `/reports/${activeTab}/export/${format}?${query}`;
-
-    if (isWelfarePortal && activeTab === "financial") {
-      exportUrl = `/reports/welfare/financial/export/${format}?${query}`;
+    try {
+      await axiosInstance.delete(`/reports/monthly/saved/${report.id}`);
+      fetchReports();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete report");
     }
-
-    downloadFile(exportUrl, filename);
   };
 
-  const studentColumns = [
+  const columns = [
     {
-      key: "full_name",
-      title: "Student",
+      key: "report_month",
+      title: "Report Month",
       render: (row) => (
         <div>
-          <strong>{row.full_name}</strong>
-          <span className="table-subtext">{row.father_name || "-"}</span>
+          <strong>{getMonthLabel(row.report_month, row.report_year)}</strong>
+          <span className="table-subtext">{row.report_no}</span>
         </div>
       ),
     },
     {
-      key: "phone",
-      title: "Phone",
-      render: (row) => row.phone || "-",
+      key: "generated_by_name",
+      title: "Generated By",
+      render: (row) => row.generated_by_name || "-",
     },
     {
-      key: "branch_name",
-      title: "Branch",
-      render: (row) => row.branch_name || "-",
+      key: "generated_at",
+      title: "Generated Date",
+      render: (row) => formatDate(row.generated_at),
     },
     {
-      key: "courses",
-      title: "Courses",
-      render: (row) =>
-        Array.isArray(row.courses) ? row.courses.join(", ") : "-",
-    },
-    {
-      key: "fee_status",
-      title: "Fee Status",
+      key: "actions",
+      title: "Actions",
       render: (row) => (
-        <Badge type={row.fee_status === "paid" ? "success" : "danger"}>
-          {row.fee_status}
-        </Badge>
-      ),
-    },
-    {
-      key: "student_status",
-      title: "Status",
-      render: (row) => (
-        <Badge type={row.student_status === "active" ? "success" : "warning"}>
-          {row.student_status}
-        </Badge>
-      ),
-    },
-    {
-      key: "total_fee",
-      title: "Total",
-      render: (row) => formatCurrency(row.total_fee),
-    },
-    {
-      key: "paid_fee",
-      title: "Paid",
-      render: (row) => formatCurrency(row.paid_fee),
-    },
-    {
-      key: "remaining_fee",
-      title: "Remaining",
-      render: (row) => formatCurrency(row.remaining_fee),
-    },
-  ];
+        <div className="certificate-action-buttons">
+          <button
+            type="button"
+            className="certificate-icon-btn certificate-preview-btn"
+            onClick={() => previewReport(row)}
+            title="Preview"
+          >
+            <Eye size={15} />
+          </button>
 
+          <button
+            type="button"
+            className="certificate-icon-btn certificate-download-btn"
+            onClick={() => downloadReport(row)}
+            title="Download"
+          >
+            <Download size={15} />
+          </button>
 
-  const expenseColumns = [
-    {
-      key: "title",
-      title: "Expense",
-      render: (row) => row.title || row.name || "-",
-    },
-    {
-      key: "category_name",
-      title: "Category",
-      render: (row) => row.category_name || "-",
-    },
-    {
-      key: "amount",
-      title: "Amount",
-      render: (row) => formatCurrency(row.amount),
-    },
-    {
-      key: "expense_date",
-      title: "Date",
-      render: (row) => formatDate(row.expense_date || row.date),
-    },
-  ];
-
-  const donationColumns = [
-    {
-      key: "donor_name",
-      title: "Donor",
-      render: (row) => row.donor_name || "-",
-    },
-    {
-      key: "charity_name",
-      title: "Charity",
-      render: (row) => row.charity_name || "-",
-    },
-    {
-      key: "amount",
-      title: "Amount",
-      render: (row) => formatCurrency(row.amount),
-    },
-    {
-      key: "donation_date",
-      title: "Date",
-      render: (row) => formatDate(row.donation_date),
-    },
-  ];
-
-  const welfareApplicationColumns = [
-    {
-      key: "applicant_name",
-      title: "Applicant",
-      render: (row) => (
-        <div>
-          <strong>{row.applicant_name}</strong>
-          <span className="table-subtext">{row.phone || "-"}</span>
+          <button
+            type="button"
+            className="certificate-icon-btn certificate-delete-btn"
+            onClick={() => deleteReport(row)}
+            title="Delete"
+          >
+            <Trash2 size={15} />
+          </button>
         </div>
       ),
     },
-    {
-      key: "support_type",
-      title: "Support",
-      render: (row) => row.support_type || "-",
-    },
-    {
-      key: "requested_amount",
-      title: "Requested",
-      render: (row) => formatCurrency(row.requested_amount),
-    },
-    {
-      key: "approved_amount",
-      title: "Approved",
-      render: (row) => formatCurrency(row.approved_amount),
-    },
-    {
-      key: "case_status",
-      title: "Status",
-      render: (row) => (
-        <Badge
-          type={
-            row.case_status === "approved"
-              ? "success"
-              : row.case_status === "rejected"
-                ? "danger"
-                : "warning"
-          }
-        >
-          {row.case_status}
-        </Badge>
-      ),
-    },
   ];
-
-  const totalStudents = studentReport.length;
-
-  const totalFee = studentReport.reduce(
-    (sum, student) => sum + Number(student.total_fee || 0),
-    0
-  );
-
-  const totalPaid = studentReport.reduce(
-    (sum, student) => sum + Number(student.paid_fee || 0),
-    0
-  );
-
-  const totalRemaining = studentReport.reduce(
-    (sum, student) => sum + Number(student.remaining_fee || 0),
-    0
-  );
 
   return (
     <div className="page reports-page">
@@ -359,216 +359,177 @@ const Reports = () => {
         <div>
           <h1 className="page-title">Reports</h1>
           <p className="page-subtitle">
-            Generate reports for {branchName || "selected branch"}.
+            {isWelfareReport
+              ? "Generate welfare monthly reports."
+              : `Generate reports for ${branchName || "selected branch"}.`}
           </p>
         </div>
 
         <div className="reports-header-actions">
-          {/* <Button variant="secondary" onClick={fetchActiveReport}>
-            <RefreshCcw size={16} /> Refresh
-          </Button> */}
-
-          <Button variant="secondary" onClick={() => handleExport("pdf")}>
-            <Download size={16} /> PDF
+          <Button variant="secondary" onClick={() => setIsOpeningModalOpen(true)}>
+            <Settings size={16} />
+            {openingBalance ? "Edit Opening Balance" : "Set Opening Balance"}
           </Button>
 
-          <Button onClick={() => handleExport("excel")}>
-            <Download size={16} /> Excel
+          <Button onClick={openGenerateModal}>
+            <Plus size={16} /> Generate Report
           </Button>
         </div>
-      </div>
-
-      <div className="reports-tabs">
-
-        <div className="reports-tabs-left">
-          {!isWelfarePortal && (
-            <button
-              className={activeTab === "students" ? "active" : ""}
-              onClick={() => setActiveTab("students")}
-            >
-              <Users size={16} /> Student Report
-            </button>
-          )}
-
-          {!isWelfarePortal && (
-            <button
-              className={activeTab === "financial" ? "active" : ""}
-              onClick={() => setActiveTab("financial")}
-            >
-              <Wallet size={16} /> Financial Report
-            </button>
-          )}
-          
-        </div>
-
-
-        <div className="reports-tabs-right">
-
-          <Card className="reports-filter-card">
-            <div className="reports-filter-bar">
-              {activeTab === "students" && (
-                <>
-                  <Select
-                    name="feeStatus"
-                    value={filters.feeStatus}
-                    onChange={handleFilterChange}
-                    placeholder="Fee status"
-                    options={[
-                      { label: "All Fee Status", value: "" },
-                      { label: "Paid", value: "paid" },
-                      { label: "Pending", value: "pending" },
-                    ]}
-                  />
-
-                  <Select
-                    name="studentStatus"
-                    value={filters.studentStatus}
-                    onChange={handleFilterChange}
-                    placeholder="Student status"
-                    options={[
-                      { label: "All Student Status", value: "" },
-                      { label: "Active", value: "active" },
-                      { label: "Non Active", value: "non_active" },
-
-                    ]}
-                  />
-                </>
-              )}
-
-
-
-              {/* <Button variant="secondary" onClick={clearFilters}>
-            Clear Filters
-          </Button> */}
-            </div>
-          </Card>
-
-        </div>
-
       </div>
 
       {error && <div className="reports-error">{error}</div>}
 
-      {loading ? (
-        <Card>
-          <Loader text="Loading report..." />
-        </Card>
-      ) : (
-        <>
-          {activeTab === "students" && (
+      <Card className="reports-main-card">
+        <div className="reports-main-content">
+          <div className="report-summary-card">
+            <Wallet size={24} />
+            <div>
+              <p>Opening Balance</p>
+              <h2>
+                {openingBalance
+                  ? formatCurrency(openingBalance.opening_balance)
+                  : "Not Set"}
+              </h2>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="reports-main-card">
+        <Table
+          columns={columns}
+          data={reports}
+          emptyText="No reports found"
+        />
+      </Card>
+
+      <Modal
+        open={isOpeningModalOpen}
+        title={openingBalance ? "Edit Opening Balance" : "Set Opening Balance"}
+        onClose={() => setIsOpeningModalOpen(false)}
+      >
+        <div className="reports-modal-grid">
+          <Input
+            label="Opening Balance"
+            name="openingBalance"
+            type="number"
+            value={openingForm.openingBalance}
+            onChange={handleOpeningChange}
+            required
+          />
+
+          <Input
+            label="Opening Date"
+            name="openingDate"
+            type="date"
+            value={openingForm.openingDate}
+            onChange={handleOpeningChange}
+            required
+          />
+
+          <Input
+            label="Note"
+            name="note"
+            value={openingForm.note}
+            onChange={handleOpeningChange}
+          />
+        </div>
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsOpeningModalOpen(false)}>
+            Cancel
+          </Button>
+
+          <Button onClick={saveOpeningBalance} loading={savingOpening}>
+            Save
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isReportModalOpen}
+        title={isWelfareReport ? "Generate Welfare Report" : "Generate Vocational Report"}
+        onClose={() => setIsReportModalOpen(false)}
+      >
+        <div className="reports-modal-grid">
+          <Select
+            label="Month"
+            name="month"
+            value={reportForm.month}
+            onChange={(event) => {
+              handleReportChange(event);
+              setTimeout(previewCalculation, 0);
+            }}
+            options={monthOptions}
+            required
+          />
+
+          <Select
+            label="Year"
+            name="year"
+            value={reportForm.year}
+            onChange={(event) => {
+              handleReportChange(event);
+              setTimeout(previewCalculation, 0);
+            }}
+            options={yearOptions}
+            required
+          />
+        </div>
+
+        <div className="report-result-grid">
+          <div>
+            <span>Previous Balance</span>
+            <strong>{formatCurrency(reportData?.previousBalance)}</strong>
+          </div>
+
+          {isWelfareReport ? (
             <>
-              <Card title="Student Report">
-                <Table
-                  columns={studentColumns}
-                  data={studentReport}
-                  emptyText="No student report data found"
-                />
-              </Card>
+              <div>
+                <span>Donations</span>
+                <strong>{formatCurrency(reportData?.donations)}</strong>
+              </div>
+
+              <div>
+                <span>Charity</span>
+                <strong>{formatCurrency(reportData?.charity)}</strong>
+              </div>
+
+              <div>
+                <span>Expenses</span>
+                <strong>{formatCurrency(reportData?.expenses)}</strong>
+              </div>
             </>
-          )}
-
-          {activeTab === "financial" && (
+          ) : (
             <>
+              <div>
+                <span>Collected Fees</span>
+                <strong>{formatCurrency(reportData?.collectedFees)}</strong>
+              </div>
 
-              <div className="reports-grid-2 single ">
-                <Card
-                  title={
-                    isWelfarePortal ? "Approved / Support Cases" : "Expenses"
-                  }
-                >
-                  <Table
-                    columns={
-                      isWelfarePortal
-                        ? welfareApplicationColumns
-                        : expenseColumns
-                    }
-                    data={financialReport?.expenses || []}
-                    emptyText={
-                      isWelfarePortal
-                        ? "No welfare support records found"
-                        : "No expense records found"
-                    }
-                  />
-                </Card>
+              <div>
+                <span>Expenses</span>
+                <strong>{formatCurrency(reportData?.expenses)}</strong>
               </div>
             </>
           )}
 
-          {activeTab === "welfare" && (
-            <>
-              <div className="reports-summary-grid">
-                <Card>
-                  <div className="report-summary-card">
-                    <HeartHandshake size={24} />
-                    <div>
-                      <p>Total Donations</p>
-                      <h2>
-                        {formatCurrency(welfareReport?.summary?.totalDonations)}
-                      </h2>
-                    </div>
-                  </div>
-                </Card>
+          <div className="report-current-balance">
+            <span>Current Balance</span>
+            <strong>{formatCurrency(reportData?.currentBalance)}</strong>
+          </div>
+        </div>
 
-                <Card>
-                  <div className="report-summary-card success">
-                    <HeartHandshake size={24} />
-                    <div>
-                      <p>Approved Support</p>
-                      <h2>
-                        {formatCurrency(
-                          welfareReport?.summary?.totalApprovedSupport
-                        )}
-                      </h2>
-                    </div>
-                  </div>
-                </Card>
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsReportModalOpen(false)}>
+            Cancel
+          </Button>
 
-                <Card>
-                  <div className="report-summary-card">
-                    <HeartHandshake size={24} />
-                    <div>
-                      <p>Balance After Support</p>
-                      <h2>
-                        {formatCurrency(
-                          welfareReport?.summary?.balanceAfterApprovedSupport
-                        )}
-                      </h2>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="report-summary-card">
-                    <HeartHandshake size={24} />
-                    <div>
-                      <p>Total Applications</p>
-                      <h2>{welfareReport?.summary?.totalApplications || 0}</h2>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="reports-grid-2">
-                <Card title="Donations">
-                  <Table
-                    columns={donationColumns}
-                    data={welfareReport?.donations || []}
-                    emptyText="No donation records found"
-                  />
-                </Card>
-
-                <Card title="Applications">
-                  <Table
-                    columns={welfareApplicationColumns}
-                    data={welfareReport?.applications || []}
-                    emptyText="No welfare applications found"
-                  />
-                </Card>
-              </div>
-            </>
-          )}
-        </>
-      )}
+          <Button onClick={generateReport} loading={generatingReport}>
+            Generate Report
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

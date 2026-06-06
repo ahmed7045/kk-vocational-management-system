@@ -17,9 +17,11 @@ const {
   getCharityHistoryController,
   createCharityForProfileController,
   getAllCharityRecordsController,
+  charityRecordsPdfReportController,
 
   createDonationController,
   getDonationsController,
+  donationsPdfReportController,
   updateDonationController,
   deleteDonationController,
 
@@ -111,6 +113,13 @@ router.get(
 );
 
 router.get(
+  "/charity-records/report/pdf",
+  authMiddleware,
+  requirePermission("welfare.charity.view"),
+  charityRecordsPdfReportController
+);
+
+router.get(
   "/charity-records",
   authMiddleware,
   requirePermission("welfare.charity.view"),
@@ -150,6 +159,13 @@ router.delete(
   authMiddleware,
   requirePermission("welfare.charity.delete"),
   deleteCharityController
+);
+
+router.get(
+  "/donations/report/pdf",
+  authMiddleware,
+  requirePermission("welfare.donation.view"),
+  donationsPdfReportController
 );
 
 router.get(

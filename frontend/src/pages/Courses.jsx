@@ -14,6 +14,7 @@ import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 import {
   formatCurrency,
+  formatDate,
   getSelectedBranchId,
   getSelectedBranchName,
 } from "../utils/formatters";
@@ -90,6 +91,7 @@ const Courses = () => {
     teacherName: "",
     courseId: "",
     shiftId: "",
+    joiningDate: "",
   });
   const applyFilters = (
     courseRecords = allCourses,
@@ -249,6 +251,7 @@ const Courses = () => {
       teacherName: "",
       courseId: "",
       shiftId: "",
+      joiningDate: "",
     });
     setTeacherShifts([]);
   };
@@ -417,6 +420,7 @@ const Courses = () => {
       teacherName: teacherForm.teacherName,
       courseId: Number(teacherForm.courseId),
       shiftId: Number(teacherForm.shiftId),
+      joiningDate: teacherForm.joiningDate || null,
     };
 
     try {
@@ -494,6 +498,7 @@ const Courses = () => {
       teacherName: teacher.teacher_name || "",
       courseId: teacher.course_id || "",
       shiftId: teacher.shift_id || "",
+      joiningDate: teacher.joining_date?.split("T")[0] || "",
     });
 
     fetchTeacherShifts(teacher.course_id);
@@ -653,6 +658,11 @@ const Courses = () => {
       title: "Shift Timing",
       render: (row) =>
         `${row.shift_name || "-"} (${formatTime12Hour(row.start_time)} - ${formatTime12Hour(row.end_time)})`,
+    },
+    {
+      key: "joining_date",
+      title: "Joining Date",
+      render: (row) => formatDate(row.joining_date),
     },
     {
       key: "actions",
@@ -957,6 +967,13 @@ const Courses = () => {
               }))}
               disabled={!teacherForm.courseId}
               required
+            />
+            <Input
+              label="Joining Date"
+              name="joiningDate"
+              type="date"
+              value={teacherForm.joiningDate}
+              onChange={handleTeacherChange}
             />
 
             <div className="modal-actions">

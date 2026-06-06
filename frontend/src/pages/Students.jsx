@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, Plus, Search, Wallet } from "lucide-react";
+import { Download, Eye, EyeOff, Plus, Search, Wallet } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import ActionButtons from "../components/common/ActionButtons";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
@@ -138,6 +138,43 @@ const Students = ({
       setSearchParams(params, { replace: true });
     }
   }, [searchParams, defaultStudentStatus, hasPermission, setSearchParams]);
+
+  const downloadPaidStudentsReport = async () => {
+    try {
+      const params = new URLSearchParams();
+
+      if (branchId) params.append("branchId", branchId);
+      if (filters.search.trim()) params.append("search", filters.search.trim());
+
+      if (filters.fromDate) params.append("fromDate", filters.fromDate);
+      if (filters.toDate) params.append("toDate", filters.toDate);
+
+      if (!filters.fromDate && !filters.toDate) {
+        if (filters.month) params.append("month", filters.month);
+        if (filters.year) params.append("year", filters.year);
+      }
+
+      const response = await axiosInstance.get(
+        `/students/reports/paid/pdf?${params.toString()}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.setAttribute("download", "paid-students-report.pdf");
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to generate paid students report");
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -787,6 +824,12 @@ const Students = ({
           <h1 className="page-title">{displayTitle}</h1>
           <p className="page-subtitle">{displaySubtitle}</p>
         </div>
+
+        {filters.feeStatus === "paid" && (
+          <Button onClick={downloadPaidStudentsReport}>
+            <Download size={16} /> Generate Report
+          </Button>
+        )}
 
         {!isFeeListMode &&
           defaultStudentStatus !== "non_active" &&

@@ -503,6 +503,56 @@
   min-width: 360px;
 }
 
+.charity-total-card {
+  margin-bottom: 24px;
+}
+
+.charity-history-card {
+  padding: 30px 20px;
+}
+
+.charity-history-filter-bar {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.charity-history-filter-bar .form-group {
+  flex: 0 0 180px;
+}
+
+.charity-history-filter-bar .charity-history-search-input {
+  flex: 1;
+  min-width: 360px;
+}
+
+.charity-history-filter-bar .date-range-picker {
+  width: 190px;
+  flex: 0 0 190px;
+}
+
+.donation-total-card {
+  margin-bottom: 24px;
+}
+
+.donation-history-filter-bar {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.donation-history-filter-bar .form-group {
+  flex: 0 0 180px;
+}
+
+.donation-history-filter-bar .donation-search-input {
+  flex: 1;
+  min-width: 360px;
+}
+
+.donation-history-filter-bar .date-range-picker {
+  width: 190px;
+  flex: 0 0 190px;
+}
+
 @media (max-width: 700px) {
   .modal-section-header {
     flex-direction: column;
@@ -600,38 +650,23 @@
 }
 
 .donor-total-donation {
-  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: 50px;
 }
 
 .donor-total-donation span {
-  display: inline-block;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  margin-right: 8px;
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .donor-total-donation strong {
-  display: inline-block;
   color: var(--text-main);
   font-size: 18px;
-}
-
-.donor-total-donation span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 13px;
   font-weight: 700;
 }
-
-.donor-total-donation strong {
-  display: block;
-  color: var(--text-main);
-  font-size: 18px;
-  margin-top: 4px;
-}
-
   @media (max-width: 700px) {
     .welfare-header-actions {
       width: 100%;

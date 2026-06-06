@@ -217,8 +217,9 @@ const deleteCourse = async (id, currentUser) => {
 
   return true;
 };
+
 const createCourseTeacher = async (data, currentUser) => {
-  const { branchId, teacherName, courseId, shiftId } = data;
+  const { branchId, teacherName, courseId, shiftId, joiningDate } = data;
 
   if (!branchId || !teacherName || !courseId || !shiftId) {
     throw new ApiError(400, "Teacher name, course and shift are required");
@@ -231,11 +232,18 @@ const createCourseTeacher = async (data, currentUser) => {
   const result = await pool.query(
     `
     INSERT INTO course_teachers
-    (branch_id, course_id, shift_id, teacher_name, created_by)
-    VALUES ($1,$2,$3,$4,$5)
+    (branch_id, course_id, shift_id, teacher_name, joining_date, created_by)
+    VALUES ($1,$2,$3,$4,$5,$6)
     RETURNING *
     `,
-    [branchId, courseId, shiftId, teacherName, currentUser.id]
+    [
+      branchId,
+      courseId,
+      shiftId,
+      teacherName,
+      joiningDate || null,
+      currentUser.id,
+    ]
   );
 
   await pool.query(
@@ -264,18 +272,19 @@ const getCourseTeachers = async (query, currentUser) => {
 
   const result = await pool.query(
     `
-    SELECT
-      ct.id,
-      ct.branch_id,
-      ct.course_id,
-      ct.shift_id,
-      ct.teacher_name,
-      ct.is_active,
-      ct.created_at,
-      c.course_name,
-      s.shift_name,
-      s.start_time,
-      s.end_time
+SELECT
+  ct.id,
+  ct.branch_id,
+  ct.course_id,
+  ct.shift_id,
+  ct.teacher_name,
+  ct.joining_date,
+  ct.is_active,
+  ct.created_at,
+  c.course_name,
+  s.shift_name,
+  s.start_time,
+  s.end_time
     FROM course_teachers ct
     LEFT JOIN courses c ON c.id = ct.course_id
     LEFT JOIN shift_timings s ON s.id = ct.shift_id
@@ -310,7 +319,7 @@ const updateCourseTeacher = async (id, data, currentUser) => {
     throw new ApiError(403, "You cannot update this teacher");
   }
 
-  const { teacherName, courseId, shiftId, isActive } = data;
+  const { teacherName, courseId, shiftId, joiningDate, isActive } = data;
 
   const result = await pool.query(
     `
@@ -319,15 +328,17 @@ const updateCourseTeacher = async (id, data, currentUser) => {
       teacher_name = COALESCE($1, teacher_name),
       course_id = COALESCE($2, course_id),
       shift_id = COALESCE($3, shift_id),
-      is_active = COALESCE($4, is_active),
+      joining_date = COALESCE($4, joining_date),
+      is_active = COALESCE($5, is_active),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $5
+    WHERE id = $6
     RETURNING *
     `,
     [
       teacherName || null,
       courseId || null,
       shiftId || null,
+      joiningDate || null,
       typeof isActive === "boolean" ? isActive : null,
       id,
     ]
