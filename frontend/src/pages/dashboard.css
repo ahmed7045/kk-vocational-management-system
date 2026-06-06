@@ -223,6 +223,17 @@
   font-size: 17px;
 }
 
+.course-popularity-empty {
+  width: 100%;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 @media (max-width: 1100px) {
   .dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);

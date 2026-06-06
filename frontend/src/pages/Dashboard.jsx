@@ -249,7 +249,9 @@ const Dashboard = () => {
         <Card title="Course Popularity" subtitle="Top enrolled courses">
           <div className="course-list">
             {coursePopularity.length === 0 ? (
-              <p className="empty-text">No course data found</p>
+              <div className="course-popularity-empty">
+                No course data found
+              </div>
             ) : (
               coursePopularity.map((course) => (
                 <div
