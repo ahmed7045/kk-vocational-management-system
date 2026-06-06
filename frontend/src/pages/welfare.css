@@ -649,24 +649,7 @@
   column-gap: 30px;
 }
 
-.donor-total-donation {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 50px;
-}
 
-.donor-total-donation span {
-  color: var(--text-main);
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.donor-total-donation strong {
-  color: var(--text-main);
-  font-size: 18px;
-  font-weight: 700;
-}
   @media (max-width: 700px) {
     .welfare-header-actions {
       width: 100%;
@@ -693,4 +676,31 @@
     min-width: 100%;
     justify-self: stretch;
   }
+}
+
+.donor-total-donation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 50px;
+}
+
+.donor-total-donation span {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.donor-total-donation strong {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.donor-profile-total strong {
+  font-weight: 800;
+}
+
+.donor-profile-total p {
+  font-weight: 500;
 }

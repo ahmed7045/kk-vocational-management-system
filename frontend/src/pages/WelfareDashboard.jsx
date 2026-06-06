@@ -166,7 +166,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
   const [donorForm, setDonorForm] = useState({
     fullName: "",
     phone: "",
-    email: "",
     address: "",
   });
 
@@ -583,7 +582,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     setDonorForm({
       fullName: "",
       phone: "",
-      email: "",
       address: "",
     });
   };
@@ -615,7 +613,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                   ...donor,
                   full_name: donorForm.fullName,
                   phone: donorForm.phone,
-                  email: donorForm.email,
                   address: donorForm.address,
                 }
                 : donor
@@ -632,7 +629,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               id: Date.now(),
               full_name: donorForm.fullName,
               phone: donorForm.phone,
-              email: donorForm.email,
               address: donorForm.address,
             },
             ...prev,
@@ -677,7 +673,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
     setDonorForm({
       fullName: donor.full_name || "",
       phone: donor.phone || "",
-      email: donor.email || "",
       address: donor.address || "",
     });
 
@@ -1754,11 +1749,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
       render: (row) => row.phone || "-",
     },
     {
-      key: "email",
-      title: "Email",
-      render: (row) => row.email || "-",
-    },
-    {
       key: "address",
       title: "Address",
       render: (row) => row.address || "-",
@@ -2035,7 +2025,7 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               name="donorSearch"
               value={filters.donorSearch}
               onChange={handleFilterChange}
-              placeholder="Search donor name, phone, email"
+              placeholder="Search donor name or phone"
             />
           </div>
 
@@ -2262,7 +2252,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
         <form onSubmit={saveDonor}>
           <Input label="Full Name" name="fullName" value={donorForm.fullName} onChange={handleChange(setDonorForm)} required />
           <Input label="Phone" name="phone" value={donorForm.phone} onChange={handleChange(setDonorForm)} />
-          <Input label="Email" name="email" type="email" value={donorForm.email} onChange={handleChange(setDonorForm)} />
           <Input label="Address" name="address" value={donorForm.address} onChange={handleChange(setDonorForm)} />
 
           <div className="modal-actions">
@@ -2309,13 +2298,13 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
               </div>
 
               <div>
-                <strong>Email:</strong>
-                <p>{selectedDonor.email || "-"}</p>
-              </div>
-
-              <div>
                 <strong>Address:</strong>
                 <p>{selectedDonor.address || "-"}</p>
+              </div>
+
+              <div className="donor-profile-total">
+                <strong>Total Donation:</strong>
+                <p>{formatCurrency(selectedDonorTotalDonation)}</p>
               </div>
             </div>
 
@@ -2324,11 +2313,6 @@ const WelfareDashboard = ({ defaultTab = "dashboard" }) => {
                 <div>
                   <h3>Donation History</h3>
                   {/* <p>All donations made by this donor.</p> */}
-                </div>
-
-                <div className="donor-total-donation">
-                  <span>Total Donation</span>
-                  <strong>{formatCurrency(selectedDonorTotalDonation)}</strong>
                 </div>
 
                 <Button type="button" onClick={openDonorDonationModal}>

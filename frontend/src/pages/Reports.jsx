@@ -8,6 +8,7 @@ import Select from "../components/common/Select";
 import Input from "../components/common/Input";
 import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
+import DateRangePicker from "../components/common/DateRangePicker";
 import {
   formatCurrency,
   formatDate,
@@ -32,12 +33,16 @@ const monthOptions = [
   { label: "December", value: "12" },
 ];
 
-const getMonthLabel = (month, year) => {
-  const monthName =
-    monthOptions.find((item) => Number(item.value) === Number(month))?.label ||
-    "-";
+const getReportPeriodLabel = (report) => {
+  if (report.report_filter_type === "date_range") {
+    return `${formatDate(report.from_date)} to ${formatDate(report.to_date)}`;
+  }
 
-  return `${monthName} ${year || ""}`;
+  const monthName =
+    monthOptions.find((item) => Number(item.value) === Number(report.report_month))
+      ?.label || "-";
+
+  return `${monthName} ${report.report_year || ""}`;
 };
 
 const Reports = () => {
@@ -63,8 +68,11 @@ const Reports = () => {
   });
 
   const [reportForm, setReportForm] = useState({
+    filterType: "month",
     month: String(new Date().getMonth() + 1),
     year: String(new Date().getFullYear()),
+    fromDate: "",
+    toDate: "",
   });
 
   const currentYear = new Date().getFullYear();
@@ -144,6 +152,20 @@ const Reports = () => {
     }));
   };
 
+  const handleReportFilterTypeChange = (filterType) => {
+    const nextForm = {
+      ...reportForm,
+      filterType,
+    };
+
+    setReportForm(nextForm);
+    setReportData(null);
+
+    if (filterType === "month") {
+      setTimeout(() => previewCalculation(nextForm), 0);
+    }
+  };
+
   const saveOpeningBalance = async () => {
     try {
       setSavingOpening(true);
@@ -155,16 +177,16 @@ const Reports = () => {
 
       const payload = isWelfareReport
         ? {
-            openingBalance: Number(openingForm.openingBalance || 0),
-            openingDate: openingForm.openingDate,
-            note: openingForm.note || null,
-          }
+          openingBalance: Number(openingForm.openingBalance || 0),
+          openingDate: openingForm.openingDate,
+          note: openingForm.note || null,
+        }
         : {
-            branchId: Number(branchId),
-            openingBalance: Number(openingForm.openingBalance || 0),
-            openingDate: openingForm.openingDate,
-            note: openingForm.note || null,
-          };
+          branchId: Number(branchId),
+          openingBalance: Number(openingForm.openingBalance || 0),
+          openingDate: openingForm.openingDate,
+          note: openingForm.note || null,
+        };
 
       await axiosInstance.put(url, payload);
 
@@ -177,7 +199,7 @@ const Reports = () => {
     }
   };
 
-  const previewCalculation = async () => {
+  const previewCalculation = async (nextForm = reportForm) => {
     try {
       setError("");
 
@@ -187,8 +209,20 @@ const Reports = () => {
         query.append("branchId", branchId);
       }
 
-      query.append("month", reportForm.month);
-      query.append("year", reportForm.year);
+      query.append("reportFilterType", nextForm.filterType);
+
+      if (nextForm.filterType === "date_range") {
+        if (!nextForm.fromDate || !nextForm.toDate) {
+          setReportData(null);
+          return;
+        }
+
+        query.append("fromDate", nextForm.fromDate);
+        query.append("toDate", nextForm.toDate);
+      } else {
+        query.append("month", nextForm.month);
+        query.append("year", nextForm.year);
+      }
 
       const url = isWelfareReport
         ? `/reports/welfare/monthly?${query.toString()}`
@@ -215,12 +249,26 @@ const Reports = () => {
     try {
       setGeneratingReport(true);
 
-      await axiosInstance.post("/reports/monthly/saved", {
+      const payload = {
         portalType: isWelfareReport ? "welfare" : "vocational",
         branchId: isWelfareReport ? null : Number(branchId),
-        month: Number(reportForm.month),
-        year: Number(reportForm.year),
-      });
+        reportFilterType: reportForm.filterType,
+      };
+
+      if (reportForm.filterType === "date_range") {
+        if (!reportForm.fromDate || !reportForm.toDate) {
+          alert("Please select from date and to date.");
+          return;
+        }
+
+        payload.fromDate = reportForm.fromDate;
+        payload.toDate = reportForm.toDate;
+      } else {
+        payload.month = Number(reportForm.month);
+        payload.year = Number(reportForm.year);
+      }
+
+      await axiosInstance.post("/reports/monthly/saved", payload);
 
       setIsReportModalOpen(false);
       setReportData(null);
@@ -231,6 +279,8 @@ const Reports = () => {
       setGeneratingReport(false);
     }
   };
+
+
 
   const previewReport = async (report) => {
     try {
@@ -302,7 +352,7 @@ const Reports = () => {
       title: "Report Month",
       render: (row) => (
         <div>
-          <strong>{getMonthLabel(row.report_month, row.report_year)}</strong>
+          <strong>{getReportPeriodLabel(row)}</strong>
           <span className="table-subtext">{row.report_no}</span>
         </div>
       ),
@@ -451,31 +501,78 @@ const Reports = () => {
         title={isWelfareReport ? "Generate Welfare Report" : "Generate Vocational Report"}
         onClose={() => setIsReportModalOpen(false)}
       >
-        <div className="reports-modal-grid">
-          <Select
-            label="Month"
-            name="month"
-            value={reportForm.month}
-            onChange={(event) => {
-              handleReportChange(event);
-              setTimeout(previewCalculation, 0);
-            }}
-            options={monthOptions}
-            required
-          />
+<div className="report-filter-type">
+  <button
+    type="button"
+    className={reportForm.filterType === "month" ? "active" : ""}
+    onClick={() => handleReportFilterTypeChange("month")}
+  >
+    Month Wise
+  </button>
 
-          <Select
-            label="Year"
-            name="year"
-            value={reportForm.year}
-            onChange={(event) => {
-              handleReportChange(event);
-              setTimeout(previewCalculation, 0);
-            }}
-            options={yearOptions}
-            required
-          />
-        </div>
+  <button
+    type="button"
+    className={reportForm.filterType === "date_range" ? "active" : ""}
+    onClick={() => handleReportFilterTypeChange("date_range")}
+  >
+    Date Range
+  </button>
+</div>
+
+{reportForm.filterType === "month" ? (
+  <div className="reports-modal-grid">
+    <Select
+      label="Month"
+      name="month"
+      value={reportForm.month}
+      onChange={(event) => {
+        const nextForm = {
+          ...reportForm,
+          [event.target.name]: event.target.value,
+        };
+
+        setReportForm(nextForm);
+        previewCalculation(nextForm);
+      }}
+      options={monthOptions}
+      required
+    />
+
+    <Select
+      label="Year"
+      name="year"
+      value={reportForm.year}
+      onChange={(event) => {
+        const nextForm = {
+          ...reportForm,
+          [event.target.name]: event.target.value,
+        };
+
+        setReportForm(nextForm);
+        previewCalculation(nextForm);
+      }}
+      options={yearOptions}
+      required
+    />
+  </div>
+) : (
+  <div className="reports-date-range-row">
+    <DateRangePicker
+      fromDate={reportForm.fromDate}
+      toDate={reportForm.toDate}
+      onChange={({ fromDate, toDate }) => {
+        const nextForm = {
+          ...reportForm,
+          fromDate,
+          toDate,
+        };
+
+        setReportForm(nextForm);
+        previewCalculation(nextForm);
+      }}
+    />
+  </div>
+)}
 
         <div className="report-result-grid">
           <div>

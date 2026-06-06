@@ -193,11 +193,11 @@ const exportPdf = async (req, res, next) => {
     const tableWidth = 485;
     const rowHeight = 30;
 
-    const col1 = 55;
-    const col2 = 210;
+    const col1 = 45;
+    const col2 = 150;
     const col3 = 120;
-    const col4 = 100;
-
+    const col4 = 90;
+    const col5 = 80;
     let y = doc.y;
 
     const drawTableRow = () => {
@@ -217,6 +217,11 @@ const exportPdf = async (req, res, next) => {
         .moveTo(tableLeft + col1 + col2 + col3, y)
         .lineTo(tableLeft + col1 + col2 + col3, y + rowHeight)
         .stroke();
+
+      doc
+        .moveTo(tableLeft + col1 + col2 + col3 + col4, y)
+        .lineTo(tableLeft + col1 + col2 + col3 + col4, y + rowHeight)
+        .stroke();
     };
 
     drawTableRow();
@@ -231,13 +236,17 @@ const exportPdf = async (req, res, next) => {
       width: col2 - 16,
     });
 
-    doc.text("Amount", tableLeft + col1 + col2 + 8, y + 10, {
+    doc.text("Category", tableLeft + col1 + col2 + 8, y + 10, {
       width: col3 - 16,
+    });
+
+    doc.text("Amount", tableLeft + col1 + col2 + col3 + 8, y + 10, {
+      width: col4 - 16,
       align: "right",
     });
 
-    doc.text("Date", tableLeft + col1 + col2 + col3 + 8, y + 10, {
-      width: col4 - 16,
+    doc.text("Date", tableLeft + col1 + col2 + col3 + col4 + 8, y + 10, {
+      width: col5 - 16,
     });
 
     y += rowHeight;
@@ -260,12 +269,16 @@ const exportPdf = async (req, res, next) => {
         width: col2 - 16,
       });
 
+      doc.text(item.category_name || "-", tableLeft + col1 + col2 + 8, y + 10, {
+        width: col3 - 16,
+      });
+
       doc.text(
         `Rs ${Number(item.amount || 0).toLocaleString()}`,
-        tableLeft + col1 + col2 + 8,
+        tableLeft + col1 + col2 + col3 + 8,
         y + 10,
         {
-          width: col3 - 16,
+          width: col4 - 16,
           align: "right",
         }
       );
@@ -274,10 +287,10 @@ const exportPdf = async (req, res, next) => {
         item.expense_date
           ? new Date(item.expense_date).toLocaleDateString("en-GB")
           : "-",
-        tableLeft + col1 + col2 + col3 + 8,
+        tableLeft + col1 + col2 + col3 + col4 + 8,
         y + 10,
         {
-          width: col4 - 16,
+          width: col5 - 16,
         }
       );
 
@@ -345,7 +358,8 @@ const exportExcel = async (req, res, next) => {
 
     sheet.columns = [
       { key: "sr", width: 12 },
-      { key: "name", width: 38 },
+      { key: "name", width: 32 },
+      { key: "category", width: 24 },
       { key: "amount", width: 20 },
       { key: "date", width: 20 },
     ];
@@ -367,7 +381,7 @@ const exportExcel = async (req, res, next) => {
       });
     }
 
-    sheet.mergeCells("A7:D7");
+    sheet.mergeCells("A7:E7");
     sheet.getCell("A7").value = portalTitle;
     sheet.getCell("A7").font = {
       bold: true,
@@ -377,7 +391,7 @@ const exportExcel = async (req, res, next) => {
       horizontal: "center",
     };
 
-    sheet.mergeCells("A8:D8");
+    sheet.mergeCells("A8:E8");
     sheet.getCell("A8").value = `From ${fromDateText} to ${toDateText}`;
     sheet.getCell("A8").font = {
       bold: true,
@@ -387,14 +401,14 @@ const exportExcel = async (req, res, next) => {
       horizontal: "center",
     };
 
-    sheet.mergeCells("A9:D9");
+    sheet.mergeCells("A9:E9");
     sheet.getCell("A9").value = `Category: ${categoryText}`;
     sheet.getCell("A9").alignment = {
       horizontal: "center",
     };
 
     const headerRow = sheet.getRow(11);
-    headerRow.values = ["S.No", "Name", "Amount", "Date"];
+    headerRow.values = ["S.No", "Name", "Category", "Amount", "Date"];
     headerRow.height = 22;
     headerRow.font = {
       bold: true,
@@ -421,6 +435,7 @@ const exportExcel = async (req, res, next) => {
       row.values = [
         index + 1,
         item.title || "-",
+        item.category_name || "-",
         Number(item.amount || 0),
         item.expense_date
           ? new Date(item.expense_date).toLocaleDateString("en-GB")
@@ -439,7 +454,7 @@ const exportExcel = async (req, res, next) => {
 
         cell.alignment = {
           vertical: "middle",
-          horizontal: colNumber === 3 ? "right" : "left",
+          horizontal: colNumber === 4 ? "right" : "left",
         };
       });
 
@@ -448,11 +463,11 @@ const exportExcel = async (req, res, next) => {
 
     const totalRow = sheet.getRow(rowNumber);
 
-    sheet.mergeCells(`A${rowNumber}:B${rowNumber}`);
+    sheet.mergeCells(`A${rowNumber}:C${rowNumber}`);
 
     totalRow.getCell(1).value = "Total Expense";
-    totalRow.getCell(3).value = totalExpense;
-    totalRow.getCell(4).value = "";
+    totalRow.getCell(4).value = totalExpense;
+    totalRow.getCell(5).value = "";
 
     totalRow.height = 22;
 
@@ -470,11 +485,11 @@ const exportExcel = async (req, res, next) => {
 
       cell.alignment = {
         vertical: "middle",
-        horizontal: colNumber === 3 ? "right" : "center",
+        horizontal: colNumber === 4 ? "right" : "center",
       };
     });
 
-    sheet.getColumn(3).numFmt = '"Rs "#,##0';
+    sheet.getColumn(4).numFmt = '"Rs "#,##0';
 
     res.setHeader(
       "Content-Type",

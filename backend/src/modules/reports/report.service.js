@@ -222,9 +222,42 @@ const getWelfareReport = async (query) => {
   };
 };
 
-const getMonthRange = (month, year) => {
-  const selectedMonth = Number(month);
-  const selectedYear = Number(year);
+const getReportRange = (query) => {
+  const filterType = query.reportFilterType || query.filterType || "month";
+
+  if (filterType === "date_range") {
+    if (!query.fromDate || !query.toDate) {
+      throw new ApiError(400, "From date and to date are required");
+    }
+
+    const fromDate = new Date(`${query.fromDate}T00:00:00`);
+    const toDate = new Date(`${query.toDate}T00:00:00`);
+
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new ApiError(400, "Invalid date range");
+    }
+
+    if (fromDate > toDate) {
+      throw new ApiError(400, "From date cannot be after to date");
+    }
+
+    const previousEnd = new Date(fromDate);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+
+    return {
+      reportFilterType: "date_range",
+      monthStart: query.fromDate,
+      monthEnd: query.toDate,
+      previousEnd: previousEnd.toISOString().split("T")[0],
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      reportMonth: null,
+      reportYear: null,
+    };
+  }
+
+  const selectedMonth = Number(query.month);
+  const selectedYear = Number(query.year);
 
   if (!selectedMonth || !selectedYear) {
     throw new ApiError(400, "Month and year are required");
@@ -235,9 +268,14 @@ const getMonthRange = (month, year) => {
   const previousEnd = new Date(selectedYear, selectedMonth - 1, 0);
 
   return {
+    reportFilterType: "month",
     monthStart: monthStart.toISOString().split("T")[0],
     monthEnd: monthEnd.toISOString().split("T")[0],
     previousEnd: previousEnd.toISOString().split("T")[0],
+    fromDate: null,
+    toDate: null,
+    reportMonth: selectedMonth,
+    reportYear: selectedYear,
   };
 };
 
@@ -382,10 +420,16 @@ const getVocationalMonthlyReport = async (query, currentUser) => {
 
   checkBranchAccess(branchId, currentUser);
 
-  const { monthStart, monthEnd, previousEnd } = getMonthRange(
-    query.month,
-    query.year
-  );
+  const {
+    reportFilterType,
+    monthStart,
+    monthEnd,
+    previousEnd,
+    fromDate,
+    toDate,
+    reportMonth,
+    reportYear,
+  } = getReportRange(query);
 
   const openingResult = await pool.query(
     `
@@ -477,8 +521,11 @@ const getVocationalMonthlyReport = async (query, currentUser) => {
     branchName: branchResult.rows[0]?.name || "-",
     branchManagerName: await getBranchManagerName(branchId),
     generatedBy: await getUserFullName(currentUser.id),
-    month: Number(query.month),
-    year: Number(query.year),
+    reportFilterType,
+    month: reportMonth,
+    year: reportYear,
+    fromDate,
+    toDate,
     monthStart,
     monthEnd,
     openingBalance,
@@ -593,10 +640,16 @@ const upsertWelfareOpeningBalance = async (data, currentUser) => {
 };
 
 const getWelfareMonthlyReport = async (query, currentUser) => {
-  const { monthStart, monthEnd, previousEnd } = getMonthRange(
-    query.month,
-    query.year
-  );
+  const {
+    reportFilterType,
+    monthStart,
+    monthEnd,
+    previousEnd,
+    fromDate,
+    toDate,
+    reportMonth,
+    reportYear,
+  } = getReportRange(query);
 
   const openingResult = await pool.query(
     `
@@ -692,8 +745,11 @@ const getWelfareMonthlyReport = async (query, currentUser) => {
 
   return {
     generatedBy: await getUserFullName(currentUser.id),
-    month: Number(query.month),
-    year: Number(query.year),
+    reportFilterType,
+    month: reportMonth,
+    year: reportYear,
+    fromDate,
+    toDate,
     monthStart,
     monthEnd,
     openingBalance,
@@ -728,8 +784,11 @@ const getSavedMonthlyReports = async (query, currentUser) => {
       r.report_no,
       r.branch_id,
       r.portal_type,
-      r.report_month,
-      r.report_year,
+r.report_filter_type,
+r.report_month,
+r.report_year,
+r.from_date,
+r.to_date,
       r.previous_balance,
       r.collected_fees,
       r.donations,
@@ -781,30 +840,36 @@ const createSavedMonthlyReport = async (data, currentUser) => {
 
   const result = await pool.query(
     `
-    INSERT INTO monthly_financial_reports
-    (
-      report_no,
-      branch_id,
-      portal_type,
-      report_month,
-      report_year,
-      previous_balance,
-      collected_fees,
-      donations,
-      charity_amount,
-      expenses,
-      current_balance,
-      generated_by
-    )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-    RETURNING *
+INSERT INTO monthly_financial_reports
+(
+  report_no,
+  branch_id,
+  portal_type,
+  report_filter_type,
+  report_month,
+  report_year,
+  from_date,
+  to_date,
+  previous_balance,
+  collected_fees,
+  donations,
+  charity_amount,
+  expenses,
+  current_balance,
+  generated_by
+)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+RETURNING *
     `,
     [
       generateReportNo(portalType),
       portalType === "welfare" ? null : branchId,
       portalType,
-      Number(data.month),
-      Number(data.year),
+      reportData.reportFilterType,
+      reportData.month,
+      reportData.year,
+      reportData.fromDate,
+      reportData.toDate,
       reportData.previousBalance,
       reportData.collectedFees || 0,
       reportData.donations || 0,

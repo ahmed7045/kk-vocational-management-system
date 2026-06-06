@@ -152,6 +152,11 @@
   display: none;
 }
 
+.sidebar-link.active {
+  background: var(--primary);
+  color: white;
+}
+
 .main-content {
   flex: 1;
   min-width: 0;

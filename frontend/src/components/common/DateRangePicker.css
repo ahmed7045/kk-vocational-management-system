@@ -129,6 +129,43 @@
   border-radius: 8px;
 }
 
+.reports-page .date-range-dropdown {
+  width: 320px;
+  padding: 14px;
+  position: fixed;
+  top: 155px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+}
+
+.reports-page .date-range-header {
+  margin-bottom: 12px;
+}
+
+.reports-page .date-range-header strong {
+  font-size: 20px;
+}
+
+.reports-page .date-range-weekdays {
+  margin-bottom: 8px;
+}
+
+.reports-page .date-range-weekdays span {
+  width: 34px;
+  font-size: 13px;
+}
+
+.reports-page .date-range-days {
+  gap: 4px;
+}
+
+.reports-page .date-range-days button {
+  width: 34px;
+  height: 32px;
+  font-size: 14px;
+}
+
 @media (max-width: 700px) {
   .date-range-picker {
     width: 100%;

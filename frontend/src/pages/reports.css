@@ -256,6 +256,41 @@
   filter: brightness(0.97);
 }
 
+.report-filter-type {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.report-filter-type button {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.report-filter-type button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.reports-date-range-row {
+  margin-bottom: 16px;
+}
+
+.reports-date-range-row .date-range-picker {
+  width: 100%;
+}
+
+.reports-date-range-row .date-range-trigger {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 @media (max-width: 700px) {
   .reports-modal-grid,
   .report-result-grid {

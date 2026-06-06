@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +20,7 @@ import { useAuth } from "../../auth/AuthContext";
 const Sidebar = () => {
   const { hasAnyPermission, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -122,6 +123,23 @@ const Sidebar = () => {
   ];
 
   const items = selectedPortal === "welfare" ? welfareItems : vocationalItems;
+  const isActiveRoute = (itemPath) => {
+    const currentPath = location.pathname;
+
+    if (itemPath === "/app/welfare") {
+      return currentPath === "/app/welfare";
+    }
+
+    if (itemPath === "/app/students") {
+      return currentPath === "/app/students";
+    }
+
+    if (itemPath === "/app/reports") {
+      return currentPath === "/app/reports";
+    }
+
+    return currentPath === itemPath;
+  };
 
   const switchPortal = () => {
     navigate("/portal-selection");
@@ -160,7 +178,9 @@ const Sidebar = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className="sidebar-link"
+                className={() =>
+                  `sidebar-link ${isActiveRoute(item.path) ? "active" : ""}`
+                }
                 title={collapsed ? item.label : ""}
               >
                 <Icon size={19} />

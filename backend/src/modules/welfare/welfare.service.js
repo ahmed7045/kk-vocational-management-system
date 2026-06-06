@@ -214,12 +214,11 @@ const getDonors = async (query) => {
 
   const result = await pool.query(
     `
-    SELECT id, full_name, phone, email, address, created_at
+    SELECT id, full_name, phone, address, created_at
     FROM donors
     WHERE 
       full_name ILIKE $1
       OR phone ILIKE $1
-      OR email ILIKE $1
     ORDER BY id DESC
     LIMIT $2 OFFSET $3
     `,
