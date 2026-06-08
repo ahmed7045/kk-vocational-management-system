@@ -42,7 +42,7 @@
   line-height: 1.7;
 }
 
-.login-right {
+/* .login-right {
   display: grid;
   place-items: center;
   padding: 30px;
@@ -50,6 +50,15 @@
   flex-direction: column;
   gap: 20px;
    margin-top: 200px;
+} */
+
+.login-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  padding: 155px 30px 30px;
 }
 
 .login-right .card {

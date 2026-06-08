@@ -200,6 +200,30 @@ const formatReportCurrency = (amount) => {
   return `Rs ${Number(amount || 0).toLocaleString("en-PK")}`;
 };
 
+const REPORT_FOOTER_TEXT = "Powered by Cybrox - cybrox.info";
+
+const addReportFooter = (doc) => {
+  const pages = doc.bufferedPageRange();
+
+  for (let i = pages.start; i < pages.start + pages.count; i += 1) {
+    doc.switchToPage(i);
+
+    const footerY = doc.page.height - 24;
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor("#6b7280")
+      .text(REPORT_FOOTER_TEXT, 0, footerY, {
+        width: doc.page.width,
+        align: "center",
+        lineBreak: false,
+      });
+
+    doc.fillColor("#111827");
+  }
+};
+
 const getMonthName = (month) => {
   if (!month) return "-";
 
@@ -232,6 +256,7 @@ const charityRecordsPdfReportController = async (req, res, next) => {
     const doc = new PDFDocument({
       size: "A4",
       margin: 35,
+      bufferPages: true,
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -406,6 +431,7 @@ const charityRecordsPdfReportController = async (req, res, next) => {
       .fontSize(10)
       .text(`Total Records: ${records.length}`, startX, y + 14);
 
+    addReportFooter(doc);
     doc.end();
   } catch (error) {
     next(error);
@@ -420,6 +446,7 @@ const donationsPdfReportController = async (req, res, next) => {
     const doc = new PDFDocument({
       size: "A4",
       margin: 35,
+      bufferPages: true,  
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -592,6 +619,7 @@ const donationsPdfReportController = async (req, res, next) => {
       .fontSize(10)
       .text(`Total Records: ${donations.length}`, startX, y + 14);
 
+    addReportFooter(doc);
     doc.end();
   } catch (error) {
     next(error);

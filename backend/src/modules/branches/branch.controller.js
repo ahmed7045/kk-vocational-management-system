@@ -3,6 +3,7 @@ const {
   getBranches,
   getBranchById,
   updateBranch,
+  deleteBranch,
 } = require("./branch.service");
 
 const create = async (req, res, next) => {
@@ -61,9 +62,24 @@ const update = async (req, res, next) => {
   }
 };
 
+const remove = async (req, res, next) => {
+  try {
+    await deleteBranch(req.params.id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Branch and related data deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   create,
   list,
   details,
   update,
+  remove,
 };

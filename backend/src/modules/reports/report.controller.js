@@ -40,6 +40,32 @@ const formatReportCurrency = (amount) => {
   return `Rs ${Number(amount || 0).toLocaleString("en-PK")}`;
 };
 
+
+
+const REPORT_FOOTER_TEXT = "Powered by Cybrox - cybrox.info";
+
+const addReportFooter = (doc) => {
+  const pages = doc.bufferedPageRange();
+
+  for (let i = pages.start; i < pages.start + pages.count; i += 1) {
+    doc.switchToPage(i);
+
+    const footerY = doc.page.height - 24;
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor("#6b7280")
+      .text(REPORT_FOOTER_TEXT, 0, footerY, {
+        width: doc.page.width,
+        align: "center",
+        lineBreak: false,
+      });
+
+    doc.fillColor("#111827");
+  }
+};
+
 const getMonthName = (month) => {
   if (!month) return "-";
 
@@ -62,6 +88,7 @@ const createSavedReportPdf = (report, res, preview = false) => {
   const doc = new PDFDocument({
     size: "A4",
     margin: 35,
+    bufferPages: true,
   });
 
   res.setHeader("Content-Type", "application/pdf");
@@ -180,6 +207,7 @@ const createSavedReportPdf = (report, res, preview = false) => {
     y += 30;
   });
 
+  addReportFooter(doc);
   doc.end();
 };
 
@@ -366,6 +394,7 @@ const exportVocationalMonthlyReportPdf = async (req, res, next) => {
     const doc = new PDFDocument({
       size: "A4",
       margin: 35,
+      bufferPages: true,
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -471,6 +500,7 @@ const exportVocationalMonthlyReportPdf = async (req, res, next) => {
       y += 30;
     });
 
+    addReportFooter(doc);
     doc.end();
   } catch (error) {
     next(error);
@@ -526,6 +556,7 @@ const exportWelfareMonthlyReportPdf = async (req, res, next) => {
     const doc = new PDFDocument({
       size: "A4",
       margin: 35,
+      bufferPages: true,
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -628,6 +659,7 @@ const exportWelfareMonthlyReportPdf = async (req, res, next) => {
       y += 30;
     });
 
+    addReportFooter(doc);
     doc.end();
   } catch (error) {
     next(error);

@@ -213,6 +213,7 @@
   border-radius: 12px;
 }
 
+
 .branch-empty {
   background: white;
   border: 1px solid var(--border);
@@ -221,6 +222,39 @@
   color: var(--text-muted);
   box-shadow: var(--shadow);
 }
+
+
+.branch-card-buttons {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.branch-card-buttons .branch-open-btn {
+  margin-top: 0;
+}
+
+.branch-delete-btn {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #991b1b;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.branch-delete-btn:hover {
+  background: #fecaca;
+}
+
 
 @media (max-width: 1200px) {
   .branch-grid {

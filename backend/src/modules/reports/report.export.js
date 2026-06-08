@@ -1,10 +1,48 @@
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
+
+const REPORT_FOOTER_TEXT = "Powered by Cybrox - cybrox.info";
+
+const addReportFooter = (doc) => {
+  const pages = doc.bufferedPageRange();
+
+  for (let i = pages.start; i < pages.start + pages.count; i += 1) {
+    doc.switchToPage(i);
+
+    const footerY = doc.page.height - 24;
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor("#6b7280")
+      .text(REPORT_FOOTER_TEXT, 0, footerY, {
+        width: doc.page.width,
+        align: "center",
+        lineBreak: false,
+      });
+
+    doc.fillColor("#111827");
+  }
+};
+
 const exportSimplePdf = (title, rows, res) => {
   const doc = new PDFDocument({
     margin: 40,
+    bufferPages: true,
   });
+
+  const footerRowNumber = worksheet.rowCount + 2;
+  worksheet.mergeCells(`A${footerRowNumber}:D${footerRowNumber}`);
+  worksheet.getCell(`A${footerRowNumber}`).value = REPORT_FOOTER_TEXT;
+  worksheet.getCell(`A${footerRowNumber}`).font = {
+    italic: true,
+    size: 10,
+    color: { argb: "FF6B7280" },
+  };
+  worksheet.getCell(`A${footerRowNumber}`).alignment = {
+    horizontal: "center",
+  };
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
@@ -22,6 +60,7 @@ const exportSimplePdf = (title, rows, res) => {
 
   if (!rows || rows.length === 0) {
     doc.fontSize(12).text("No records found.");
+    addReportFooter(doc);
     doc.end();
     return;
   }
@@ -33,7 +72,7 @@ const exportSimplePdf = (title, rows, res) => {
 
     doc.moveDown(0.5);
   });
-
+  addReportFooter(doc);
   doc.end();
 };
 

@@ -14,6 +14,31 @@ const {
   generateExpenseExcel,
 } = require("./expense.service");
 
+
+const REPORT_FOOTER_TEXT = "Powered by Cybrox - cybrox.info";
+
+const addReportFooter = (doc) => {
+  const pages = doc.bufferedPageRange();
+
+  for (let i = pages.start; i < pages.start + pages.count; i += 1) {
+    doc.switchToPage(i);
+
+    const footerY = doc.page.height - 24;
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor("#6b7280")
+      .text(REPORT_FOOTER_TEXT, 0, footerY, {
+        width: doc.page.width,
+        align: "center",
+        lineBreak: false,
+      });
+
+    doc.fillColor("#111827");
+  }
+};
+
 const create = async (req, res, next) => {
   try {
     const expense = await createExpense(req.body, req.user);
@@ -122,7 +147,7 @@ const exportPdf = async (req, res, next) => {
         ? "Welfare Expenses Report"
         : "Vocational Expenses Report";
 
-    const categoryText = expenses[0]?.category_name || "All Categories";
+    // const categoryText = expenses[0]?.category_name || "All Categories";
 
     const fromDateText = req.query.fromDate
       ? new Date(req.query.fromDate).toLocaleDateString("en-GB")
@@ -140,6 +165,7 @@ const exportPdf = async (req, res, next) => {
     const doc = new PDFDocument({
       margin: 40,
       size: "A4",
+      bufferPages: true,
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -178,16 +204,18 @@ const exportPdf = async (req, res, next) => {
         align: "center",
       });
 
-    doc.moveDown(0.3);
-
-    doc
-      .fontSize(10)
-      .font("Helvetica")
-      .text(`Category: ${categoryText}`, {
-        align: "center",
-      });
-
     doc.moveDown(1.8);
+
+    // doc.moveDown(0.3);
+
+    // doc
+    //   .fontSize(10)
+    //   .font("Helvetica")
+    //   .text(`Category: ${categoryText}`, {
+    //     align: "center",
+    //   });
+
+    // doc.moveDown(1.8);
 
     const tableLeft = 55;
     const tableWidth = 485;
@@ -321,6 +349,7 @@ const exportPdf = async (req, res, next) => {
       }
     );
 
+    addReportFooter(doc);
     doc.end();
   } catch (error) {
     next(error);
@@ -338,7 +367,7 @@ const exportExcel = async (req, res, next) => {
         ? "Welfare Expenses Report"
         : "Vocational Expenses Report";
 
-    const categoryText = expenses[0]?.category_name || "All Categories";
+    // const categoryText = expenses[0]?.category_name || "All Categories";
 
     const fromDateText = req.query.fromDate
       ? new Date(req.query.fromDate).toLocaleDateString("en-GB")
@@ -401,11 +430,14 @@ const exportExcel = async (req, res, next) => {
       horizontal: "center",
     };
 
+    // sheet.mergeCells("A9:E9");
+    // sheet.getCell("A9").value = `Category: ${categoryText}`;
+    // sheet.getCell("A9").alignment = {
+    //   horizontal: "center",
+    // };
+
     sheet.mergeCells("A9:E9");
-    sheet.getCell("A9").value = `Category: ${categoryText}`;
-    sheet.getCell("A9").alignment = {
-      horizontal: "center",
-    };
+    sheet.getCell("A9").value = "";
 
     const headerRow = sheet.getRow(11);
     headerRow.values = ["S.No", "Name", "Category", "Amount", "Date"];
@@ -490,6 +522,19 @@ const exportExcel = async (req, res, next) => {
     });
 
     sheet.getColumn(4).numFmt = '"Rs "#,##0';
+
+    rowNumber += 2;
+
+    sheet.mergeCells(`A${rowNumber}:E${rowNumber}`);
+    sheet.getCell(`A${rowNumber}`).value = REPORT_FOOTER_TEXT;
+    sheet.getCell(`A${rowNumber}`).font = {
+      italic: true,
+      size: 10,
+      color: { argb: "FF6B7280" },
+    };
+    sheet.getCell(`A${rowNumber}`).alignment = {
+      horizontal: "center",
+    };+
 
     res.setHeader(
       "Content-Type",

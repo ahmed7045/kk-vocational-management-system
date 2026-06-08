@@ -8,6 +8,7 @@ import {
   Wallet,
   ArrowLeft,
   Plus,
+  Trash2,
 } from "lucide-react";
 
 import axiosInstance from "../api/axiosInstance";
@@ -19,6 +20,7 @@ import Select from "../components/common/Select";
 import Modal from "../components/common/Modal";
 import { formatCurrency } from "../utils/formatters";
 import "./branchSelection.css";
+import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
@@ -28,6 +30,8 @@ const BranchSelection = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [branchToDelete, setBranchToDelete] = useState(null);
+  const [deletingBranch, setDeletingBranch] = useState(false);
 
   const [branchModalOpen, setBranchModalOpen] = useState(false);
 
@@ -40,42 +44,71 @@ const BranchSelection = () => {
   const canCreateBranch =
     user?.role === "super_admin" || hasPermission?.("branches.create");
 
-const fetchBranches = async () => {
-  if (user?.role !== "super_admin") {
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError("");
-
-    const response = await axiosInstance.get("/branches");
-    setBranches(response.data.data || []);
-  } catch (error) {
-    setError(error.response?.data?.message || "Failed to fetch branches");
-  } finally {
-    setLoading(false);
-  }
-};
-
-useEffect(() => {
-  if (!user) return;
-
-  if (user.role !== "super_admin") {
-    if (user.portalAccess === "welfare") {
-      navigate("/app/welfare", { replace: true });
+  const fetchBranches = async () => {
+    if (user?.role !== "super_admin") {
+      setLoading(false);
       return;
     }
 
-    if (user.portalAccess === "vocational") {
-      navigate("/app/dashboard", { replace: true });
-      return;
-    }
-  }
+    try {
+      setLoading(true);
+      setError("");
 
-  fetchBranches();
-}, [user]);
+      const response = await axiosInstance.get("/branches");
+      setBranches(response.data.data || []);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to fetch branches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBranchClick = (event, branch) => {
+    event.stopPropagation();
+    setBranchToDelete(branch);
+  };
+
+  const confirmDeleteBranch = async () => {
+    if (!branchToDelete?.id) return;
+
+    try {
+      setDeletingBranch(true);
+      setError("");
+
+      await axiosInstance.delete(`/branches/${branchToDelete.id}`);
+
+      if (localStorage.getItem("selectedBranchId") === String(branchToDelete.id)) {
+        localStorage.removeItem("selectedBranchId");
+        localStorage.removeItem("selectedBranchName");
+        localStorage.removeItem("selectedBranchStatus");
+      }
+
+      setBranchToDelete(null);
+      await fetchBranches();
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to delete branch");
+    } finally {
+      setDeletingBranch(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.role !== "super_admin") {
+      if (user.portalAccess === "welfare") {
+        navigate("/app/welfare", { replace: true });
+        return;
+      }
+
+      if (user.portalAccess === "vocational") {
+        navigate("/app/dashboard", { replace: true });
+        return;
+      }
+    }
+
+    fetchBranches();
+  }, [user]);
 
   const handleBranchFormChange = (event) => {
     const { name, value } = event.target;
@@ -133,19 +166,19 @@ useEffect(() => {
   const getStudentCount = (branch) => {
     return Number(
       branch.students_count ??
-        branch.total_students ??
-        branch.student_count ??
-        0
+      branch.total_students ??
+      branch.student_count ??
+      0
     );
   };
 
-const getBranchBalance = (branch) => {
-  return Number(
-    branch.total_payments ??
+  const getBranchBalance = (branch) => {
+    return Number(
+      branch.total_payments ??
       branch.totalPayments ??
       0
-  );
-};
+    );
+  };
 
   if (loading) {
     return <Loader fullPage text="Loading branches..." />;
@@ -204,18 +237,41 @@ const getBranchBalance = (branch) => {
               className="branch-card"
               onClick={() => handleSelectBranch(branch)}
             >
+              {/* {user?.role === "super_admin" && (
+                <button
+                  type="button"
+                  className="branch-delete-btn"
+                  onClick={(event) => handleDeleteBranchClick(event, branch)}
+                  title="Delete Branch"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )} */}
+
               <div className="branch-card-top">
                 <div className="branch-icon">
                   <Building2 size={28} />
                 </div>
 
-                <span
-                  className={`branch-status ${
-                    branch.status === "active" ? "active" : "inactive"
-                  }`}
-                >
-                  {branch.status || "active"}
-                </span>
+                <div className="branch-card-actions">
+                  <span
+                    className={`branch-status ${branch.status === "active" ? "active" : "inactive"
+                      }`}
+                  >
+                    {branch.status || "active"}
+                  </span>
+
+                  {/* {user?.role === "super_admin" && (
+                    <button
+                      type="button"
+                      className="branch-delete-btn"
+                      onClick={(event) => handleDeleteBranchClick(event, branch)}
+                      title="Delete Branch"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )} */}
+                </div>
               </div>
 
               <div className="branch-card-content">
@@ -235,9 +291,22 @@ const getBranchBalance = (branch) => {
                 </div>
               </div>
 
-              <button type="button" className="branch-open-btn">
-                Open Dashboard <ArrowRight size={17} />
-              </button>
+              <div className="branch-card-buttons">
+                <button type="button" className="branch-open-btn">
+                  Open Dashboard <ArrowRight size={17} />
+                </button>
+
+                {user?.role === "super_admin" && (
+                  <button
+                    type="button"
+                    className="branch-delete-btn"
+                    onClick={(event) => handleDeleteBranchClick(event, branch)}
+                    title="Delete Branch"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
             </article>
           ))
         )}
@@ -299,6 +368,15 @@ const getBranchBalance = (branch) => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={Boolean(branchToDelete)}
+        title="Delete Branch"
+        message={`Are you sure you want to delete "${branchToDelete?.name}"? This will permanently delete this branch and all related branch data.`}
+        loading={deletingBranch}
+        onClose={() => setBranchToDelete(null)}
+        onConfirm={confirmDeleteBranch}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ const {
   list,
   details,
   update,
+  remove,
 } = require("./branch.controller");
 
 router.get(
@@ -37,6 +38,13 @@ router.put(
   authMiddleware,
   requirePermission("branches.update"),
   update
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission("branches.delete"),
+  remove
 );
 
 module.exports = router;
