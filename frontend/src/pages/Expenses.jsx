@@ -41,17 +41,19 @@ const getCurrentPortalType = () => {
 };
 
 const Expenses = () => {
-  const branchId =
-    getSelectedBranchId() ||
-    localStorage.getItem("selectedBranchId") ||
-    "1";
+  const portalType = getCurrentPortalType();
+
+  const selectedBranchId =
+    getSelectedBranchId() || localStorage.getItem("selectedBranchId");
+
+  const branchId = portalType === "welfare" ? "" : selectedBranchId || "1";
 
   const branchName =
-    getSelectedBranchName() ||
-    localStorage.getItem("selectedBranchName") ||
-    "Branch 1";
-
-  const portalType = getCurrentPortalType();
+    portalType === "welfare"
+      ? "Welfare"
+      : getSelectedBranchName() ||
+      localStorage.getItem("selectedBranchName") ||
+      "Branch 1";
 
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -167,61 +169,61 @@ const Expenses = () => {
   };
 
 
-// const downloadFile = async (url, fileName) => {
-//   try {
-//     const response = await axiosInstance.get(url, {
-//       responseType: "blob",
-//     });
+  // const downloadFile = async (url, fileName) => {
+  //   try {
+  //     const response = await axiosInstance.get(url, {
+  //       responseType: "blob",
+  //     });
 
-//     const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+  //     const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
 
-//     const link = document.createElement("a");
-//     link.href = fileUrl;
-//     link.setAttribute("download", fileName);
-//     document.body.appendChild(link);
-//     link.click();
+  //     const link = document.createElement("a");
+  //     link.href = fileUrl;
+  //     link.setAttribute("download", fileName);
+  //     document.body.appendChild(link);
+  //     link.click();
 
-//     link.remove();
-//     window.URL.revokeObjectURL(fileUrl);
-//   } catch (error) {
-//     alert(error.response?.data?.message || "Failed to download report");
-//   }
-// };
+  //     link.remove();
+  //     window.URL.revokeObjectURL(fileUrl);
+  //   } catch (error) {
+  //     alert(error.response?.data?.message || "Failed to download report");
+  //   }
+  // };
 
-const downloadFile = async (url, fileName) => {
-  try {
-    const response = await axiosInstance.get(url, {
-      responseType: "blob",
-    });
+  const downloadFile = async (url, fileName) => {
+    try {
+      const response = await axiosInstance.get(url, {
+        responseType: "blob",
+      });
 
-    const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
 
-    const link = document.createElement("a");
-    link.href = fileUrl;
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
 
-    link.remove();
-    window.URL.revokeObjectURL(fileUrl);
-  } catch (error) {
-    alert("Failed to download report. Please login again if the issue continues.");
-  }
-};
+      link.remove();
+      window.URL.revokeObjectURL(fileUrl);
+    } catch (error) {
+      alert("Failed to download report. Please login again if the issue continues.");
+    }
+  };
 
-const downloadPdf = () => {
-  downloadFile(
-    `/expenses/report/pdf?${buildReportQuery()}`,
-    `${portalType}-expenses-report.pdf`
-  );
-};
+  const downloadPdf = () => {
+    downloadFile(
+      `/expenses/report/pdf?${buildReportQuery()}`,
+      `${portalType}-expenses-report.pdf`
+    );
+  };
 
-const downloadExcel = () => {
-  downloadFile(
-    `/expenses/report/excel?${buildReportQuery()}`,
-    `${portalType}-expenses-report.xlsx`
-  );
-};
+  const downloadExcel = () => {
+    downloadFile(
+      `/expenses/report/excel?${buildReportQuery()}`,
+      `${portalType}-expenses-report.xlsx`
+    );
+  };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -251,7 +253,7 @@ const downloadExcel = () => {
   const saveExpense = async (event) => {
     event.preventDefault();
 
-    if (!branchId) {
+    if (portalType !== "welfare" && !branchId) {
       alert("Please select a branch first.");
       return;
     }
@@ -267,8 +269,8 @@ const downloadExcel = () => {
     }
 
     const payload = {
-      branchId: Number(branchId),
-      portalType,
+      branchId: portalType === "welfare" ? null : Number(branchId),
+      portalType: portalType === "welfare" ? "welfare" : "vocational",
       name: form.name.trim(),
       categoryId: form.categoryId ? Number(form.categoryId) : null,
       amount: Number(form.amount),
@@ -311,8 +313,8 @@ const downloadExcel = () => {
           setExpenses((prev) => [
             {
               id: Date.now(),
-              branch_id: branchId,
-              branch_name: branchName || "Demo Branch",
+              branch_id: payload.branchId,
+              branch_name: portalType === "welfare" ? null : branchName || "Demo Branch",
               title: payload.name,
               name: payload.name,
               amount: payload.amount,

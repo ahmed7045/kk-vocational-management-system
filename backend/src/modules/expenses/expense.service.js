@@ -18,25 +18,29 @@ const normalizePortalType = (value) => {
 };
 
 const createExpense = async (data, currentUser) => {
-  const branchId = data.branchId;
+  const portalType = normalizePortalType(data.portalType || data.expenseType);
+  const branchId = portalType === "welfare" ? null : data.branchId;
+
   const name = data.name || data.title;
   const amount = data.amount;
   const date = data.date || data.expenseDate;
   const note = data.note || data.description;
-  const portalType = normalizePortalType(data.portalType || data.expenseType);
 
-  if (!branchId || !name || !amount) {
+  if (portalType !== "welfare" && !branchId) {
     throw new ApiError(400, "Branch, name and amount are required");
+  }
+
+  if (!name || !amount) {
+    throw new ApiError(400, "Name and amount are required");
   }
 
   if (Number(amount) <= 0) {
     throw new ApiError(400, "Expense amount must be greater than zero");
   }
 
-  if (!canAccessBranch(currentUser, branchId)) {
+  if (portalType !== "welfare" && !canAccessBranch(currentUser, branchId)) {
     throw new ApiError(403, "You cannot create expense for this branch");
   }
-
   const result = await pool.query(
     `
     INSERT INTO expenses
@@ -96,7 +100,9 @@ const getExpenses = async (query, currentUser) => {
 
   let branchId = query.branchId;
 
-  if (currentUser.role !== "super_admin") {
+  if (portalType === "welfare") {
+    branchId = null;
+  } else if (currentUser.role !== "super_admin") {
     branchId = currentUser.branchId;
   }
 
@@ -125,7 +131,11 @@ const getExpenses = async (query, currentUser) => {
     LEFT JOIN expense_categories ec ON ec.id = e.category_id
     LEFT JOIN users u ON u.id = e.created_by
     WHERE
-      ($1::INT IS NULL OR e.branch_id = $1)
+      (
+  ($5 = 'welfare' AND e.branch_id IS NULL)
+  OR
+  ($5 <> 'welfare' AND ($1::INT IS NULL OR e.branch_id = $1))
+)
       AND ($2::INT IS NULL OR e.category_id = $2)
       AND ($3::DATE IS NULL OR e.expense_date >= $3)
       AND ($4::DATE IS NULL OR e.expense_date <= $4)
@@ -180,7 +190,10 @@ const getExpenseById = async (id, currentUser) => {
 
   const expense = result.rows[0];
 
-  if (!canAccessBranch(currentUser, expense.branch_id)) {
+  if (
+    expense.expense_type !== "welfare" &&
+    !canAccessBranch(currentUser, expense.branch_id)
+  ) {
     throw new ApiError(403, "You cannot view this expense");
   }
 
@@ -199,7 +212,10 @@ const updateExpense = async (id, data, currentUser) => {
 
   const oldExpense = existing.rows[0];
 
-  if (!canAccessBranch(currentUser, oldExpense.branch_id)) {
+  if (
+    oldExpense.expense_type !== "welfare" &&
+    !canAccessBranch(currentUser, oldExpense.branch_id)
+  ) {
     throw new ApiError(403, "You cannot update this expense");
   }
 
@@ -208,6 +224,7 @@ const updateExpense = async (id, data, currentUser) => {
   const date = data.date || data.expenseDate;
   const note = data.note || data.description;
   const portalType = data.portalType || data.expenseType;
+  const finalPortalType = portalType ? normalizePortalType(portalType) : oldExpense.expense_type;
 
   if (amount !== undefined && Number(amount) <= 0) {
     throw new ApiError(400, "Expense amount must be greater than zero");
@@ -236,6 +253,7 @@ const updateExpense = async (id, data, currentUser) => {
       note || null,
       data.receiptUrl || null,
       portalType ? normalizePortalType(portalType) : null,
+      portalType ? finalPortalType : null,
       id,
     ]
   );
@@ -400,5 +418,5 @@ module.exports = {
   getExpenseCategories,
   createExpenseCategory,
   generateExpensePdf,
-generateExpenseExcel,
+  generateExpenseExcel,
 };
